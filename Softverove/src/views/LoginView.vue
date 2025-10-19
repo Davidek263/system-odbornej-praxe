@@ -78,13 +78,13 @@ function handleLogin() {
 
 <style scoped>
 /*  Full page background */
-body {
+html,
+body,
+.login-page {
+  height: 100%;
   margin: 0;
-  font-family: 'Inter', sans-serif;
   background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  font-family: 'Inter', sans-serif;
 }
 
 /*  Center container */
@@ -92,7 +92,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 120px); /* keeps centered under navbar */
+  min-height: calc(100vh - 116px); /* keeps centered under navbar */
   padding: 20px;
 }
 

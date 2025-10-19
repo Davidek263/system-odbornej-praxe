@@ -188,13 +188,13 @@ function handleRegister() {
 </script>
 
 <style scoped>
-body {
+html,
+body,
+.register-page {
+  height: 100%;
   margin: 0;
-  font-family: 'Inter', sans-serif;
   background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  font-family: 'Inter', sans-serif;
 }
 
 /*  Center the card */
@@ -202,7 +202,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 80px); /* subtract navbar height */
+  min-height: calc(100vh - 76px); /* subtract navbar height */
 }
 
 /*  Card */

@@ -16,4 +16,9 @@
 import HeaderComponent from './components/Header.vue'
 </script>
 
-<style></style>
+<style>
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+}
+</style>

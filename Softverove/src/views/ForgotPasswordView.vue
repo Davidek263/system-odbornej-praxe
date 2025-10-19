@@ -59,13 +59,13 @@ function handleReset() {
 
 <style scoped>
 /* Background covers full page */
-body {
+html,
+body,
+.forgot-page {
+  height: 100%;
   margin: 0;
-  font-family: 'Inter', sans-serif;
   background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  font-family: 'Inter', sans-serif;
 }
 
 /*  Center container (under navbar if fixed) */
@@ -73,7 +73,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 120px); /* adjust to match navbar height */
+  min-height: calc(100vh - 116px); /* adjust to match navbar height */
   padding: 20px;
 }
 
@@ -194,7 +194,7 @@ button:hover {
   }
 }
 
-/*  Fade in animation */
+/* ✨ Fade in animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
