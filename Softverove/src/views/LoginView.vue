@@ -1,71 +1,42 @@
 <template>
-  <div class="login-container" ref="container">
-    <div class="login-card">
-      <h1>Welcome Back</h1>
+  <div class="login-page">
+    <div class="login-container">
+      <div class="login-card">
+        <h1>Welcome Back</h1>
 
-      <form @submit.prevent="handleLogin" class="login-form">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input id="email" v-model="form.email" type="email" placeholder="Enter your email" />
-          <p v-if="errors.email" class="error">{{ errors.email }}</p>
+        <form @submit.prevent="handleLogin" class="login-form">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input id="email" v-model="form.email" type="email" placeholder="Enter your email" />
+            <p v-if="errors.email" class="error">{{ errors.email }}</p>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              id="password"
+              v-model="form.password"
+              type="password"
+              placeholder="Enter your password"
+            />
+            <p v-if="errors.password" class="error">{{ errors.password }}</p>
+          </div>
+
+          <button type="submit">Log In</button>
+        </form>
+
+        <div class="bottom-links">
+          <router-link to="/forgot-password" class="forgot">Forgot password?</router-link>
+          <router-link to="/register" class="register">Register</router-link>
         </div>
-
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input
-            id="password"
-            v-model="form.password"
-            type="password"
-            placeholder="Enter your password"
-          />
-          <p v-if="errors.password" class="error">{{ errors.password }}</p>
-        </div>
-
-        <button type="submit">Log In</button>
-      </form>
-
-      <div class="bottom-links">
-        <router-link to="/forgot-password" class="forgot">Forgot password?</router-link>
-        <router-link to="/register" class="register">Register</router-link>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, onBeforeUnmount } from 'vue'
+import { reactive } from 'vue'
 
-const container = ref(null)
-
-//  Funkcia na dynamické prispôsobenie výšky kontajnera
-function adjustContainerHeight() {
-  const header = document.querySelector('header')
-  const footer = document.querySelector('footer')
-
-  const headerHeight = header ? header.offsetHeight : 0
-  const footerHeight = footer ? footer.offsetHeight : 0
-  const windowHeight = window.innerHeight
-
-  // Výška, ktorú má mať register-container
-  const targetHeight = windowHeight - headerHeight - footerHeight
-
-  if (container.value) {
-    container.value.style.minHeight = `${targetHeight}px`
-    container.value.style.height = `${targetHeight}px`
-    container.value.style.display = 'flex'
-    container.value.style.alignItems = 'center'
-    container.value.style.justifyContent = 'center'
-  }
-}
-
-onMounted(() => {
-  adjustContainerHeight()
-  window.addEventListener('resize', adjustContainerHeight)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', adjustContainerHeight)
-})
 const form = reactive({
   email: '',
   password: '',
@@ -80,14 +51,14 @@ function handleLogin() {
   errors.email = ''
   errors.password = ''
 
-  let isValid = true
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  let isValid = true
 
   if (!form.email.trim()) {
     errors.email = 'Email is required.'
     isValid = false
   } else if (!emailPattern.test(form.email)) {
-    errors.email = 'Please enter a valid email.'
+    errors.email = 'Please enter a valid email address.'
     isValid = false
   }
 
@@ -98,43 +69,45 @@ function handleLogin() {
 
   if (!isValid) return
 
-  console.log('Logging in user:', form)
   alert(`Welcome back, ${form.email}!`)
+  console.log('User logged in:', form)
   form.email = ''
   form.password = ''
 }
 </script>
 
 <style scoped>
+/*  Full page background */
 html,
 body,
-#app,
-.login-container {
+.login-page {
   height: 100%;
   margin: 0;
-  padding: 0;
+  background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
+  font-family: 'Inter', sans-serif;
 }
 
+/*  Center container */
 .login-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
-  font-family: 'Inter', sans-serif;
-  overflow: hidden;
+  min-height: calc(100vh - 116px); /* keeps centered under navbar */
+  padding: 20px;
 }
 
+/*  Card */
 .login-card {
   width: 100%;
-  max-width: 360px;
+  max-width: 420px;
   background: #fff;
-  padding: 32px 26px;
-  border-radius: 14px;
+  padding: 36px 28px;
+  border-radius: 16px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
   animation: fadeIn 0.6s ease;
 }
 
+/*  Title */
 h1 {
   text-align: center;
   margin-bottom: 25px;
@@ -142,6 +115,7 @@ h1 {
   font-size: 22px;
 }
 
+/*  Form fields */
 .form-group {
   margin-bottom: 16px;
   display: flex;
@@ -168,12 +142,13 @@ input:focus {
   box-shadow: 0 0 0 2px rgba(66, 184, 131, 0.25);
 }
 
+/*  Button */
 button {
   width: 100%;
   background: #42b883;
   color: white;
   border: none;
-  padding: 11px;
+  padding: 12px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 15px;
@@ -186,16 +161,18 @@ button:hover {
   background: #369f73;
 }
 
+/*  Error messages */
 .error {
   color: #e74c3c;
   font-size: 12px;
   margin-top: 4px;
 }
 
+/*  Bottom links */
 .bottom-links {
   display: flex;
   justify-content: space-between;
-  margin-top: 16px;
+  margin-top: 18px;
   font-size: 13px;
 }
 
@@ -209,6 +186,24 @@ button:hover {
   text-decoration: underline;
 }
 
+/*  Mobile responsive */
+@media (max-width: 480px) {
+  .login-card {
+    max-width: 90%;
+    padding: 26px 20px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  button {
+    font-size: 14px;
+    padding: 10px;
+  }
+}
+
+/*  Animation */
 @keyframes fadeIn {
   from {
     opacity: 0;

@@ -1,145 +1,119 @@
 <template>
-  <div ref="container" class="register-container" >
-    <div class="register-card">
-      <h1>{{ isCompany ? 'Register Company' : 'Register Account' }}</h1>
+  <div class="register-page">
+    <div class="register-container">
+      <div class="register-card">
+        <h1>{{ isCompany ? 'Register Company' : 'Register Account' }}</h1>
 
-      <!-- Toggle switch -->
-      <div class="toggle-buttons">
-        <button :class="{ active: !isCompany }" @click="isCompany = false">Person</button>
-        <button :class="{ active: isCompany }" @click="isCompany = true">Company</button>
+        <!-- Toggle switch -->
+        <div class="toggle-buttons">
+          <button :class="{ active: !isCompany }" @click="isCompany = false">Person</button>
+          <button :class="{ active: isCompany }" @click="isCompany = true">Company</button>
+        </div>
+
+        <form @submit.prevent="handleRegister" class="register-form">
+          <!-- PERSON FORM -->
+          <template v-if="!isCompany">
+            <div class="form-group">
+              <label for="username">Name</label>
+              <input
+                id="username"
+                v-model="form.username"
+                type="text"
+                placeholder="Enter your name"
+              />
+              <p v-if="errors.username" class="error">{{ errors.username }}</p>
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input id="email" v-model="form.email" type="email" placeholder="Enter your email" />
+              <p v-if="errors.email" class="error">{{ errors.email }}</p>
+            </div>
+
+            <div class="form-group">
+              <label for="password">Password</label>
+              <input
+                id="password"
+                v-model="form.password"
+                type="password"
+                placeholder="Enter your password"
+              />
+              <p v-if="errors.password" class="error">{{ errors.password }}</p>
+            </div>
+          </template>
+
+          <!-- COMPANY FORM -->
+          <template v-else>
+            <div class="form-group">
+              <label for="companyName">Company Name</label>
+              <input
+                id="companyName"
+                v-model="form.companyName"
+                type="text"
+                placeholder="Enter your company name"
+              />
+              <p v-if="errors.companyName" class="error">{{ errors.companyName }}</p>
+            </div>
+
+            <div class="form-group">
+              <label for="email">Company Email</label>
+              <input
+                id="email"
+                v-model="form.email"
+                type="email"
+                placeholder="Enter company email"
+              />
+              <p v-if="errors.email" class="error">{{ errors.email }}</p>
+            </div>
+
+            <div class="form-group">
+              <label for="address">Address</label>
+              <input
+                id="address"
+                v-model="form.address"
+                type="text"
+                placeholder="Enter company address"
+              />
+              <p v-if="errors.address" class="error">{{ errors.address }}</p>
+            </div>
+
+            <div class="form-group">
+              <label for="phone">Phone</label>
+              <input
+                id="phone"
+                v-model="form.phone"
+                type="text"
+                placeholder="Enter company phone number"
+              />
+              <p v-if="errors.phone" class="error">{{ errors.phone }}</p>
+            </div>
+
+            <div class="form-group">
+              <label for="password">Password</label>
+              <input
+                id="password"
+                v-model="form.password"
+                type="password"
+                placeholder="Enter your password"
+              />
+              <p v-if="errors.password" class="error">{{ errors.password }}</p>
+            </div>
+          </template>
+
+          <button type="submit">Register</button>
+        </form>
+
+        <p class="login-link">
+          Already have an account?
+          <router-link to="/login">Login</router-link>
+        </p>
       </div>
-
-      <form @submit.prevent="handleRegister" class="register-form">
-        <!-- PERSON FORM -->
-        <template v-if="!isCompany">
-          <div class="form-group">
-            <label for="username">Name</label>
-            <input
-              id="username"
-              v-model="form.username"
-              type="text"
-              placeholder="Enter your name"
-            />
-            <p v-if="errors.username" class="error">{{ errors.username }}</p>
-          </div>
-
-          <div class="form-group">
-            <label for="email">Email</label>
-            <input id="email" v-model="form.email" type="email" placeholder="Enter your email" />
-            <p v-if="errors.email" class="error">{{ errors.email }}</p>
-          </div>
-
-          <div class="form-group">
-            <label for="password">Password</label>
-            <input
-              id="password"
-              v-model="form.password"
-              type="password"
-              placeholder="Enter your password"
-            />
-            <p v-if="errors.password" class="error">{{ errors.password }}</p>
-          </div>
-        </template>
-
-        <!-- COMPANY FORM -->
-        <template v-else>
-          <div class="form-group">
-            <label for="companyName">Company Name</label>
-            <input
-              id="companyName"
-              v-model="form.companyName"
-              type="text"
-              placeholder="Enter your company name"
-            />
-            <p v-if="errors.companyName" class="error">{{ errors.companyName }}</p>
-          </div>
-
-          <div class="form-group">
-            <label for="email">Company Email</label>
-            <input id="email" v-model="form.email" type="email" placeholder="Enter company email" />
-            <p v-if="errors.email" class="error">{{ errors.email }}</p>
-          </div>
-
-          <div class="form-group">
-            <label for="address">Address</label>
-            <input
-              id="address"
-              v-model="form.address"
-              type="text"
-              placeholder="Enter company address"
-            />
-            <p v-if="errors.address" class="error">{{ errors.address }}</p>
-          </div>
-
-          <div class="form-group">
-            <label for="phone">Phone</label>
-            <input
-              id="phone"
-              v-model="form.phone"
-              type="text"
-              placeholder="Enter company phone number"
-            />
-            <p v-if="errors.phone" class="error">{{ errors.phone }}</p>
-          </div>
-
-          <div class="form-group">
-            <label for="password">Password</label>
-            <input
-              id="password"
-              v-model="form.password"
-              type="password"
-              placeholder="Enter your password"
-            />
-            <p v-if="errors.password" class="error">{{ errors.password }}</p>
-          </div>
-        </template>
-
-        <button type="submit">Register</button>
-      </form>
-
-      <p class="login-link">
-        Already have an account?
-        <router-link to="/login">Login</router-link>
-      </p>
     </div>
   </div>
 </template>
 
-
 <script setup>
-import { reactive, ref, onMounted, onBeforeUnmount } from 'vue'
-
-const container = ref(null)
-
-//  Funkcia na dynamické prispôsobenie výšky kontajnera
-function adjustContainerHeight() {
-  const header = document.querySelector('header')
-  const footer = document.querySelector('footer')
-
-  const headerHeight = header ? header.offsetHeight : 0
-  const footerHeight = footer ? footer.offsetHeight : 0
-  const windowHeight = window.innerHeight
-
-  // Výška, ktorú má mať register-container
-  const targetHeight = windowHeight - headerHeight - footerHeight
-
-  if (container.value) {
-    container.value.style.minHeight = `${targetHeight}px`
-    container.value.style.height = `${targetHeight}px`
-    container.value.style.display = 'flex'
-    container.value.style.alignItems = 'center'
-    container.value.style.justifyContent = 'center'
-  }
-}
-
-onMounted(() => {
-  adjustContainerHeight()
-  window.addEventListener('resize', adjustContainerHeight)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', adjustContainerHeight)
-})
+import { reactive, ref } from 'vue'
 
 const isCompany = ref(false)
 
@@ -155,13 +129,11 @@ const form = reactive({
 const errors = reactive({})
 
 function handleRegister() {
-  // Clear old errors
   Object.keys(errors).forEach((k) => (errors[k] = ''))
   let isValid = true
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
   if (!isCompany.value) {
-    // --- PERSON VALIDATION ---
     if (!form.username.trim()) {
       errors.username = 'Name is required.'
       isValid = false
@@ -178,7 +150,6 @@ function handleRegister() {
       isValid = false
     }
   } else {
-    // --- COMPANY VALIDATION ---
     if (!form.companyName.trim()) {
       errors.companyName = 'Company name is required.'
       isValid = false
@@ -206,44 +177,75 @@ function handleRegister() {
 
   if (!isValid) return
 
-  console.log('Registering:', isCompany.value ? 'Company' : 'Person', form)
   alert(
     isCompany.value
       ? `Company "${form.companyName}" registered successfully!`
       : `Welcome, ${form.username}! Your account has been created.`,
   )
 
-  // Reset form
   Object.keys(form).forEach((k) => (form[k] = ''))
 }
 </script>
 
 <style scoped>
+html,
+body,
+.register-page {
+  height: 100%;
+  margin: 0;
+  background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
+  font-family: 'Inter', sans-serif;
+}
+
+/*  Center the card */
 .register-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
-  font-family: 'Inter', sans-serif;
-  overflow: hidden;
+  min-height: calc(100vh - 76px); /* subtract navbar height */
 }
 
+/*  Card */
 .register-card {
   width: 100%;
-  max-width: 430px;
+  max-width: 420px;
   background: #fff;
   padding: 36px 28px;
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
   animation: fadeIn 0.6s ease;
 }
 
-h1 {
-  text-align: center;
-  margin-bottom: 18px;
-  color: #2c3e50;
+/*  Responsive */
+@media (max-width: 480px) {
+  .register-card {
+    padding: 24px 20px;
+    max-width: 90%;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  input {
+    font-size: 13px;
+  }
+
+  button[type='submit'] {
+    font-size: 14px;
+    padding: 10px;
+  }
 }
 
+/* Titles */
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #2c3e50;
+  font-size: 22px;
+}
+
+/* Toggle buttons */
 .toggle-buttons {
   display: flex;
   justify-content: center;
@@ -272,6 +274,7 @@ h1 {
   color: white;
 }
 
+/* Form */
 .form-group {
   margin-bottom: 14px;
   display: flex;
@@ -298,6 +301,7 @@ input:focus {
   box-shadow: 0 0 0 2px rgba(66, 184, 131, 0.25);
 }
 
+/* Button */
 button[type='submit'] {
   width: 100%;
   background: #42b883;
@@ -316,12 +320,14 @@ button[type='submit']:hover {
   background: #369f73;
 }
 
+/* Errors */
 .error {
   color: #e74c3c;
   font-size: 12px;
   margin-top: 4px;
 }
 
+/* Login link */
 .login-link {
   text-align: center;
   margin-top: 16px;
@@ -338,6 +344,7 @@ button[type='submit']:hover {
   text-decoration: underline;
 }
 
+/* Fade-in animation */
 @keyframes fadeIn {
   from {
     opacity: 0;

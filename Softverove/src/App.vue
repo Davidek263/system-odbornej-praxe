@@ -14,15 +14,11 @@
 
 <script setup>
 import HeaderComponent from './components/Header.vue'
-import FooterComponent from './components/Footer.vue'
 </script>
 
 <style>
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background: #f5f5f5;
 }
-
-
 </style>
