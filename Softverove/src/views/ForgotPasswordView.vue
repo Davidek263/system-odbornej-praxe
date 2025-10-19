@@ -1,24 +1,26 @@
 <template>
-  <div class="forgot-container">
-    <div class="forgot-card">
-      <h1>Forgot Password</h1>
-      <p class="info-text">
-        Enter your email address and we’ll send you a link to reset your password.
-      </p>
+  <div class="forgot-page">
+    <div class="forgot-container">
+      <div class="forgot-card">
+        <h1>Forgot Password</h1>
+        <p class="info-text">
+          Enter your email address and we’ll send you a link to reset your password.
+        </p>
 
-      <form @submit.prevent="handleReset" class="forgot-form">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input id="email" v-model="email" type="email" placeholder="Enter your email" />
-          <p v-if="error" class="error">{{ error }}</p>
-        </div>
+        <form @submit.prevent="handleReset" class="forgot-form">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input id="email" v-model="email" type="email" placeholder="Enter your email" />
+            <p v-if="error" class="error">{{ error }}</p>
+          </div>
 
-        <button type="submit">Send Reset Link</button>
-      </form>
+          <button type="submit">Send Reset Link</button>
+        </form>
 
-      <p class="login-link">
-        <router-link to="/login">Back to Login</router-link>
-      </p>
+        <p class="login-link">
+          <router-link to="/login">Back to Login</router-link>
+        </p>
+      </div>
     </div>
   </div>
 </template>
@@ -43,40 +45,42 @@ function handleReset() {
     return
   }
 
-  // ✅ Simulate success
+  //  Simulate sending email
   alert(`A password reset link has been sent to ${email.value}.`)
 
-  // 🕒 Redirect back to login after short delay
+  //  Redirect to login page after short delay
   setTimeout(() => {
     router.push('/login')
-  }, 500)
+  }, 700)
 
   email.value = ''
 }
 </script>
 
 <style scoped>
-html,
-body,
-#app,
-.forgot-container {
-  height: 100%;
+/* Background covers full page */
+body {
   margin: 0;
-  padding: 0;
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
+/*  Center container (under navbar if fixed) */
 .forgot-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
-  font-family: 'Inter', sans-serif;
+  min-height: calc(100vh - 120px); /* adjust to match navbar height */
+  padding: 20px;
 }
 
+/*  Card */
 .forgot-card {
   width: 100%;
-  max-width: 380px;
+  max-width: 400px;
   background: #fff;
   padding: 36px 28px;
   border-radius: 14px;
@@ -84,19 +88,23 @@ body,
   animation: fadeIn 0.6s ease;
 }
 
+/*  Headings */
 h1 {
   text-align: center;
+  margin-bottom: 15px;
   color: #2c3e50;
-  margin-bottom: 12px;
+  font-size: 22px;
 }
 
 .info-text {
   text-align: center;
   font-size: 14px;
   color: #555;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
+  line-height: 1.5;
 }
 
+/*  Form */
 .form-group {
   margin-bottom: 18px;
   display: flex;
@@ -104,7 +112,7 @@ h1 {
 }
 
 label {
-  margin-bottom: 6px;
+  margin-bottom: 5px;
   font-weight: 600;
   color: #333;
 }
@@ -123,6 +131,7 @@ input:focus {
   box-shadow: 0 0 0 2px rgba(66, 184, 131, 0.25);
 }
 
+/*  Button */
 button {
   width: 100%;
   background: #42b883;
@@ -140,12 +149,14 @@ button:hover {
   background: #369f73;
 }
 
+/*  Error */
 .error {
   color: #e74c3c;
   font-size: 13px;
   margin-top: 3px;
 }
 
+/*  Back to login */
 .login-link {
   text-align: center;
   margin-top: 20px;
@@ -162,6 +173,28 @@ button:hover {
   text-decoration: underline;
 }
 
+/*  Responsive tweaks */
+@media (max-width: 480px) {
+  .forgot-card {
+    max-width: 90%;
+    padding: 26px 20px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  button {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .info-text {
+    font-size: 13px;
+  }
+}
+
+/*  Fade in animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
