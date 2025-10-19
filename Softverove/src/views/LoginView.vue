@@ -1,5 +1,5 @@
 <template>
-  <div class="login-container" ref="container">
+  <div class="login-container">
     <div class="login-card">
       <h1>Welcome Back</h1>
 
@@ -33,39 +33,8 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, onBeforeUnmount } from 'vue'
+import { reactive } from 'vue'
 
-const container = ref(null)
-
-//  Funkcia na dynamické prispôsobenie výšky kontajnera
-function adjustContainerHeight() {
-  const header = document.querySelector('header')
-  const footer = document.querySelector('footer')
-
-  const headerHeight = header ? header.offsetHeight : 0
-  const footerHeight = footer ? footer.offsetHeight : 0
-  const windowHeight = window.innerHeight
-
-  // Výška, ktorú má mať register-container
-  const targetHeight = windowHeight - headerHeight - footerHeight
-
-  if (container.value) {
-    container.value.style.minHeight = `${targetHeight}px`
-    container.value.style.height = `${targetHeight}px`
-    container.value.style.display = 'flex'
-    container.value.style.alignItems = 'center'
-    container.value.style.justifyContent = 'center'
-  }
-}
-
-onMounted(() => {
-  adjustContainerHeight()
-  window.addEventListener('resize', adjustContainerHeight)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', adjustContainerHeight)
-})
 const form = reactive({
   email: '',
   password: '',

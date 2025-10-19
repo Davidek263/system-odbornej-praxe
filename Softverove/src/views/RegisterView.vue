@@ -1,5 +1,5 @@
 <template>
-  <div ref="container" class="register-container" >
+  <div class="register-container">
     <div class="register-card">
       <h1>{{ isCompany ? 'Register Company' : 'Register Account' }}</h1>
 
@@ -105,41 +105,8 @@
   </div>
 </template>
 
-
 <script setup>
-import { reactive, ref, onMounted, onBeforeUnmount } from 'vue'
-
-const container = ref(null)
-
-//  Funkcia na dynamické prispôsobenie výšky kontajnera
-function adjustContainerHeight() {
-  const header = document.querySelector('header')
-  const footer = document.querySelector('footer')
-
-  const headerHeight = header ? header.offsetHeight : 0
-  const footerHeight = footer ? footer.offsetHeight : 0
-  const windowHeight = window.innerHeight
-
-  // Výška, ktorú má mať register-container
-  const targetHeight = windowHeight - headerHeight - footerHeight
-
-  if (container.value) {
-    container.value.style.minHeight = `${targetHeight}px`
-    container.value.style.height = `${targetHeight}px`
-    container.value.style.display = 'flex'
-    container.value.style.alignItems = 'center'
-    container.value.style.justifyContent = 'center'
-  }
-}
-
-onMounted(() => {
-  adjustContainerHeight()
-  window.addEventListener('resize', adjustContainerHeight)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', adjustContainerHeight)
-})
+import { reactive, ref } from 'vue'
 
 const isCompany = ref(false)
 
@@ -223,6 +190,7 @@ function handleRegister() {
   display: flex;
   justify-content: center;
   align-items: center;
+  height: 100vh;
   background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
   font-family: 'Inter', sans-serif;
   overflow: hidden;
