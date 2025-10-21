@@ -114,6 +114,7 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
+import api from '../api.js'
 
 const isCompany = ref(false)
 
@@ -129,10 +130,12 @@ const form = reactive({
 const errors = reactive({})
 
 function handleRegister() {
+  // reset errors
   Object.keys(errors).forEach((k) => (errors[k] = ''))
   let isValid = true
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+  // validation
   if (!isCompany.value) {
     if (!form.username.trim()) {
       errors.username = 'Name is required.'
@@ -177,15 +180,40 @@ function handleRegister() {
 
   if (!isValid) return
 
-  alert(
-    isCompany.value
-      ? `Company "${form.companyName}" registered successfully!`
-      : `Welcome, ${form.username}! Your account has been created.`,
-  )
+  // call Laravel API
+  const endpoint = isCompany.value ? '/register-company' : '/register-person'
 
-  Object.keys(form).forEach((k) => (form[k] = ''))
+  api.post(endpoint, {
+    first_name: form.username,
+    email: form.email,
+    password: form.password,
+    password_confirmation: form.password, // Laravel requires confirmation
+    companyName: form.companyName,
+    address: form.address,
+    phone: form.phone,
+  })
+    .then(res => {
+      const token = res.data.token
+      localStorage.setItem('token', token)
+      alert(
+        isCompany.value
+          ? `Company "${form.companyName}" registered successfully!`
+          : `Welcome, ${form.username}! Your account has been created.`
+      )
+      // reset form
+      Object.keys(form).forEach((k) => (form[k] = ''))
+    })
+    .catch(err => {
+      if (err.response && err.response.data) {
+        Object.assign(errors, err.response.data) // show backend validation errors
+      } else {
+        console.error(err)
+        alert('Registration failed. Try again.')
+      }
+    })
 }
 </script>
+
 
 <style scoped>
 html,

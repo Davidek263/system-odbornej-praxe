@@ -36,6 +36,7 @@
 
 <script setup>
 import { reactive } from 'vue'
+import axios from 'axios'
 
 const form = reactive({
   email: '',
@@ -45,6 +46,11 @@ const form = reactive({
 const errors = reactive({
   email: '',
   password: '',
+})
+
+// Axios instance
+const api = axios.create({
+  baseURL: 'http://localhost:8000/api', // your Laravel backend
 })
 
 function handleLogin() {
@@ -69,12 +75,29 @@ function handleLogin() {
 
   if (!isValid) return
 
-  alert(`Welcome back, ${form.email}!`)
-  console.log('User logged in:', form)
-  form.email = ''
-  form.password = ''
+  // Call Laravel API
+  api.post('/login-person', {
+    email: form.email,
+    password: form.password
+  })
+    .then(res => {
+      const token = res.data.token
+      localStorage.setItem('token', token) // save token
+      alert(`Welcome back, ${form.email}!`)
+      form.email = ''
+      form.password = ''
+    })
+    .catch(err => {
+      if (err.response && err.response.data.message) {
+        alert(err.response.data.message) // e.g., invalid credentials
+      } else {
+        console.error(err)
+        alert('Login failed. Try again.')
+      }
+    })
 }
 </script>
+
 
 <style scoped>
 /*  Full page background */
