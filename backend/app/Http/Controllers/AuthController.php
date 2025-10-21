@@ -3,50 +3,21 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Person;
+use App\Models\User;
 use App\Models\Company;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
-    // ==========================
-    // LOGIN
-    // ==========================
-    public function loginPerson(Request $request)
-    {
-        $person = Person::where('email', $request->email)->first();
-
-        if (!$person || !Hash::check($request->password, $person->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
-        }
-
-        $token = $person->createToken('vue-spa-token')->plainTextToken;
-
-        return response()->json(['token' => $token]);
-    }
-
-    public function loginCompany(Request $request)
-    {
-        $company = Company::where('email', $request->email)->first();
-
-        if (!$company || !Hash::check($request->password, $company->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
-        }
-
-        $token = $company->createToken('vue-spa-token')->plainTextToken;
-
-        return response()->json(['token' => $token]);
-    }
-
-    // ==========================
-    // REGISTER
-    // ==========================
-    public function registerPerson(Request $request)
+    // -----------------------------
+    // REGISTER USER
+    // -----------------------------
+    public function registerUser(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string|max:255',
-            'email' => 'required|email|unique:people,email',
+            'first_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
         ]);
 
@@ -54,20 +25,23 @@ class AuthController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        $person = Person::create([
-            'username' => $request->username,
+        $user = User::create([
+            'first_name' => $request->first_name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
 
-        $token = $person->createToken('vue-spa-token')->plainTextToken;
+        $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
-            'person' => $person,
+            'user' => $user,
             'token' => $token
         ], 201);
     }
 
+    // -----------------------------
+    // REGISTER COMPANY
+    // -----------------------------
     public function registerCompany(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -90,7 +64,7 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $token = $company->createToken('vue-spa-token')->plainTextToken;
+        $token = $company->createToken('api-token')->plainTextToken;
 
         return response()->json([
             'company' => $company,
@@ -98,12 +72,63 @@ class AuthController extends Controller
         ], 201);
     }
 
-    // ==========================
+    // -----------------------------
+    // LOGIN USER
+    // -----------------------------
+    public function loginUser(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string'
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+
+        $token = $user->createToken('api-token')->plainTextToken;
+
+        return response()->json([
+            'user' => $user,
+            'token' => $token
+        ]);
+    }
+
+    // -----------------------------
+    // LOGIN COMPANY
+    // -----------------------------
+    public function loginCompany(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string'
+        ]);
+
+        $company = Company::where('email', $request->email)->first();
+
+        if (!$company || !Hash::check($request->password, $company->password)) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+
+        $token = $company->createToken('api-token')->plainTextToken;
+
+        return response()->json([
+            'company' => $company,
+            'token' => $token
+        ]);
+    }
+
+    // -----------------------------
     // LOGOUT
-    // ==========================
+    // -----------------------------
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+        if ($user) {
+            $user->currentAccessToken()->delete();
+        }
 
         return response()->json(['message' => 'Logged out']);
     }

@@ -6,11 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
-class Company extends Authenticatable
+class User extends Authenticatable
 {
     use HasApiTokens, HasFactory;
 
-    protected $table = 'companies'; // match your DB
-    protected $fillable = ['companyName', 'email', 'address', 'phone', 'password'];
+    public $timestamps = false;
+    protected $table = 'users';
+    protected $fillable = ['first_name', 'email', 'password'];
     protected $hidden = ['password'];
 }

@@ -1,42 +1,24 @@
-# Laravel & PHP
-/vendor
-/node_modules
-/.idea
-/.vscode
-/.env
-/.phpunit.result.cache
+*.log
+.DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
 .phpunit.result.cache
-Homestead.yaml
-Homestead.json
-/.env.testing
-
-# Laravel storage
-/storage/*.key
-/storage/debugbar
-/storage/framework/cache/data
-/storage/framework/sessions
-/storage/framework/testing
-/storage/framework/views
-/storage/logs
-
-# Composer
-composer.lock
-
-# NPM & frontend build
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
 /public/hot
 /public/storage
-/public/js
-/public/css
-npm-debug.log
-yarn-error.log
-
-# OS & Editor files
-.DS_Store
+/storage/*.key
+/storage/pail
+/vendor
+Homestead.json
+Homestead.yaml
 Thumbs.db
-*.log
-*.bak
-*.swp
-*.swo
-
-# Vite / Mix build (if using Vue SPA separately)
-public/build

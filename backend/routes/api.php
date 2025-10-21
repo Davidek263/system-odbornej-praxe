@@ -1,21 +1,17 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Models\Person;
-use App\Models\Company;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
-Route::post('/register-person', [AuthController::class, 'registerPerson']);
+Route::post('/register-person', [AuthController::class, 'registerUser']);
 Route::post('/register-company', [AuthController::class, 'registerCompany']);
-Route::post('/login-person', [AuthController::class, 'loginPerson']);
+Route::post('/login-person', [AuthController::class, 'loginUser']);
 Route::post('/login-company', [AuthController::class, 'loginCompany']);
 
-// Protected routes (token required)
+// Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
-
-    // Example of protected endpoints
-    Route::get('/persons', function() { return Person::all(); });
-    Route::get('/companies', function() { return Company::all(); });
+    Route::get('/persons', fn() => \App\Models\Person::all());
+    Route::get('/companies', fn() => \App\Models\Company::all());
 });
