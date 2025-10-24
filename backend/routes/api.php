@@ -12,6 +12,6 @@ Route::post('/login-company', [AuthController::class, 'loginCompany']);
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/persons', fn() => \App\Models\Person::all());
+    Route::get('/users', fn() => \App\Models\User::all());
     Route::get('/companies', fn() => \App\Models\Company::all());
 });

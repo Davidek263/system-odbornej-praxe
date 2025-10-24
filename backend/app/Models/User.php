@@ -12,6 +12,9 @@ class User extends Authenticatable
 
     public $timestamps = false;
     protected $table = 'users';
-    protected $fillable = ['first_name', 'email', 'password'];
+
+    // ➕ pridávame last_name, aby ho Laravel mohol uložiť
+    protected $fillable = ['first_name', 'last_name', 'email', 'password'];
+
     protected $hidden = ['password'];
 }
