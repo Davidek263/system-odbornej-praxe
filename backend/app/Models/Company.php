@@ -10,7 +10,8 @@ class Company extends Authenticatable
 {
     use HasApiTokens, HasFactory;
 
-    protected $table = 'companies'; // match your DB
-    protected $fillable = ['companyName', 'email', 'address', 'phone', 'password'];
-    protected $hidden = ['password'];
+    public $timestamps = false;
+    protected $table = 'Company';
+    protected $fillable = ['CompanyName', 'CompanyEmail', 'CompanyAddress', 'phone', 'password'];
+    protected $hidden = ['Password'];
 }
