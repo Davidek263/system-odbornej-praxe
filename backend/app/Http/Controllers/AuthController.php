@@ -11,24 +11,28 @@ use Illuminate\Support\Facades\Validator;
 class AuthController extends Controller
 {
     // -----------------------------
-    // REGISTER USER
+    // REGISTER PERSON (USER)
     // -----------------------------
     public function registerUser(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6|confirmed',
+            'last_name'  => 'required|string|max:255',
+            'email'      => 'required|email|unique:users,email',
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
+        $password = Str::random(12);
+        Mail::to($request->email)->send(new MailSender($password));
+
         $user = User::create([
             'first_name' => $request->first_name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'last_name'  => $request->last_name,
+            'email'      => $request->email,
+            'password'   => Hash::make($password),
         ]);
 
         $token = $user->createToken('api-token')->plainTextToken;
@@ -46,10 +50,10 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'companyName' => 'required|string|max:255',
-            'email' => 'required|email|unique:companies,email',
-            'address' => 'required|string|max:255',
-            'phone' => 'required|string|max:255',
-            'password' => 'required|string|min:6|confirmed',
+            'email'       => 'required|email|unique:companies,email',
+            'address'     => 'required|string|max:255',
+            'phone'       => 'required|string|max:255',
+            'password'    => 'required|string|min:6|confirmed',
         ]);
 
         if ($validator->fails()) {
@@ -58,10 +62,10 @@ class AuthController extends Controller
 
         $company = Company::create([
             'companyName' => $request->companyName,
-            'email' => $request->email,
-            'address' => $request->address,
-            'phone' => $request->phone,
-            'password' => Hash::make($request->password),
+            'email'       => $request->email,
+            'address'     => $request->address,
+            'phone'       => $request->phone,
+            'password'    => Hash::make($request->password),
         ]);
 
         $token = $company->createToken('api-token')->plainTextToken;

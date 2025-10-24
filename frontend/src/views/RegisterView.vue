@@ -14,14 +14,25 @@
           <!-- PERSON FORM -->
           <template v-if="!isCompany">
             <div class="form-group">
-              <label for="username">Name</label>
+              <label for="first_name">First Name</label>
               <input
-                id="username"
-                v-model="form.username"
+                id="first_name"
+                v-model="form.first_name"
                 type="text"
-                placeholder="Enter your name"
+                placeholder="Enter your first name"
               />
-              <p v-if="errors.username" class="error">{{ errors.username }}</p>
+              <p v-if="errors.first_name" class="error">{{ errors.first_name }}</p>
+            </div>
+
+            <div class="form-group">
+              <label for="last_name">Last Name</label>
+              <input
+                id="last_name"
+                v-model="form.last_name"
+                type="text"
+                placeholder="Enter your last name"
+              />
+              <p v-if="errors.last_name" class="error">{{ errors.last_name }}</p>
             </div>
 
             <div class="form-group">
@@ -119,7 +130,8 @@ import api from '../api.js'
 const isCompany = ref(false)
 
 const form = reactive({
-  username: '',
+  first_name: '',
+  last_name: '',
   email: '',
   password: '',
   companyName: '',
@@ -135,10 +147,14 @@ function handleRegister() {
   let isValid = true
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-  // validation
   if (!isCompany.value) {
-    if (!form.username.trim()) {
-      errors.username = 'Name is required.'
+    // Validation for person
+    if (!form.first_name.trim()) {
+      errors.first_name = 'First name is required.'
+      isValid = false
+    }
+    if (!form.last_name.trim()) {
+      errors.last_name = 'Last name is required.'
       isValid = false
     }
     if (!form.email.trim()) {
@@ -153,6 +169,7 @@ function handleRegister() {
       isValid = false
     }
   } else {
+    // Validation for company
     if (!form.companyName.trim()) {
       errors.companyName = 'Company name is required.'
       isValid = false
@@ -184,10 +201,11 @@ function handleRegister() {
   const endpoint = isCompany.value ? '/register-company' : '/register-person'
 
   api.post(endpoint, {
-    first_name: form.username,
+    first_name: form.first_name,
+    last_name: form.last_name,
     email: form.email,
     password: form.password,
-    password_confirmation: form.password, // Laravel requires confirmation
+    password_confirmation: form.password,
     companyName: form.companyName,
     address: form.address,
     phone: form.phone,
@@ -198,14 +216,14 @@ function handleRegister() {
       alert(
         isCompany.value
           ? `Company "${form.companyName}" registered successfully!`
-          : `Welcome, ${form.username}! Your account has been created.`
+          : `Welcome, ${form.first_name}! Your account has been created.`
       )
       // reset form
       Object.keys(form).forEach((k) => (form[k] = ''))
     })
     .catch(err => {
       if (err.response && err.response.data) {
-        Object.assign(errors, err.response.data) // show backend validation errors
+        Object.assign(errors, err.response.data)
       } else {
         console.error(err)
         alert('Registration failed. Try again.')
@@ -213,7 +231,6 @@ function handleRegister() {
     })
 }
 </script>
-
 
 <style scoped>
 html,
@@ -225,15 +242,15 @@ body,
   font-family: 'Inter', sans-serif;
 }
 
-/*  Center the card */
+/* Center card */
 .register-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 76px); /* subtract navbar height */
+  min-height: calc(100vh - 76px);
 }
 
-/*  Card */
+/* Card */
 .register-card {
   width: 100%;
   max-width: 420px;
@@ -244,21 +261,18 @@ body,
   animation: fadeIn 0.6s ease;
 }
 
-/*  Responsive */
+/* Responsive */
 @media (max-width: 480px) {
   .register-card {
     padding: 24px 20px;
     max-width: 90%;
   }
-
   h1 {
     font-size: 20px;
   }
-
   input {
     font-size: 13px;
   }
-
   button[type='submit'] {
     font-size: 14px;
     padding: 10px;
