@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -28,8 +29,8 @@ class AuthController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
+        // Náhodné dočasné heslo (nebude sa posielať používateľovi)
         $password = Str::random(12);
-        Mail::to($request->email)->send(new MailSender($password));
 
         $user = User::create([
             'first_name' => $request->first_name,
@@ -38,12 +39,48 @@ class AuthController extends Controller
             'password'   => Hash::make($password),
         ]);
 
-        $token = $user->createToken('api-token')->plainTextToken;
+        // Token pre nastavenie hesla
+        $token = Str::random(64);
+
+        DB::table('password_resets')->insert([
+            'email' => $user->email,
+            'token' => $token,
+            'created_at' => now()
+        ]);
+
+        // Pošli e-mail s linkom
+        Mail::to($user->email)->send(new MailSender($user, $token));
 
         return response()->json([
-            'user' => $user,
-            'token' => $token
+            'message' => 'Registration successful. Please check your email to set your password.'
         ], 201);
+    }
+
+    // -----------------------------
+    // SET PASSWORD (from email link)
+    // -----------------------------
+    public function setPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+            'token' => 'required',
+            'password' => 'required|min:8|confirmed',
+        ]);
+
+        $reset = DB::table('password_resets')->where('email', $request->email)->first();
+
+       if (!$reset || $request->token !== $reset->token) {
+         return response()->json(['message' => 'Invalid or expired token'], 400);
+        }
+
+
+        User::where('email', $request->email)->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        DB::table('password_resets')->where('email', $request->email)->delete();
+
+        return response()->json(['message' => 'Password set successfully']);
     }
 
     // -----------------------------

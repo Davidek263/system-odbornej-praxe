@@ -8,6 +8,7 @@ Route::post('/register-person', [AuthController::class, 'registerUser']);
 Route::post('/register-company', [AuthController::class, 'registerCompany']);
 Route::post('/login-person', [AuthController::class, 'loginUser']);
 Route::post('/login-company', [AuthController::class, 'loginCompany']);
+Route::post('/set-password', [AuthController::class, 'setPassword']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {

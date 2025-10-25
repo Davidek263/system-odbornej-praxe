@@ -159,6 +159,20 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
     ],
+   
+     /*
+    |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | This value is used when generating links in emails (e.g. password reset).
+    | It should point to your Vue or other frontend URL.
+    |
+    */
+
+    'frontend_url' => env('APP_FRONTEND_URL', 'http://localhost:5173'),
+
 
 
 ];
+
