@@ -40,17 +40,6 @@
               <input id="email" v-model="form.email" type="email" placeholder="Enter your email" />
               <p v-if="errors.email" class="error">{{ errors.email }}</p>
             </div>
-
-            <div class="form-group">
-              <label for="password">Password</label>
-              <input
-                id="password"
-                v-model="form.password"
-                type="password"
-                placeholder="Enter your password"
-              />
-              <p v-if="errors.password" class="error">{{ errors.password }}</p>
-            </div>
           </template>
 
           <!-- COMPANY FORM -->
@@ -164,10 +153,6 @@ function handleRegister() {
       errors.email = 'Invalid email format.'
       isValid = false
     }
-    if (form.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters.'
-      isValid = false
-    }
   } else {
     // Validation for company
     if (!form.companyName.trim()) {
@@ -197,31 +182,36 @@ function handleRegister() {
 
   if (!isValid) return
 
-  // call Laravel API
   const endpoint = isCompany.value ? '/register-company' : '/register-person'
 
-  api.post(endpoint, {
-    first_name: form.first_name,
-    last_name: form.last_name,
-    email: form.email,
-    password: form.password,
-    password_confirmation: form.password,
-    companyName: form.companyName,
-    address: form.address,
-    phone: form.phone,
-  })
-    .then(res => {
+  const payload = isCompany.value
+    ? {
+        companyName: form.companyName,
+        email: form.email,
+        address: form.address,
+        phone: form.phone,
+        password: form.password,
+        password_confirmation: form.password,
+      }
+    : {
+        first_name: form.first_name,
+        last_name: form.last_name,
+        email: form.email,
+      }
+
+  api
+    .post(endpoint, payload)
+    .then((res) => {
       const token = res.data.token
       localStorage.setItem('token', token)
       alert(
         isCompany.value
           ? `Company "${form.companyName}" registered successfully!`
-          : `Welcome, ${form.first_name}! Your account has been created.`
+          : `Registration successful! Check your email to set your password.`
       )
-      // reset form
       Object.keys(form).forEach((k) => (form[k] = ''))
     })
-    .catch(err => {
+    .catch((err) => {
       if (err.response && err.response.data) {
         Object.assign(errors, err.response.data)
       } else {
