@@ -10,8 +10,10 @@ return new class extends Migration
     {
         Schema::create('address', function (Blueprint $table) {
             $table->id();
+            $table->string('street', 45)->nullable();
+            $table->string('street_number', 45)->nullable();
             $table->string('city', 45)->nullable();
-            $table->string('region', 45)->nullable();
+            $table->string('postal_code', 45)->nullable();
             $table->timestamps();
         });
     }

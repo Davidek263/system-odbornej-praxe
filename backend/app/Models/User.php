@@ -10,11 +10,8 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory;
 
-    public $timestamps = false;
     protected $table = 'users';
-
     // ➕ pridávame last_name, aby ho Laravel mohol uložiť
     protected $fillable = ['first_name', 'last_name', 'email', 'password'];
-
     protected $hidden = ['password'];
 }
