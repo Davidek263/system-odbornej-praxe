@@ -4,7 +4,7 @@
       <!--  Logo + Title -->
       <div class="logo-section">
         
-        <h1 class="title">Evidencia odbornej praxe</h1>
+        <RouterLink to="/home" class="nav-item"><h1>Evidencia odbornej praxe</h1></RouterLink> 
       </div>
 
       <!--  Hamburger button (mobile only) -->
