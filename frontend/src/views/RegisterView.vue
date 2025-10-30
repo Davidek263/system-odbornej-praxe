@@ -1,43 +1,52 @@
 <template>
   <div class="register-page">
+    <PageAlert 
+      v-if="registerError" 
+      :type="alertType" 
+      :message="registerError" 
+      @update:show="registerError = ''" 
+      dismissible 
+    />
     <div class="register-container">
       <div class="register-card">
-        <h1>{{ isCompany ? 'Register Company' : 'Register Account' }}</h1>
+        <h1>{{ isCompany ? 'Registrácia Firmy' : 'Registrácia Študenta' }}</h1>
+        
+        <!-- <Spinner v-if="loading" overlay /> -->
 
         <!-- Toggle switch -->
         <div class="toggle-buttons">
-          <button :class="{ active: !isCompany }" @click="isCompany = false">Person</button>
-          <button :class="{ active: isCompany }" @click="isCompany = true">Company</button>
+          <button :class="{ active: !isCompany }" @click="isCompany = false">Študent</button>
+          <button :class="{ active: isCompany }" @click="isCompany = true">Firma</button>
         </div>
 
         <form @submit.prevent="handleRegister" class="register-form">
           <!-- PERSON FORM -->
           <template v-if="!isCompany">
             <div class="form-group">
-              <label for="first_name">First Name</label>
+              <label for="first_name">Meno</label>
               <input
                 id="first_name"
                 v-model="form.first_name"
                 type="text"
-                placeholder="Enter your first name"
+                placeholder="Vlož svoje meno"
               />
               <p v-if="errors.first_name" class="error">{{ errors.first_name }}</p>
             </div>
 
             <div class="form-group">
-              <label for="last_name">Last Name</label>
+              <label for="last_name">Priezvisko</label>
               <input
                 id="last_name"
                 v-model="form.last_name"
                 type="text"
-                placeholder="Enter your last name"
+                placeholder="Vlož svoje priezvisko"
               />
               <p v-if="errors.last_name" class="error">{{ errors.last_name }}</p>
             </div>
 
             <div class="form-group">
               <label for="email">Email</label>
-              <input id="email" v-model="form.email" type="email" placeholder="Enter your email" />
+              <input id="email" v-model="form.email" type="email" placeholder="Vlož svoj email" />
               <p v-if="errors.email" class="error">{{ errors.email }}</p>
             </div>
           </template>
@@ -45,67 +54,67 @@
           <!-- COMPANY FORM -->
           <template v-else>
             <div class="form-group">
-              <label for="companyName">Company Name</label>
+              <label for="companyName">Názov firmy</label>
               <input
                 id="companyName"
                 v-model="form.companyName"
                 type="text"
-                placeholder="Enter your company name"
+                placeholder="Vlož názov firmy"
               />
               <p v-if="errors.companyName" class="error">{{ errors.companyName }}</p>
             </div>
 
             <div class="form-group">
-              <label for="email">Company Email</label>
+              <label for="email">Firemný email</label>
               <input
                 id="email"
                 v-model="form.email"
                 type="email"
-                placeholder="Enter company email"
+                placeholder="Vlož firemný email pre kontaktnú osobu"
               />
               <p v-if="errors.email" class="error">{{ errors.email }}</p>
             </div>
 
             <div class="form-group">
-              <label for="address">Address</label>
+              <label for="address">Adresa</label>
               <input
                 id="address"
                 v-model="form.address"
                 type="text"
-                placeholder="Enter company address"
+                placeholder="Vlož adresu firmy"
               />
               <p v-if="errors.address" class="error">{{ errors.address }}</p>
             </div>
 
             <div class="form-group">
-              <label for="phone">Phone</label>
+              <label for="phone">Telefón</label>
               <input
                 id="phone"
                 v-model="form.phone"
                 type="text"
-                placeholder="Enter company phone number"
+                placeholder="Vlož telefónne číslo"
               />
               <p v-if="errors.phone" class="error">{{ errors.phone }}</p>
             </div>
 
             <div class="form-group">
-              <label for="password">Password</label>
+              <label for="password">Heslo</label>
               <input
                 id="password"
                 v-model="form.password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Vlož heslo"
               />
               <p v-if="errors.password" class="error">{{ errors.password }}</p>
             </div>
           </template>
 
-          <button type="submit">Register</button>
+          <button type="submit">Registrácia</button>
         </form>
 
         <p class="login-link">
-          Already have an account?
-          <router-link to="/login">Login</router-link>
+          Už máš účet?
+          <router-link to="/login">Prihlásenie</router-link>
         </p>
       </div>
     </div>
@@ -115,8 +124,13 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import api from '../api.js'
+import PageAlert from '@/components/PageAlert.vue'
+import Spinner from '@/components/Spinner.vue'
 
 const isCompany = ref(false)
+const loading = ref(false)
+const registerError = ref('')
+const alertType = ref('error')
 
 const form = reactive({
   first_name: '',
@@ -133,6 +147,8 @@ const errors = reactive({})
 function handleRegister() {
   // reset errors
   Object.keys(errors).forEach((k) => (errors[k] = ''))
+  registerError.value = ''
+  
   let isValid = true
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -180,7 +196,11 @@ function handleRegister() {
     }
   }
 
-  if (!isValid) return
+  if (!isValid) {
+    registerError.value = 'Please fix the errors below.'
+    alertType.value = 'validation'
+    return
+  }
 
   const endpoint = isCompany.value ? '/register-company' : '/register-person'
 
@@ -199,25 +219,51 @@ function handleRegister() {
         email: form.email,
       }
 
+  loading.value = true
+
   api
     .post(endpoint, payload)
     .then((res) => {
       const token = res.data.token
       localStorage.setItem('token', token)
-      alert(
-        isCompany.value
-          ? `Company "${form.companyName}" registered successfully!`
-          : `Registration successful! Check your email to set your password.`
-      )
+      
+      alertType.value = 'success'
+      registerError.value = isCompany.value
+        ? `Company "${form.companyName}" registered successfully!`
+        : 'Registration successful! Check your email to set your password.'
+      
       Object.keys(form).forEach((k) => (form[k] = ''))
+      
+      // Optional: Redirect after success
+      // setTimeout(() => {
+      //   router.push('/dashboard')
+      // }, 2000)
     })
     .catch((err) => {
       if (err.response && err.response.data) {
-        Object.assign(errors, err.response.data)
+        // Handle validation errors from backend
+        if (err.response.data.errors) {
+          Object.assign(errors, err.response.data.errors)
+          registerError.value = 'Please fix the errors below.'
+          alertType.value = 'validation'
+        } else if (err.response.data.message) {
+          registerError.value = err.response.data.message
+          alertType.value = 'error'
+        }
+      } else if (err.code === 'ERR_NETWORK') {
+        registerError.value = 'Unable to connect to server. Please check your connection.'
+        alertType.value = 'network'
+      } else if (err.code === 'ECONNABORTED') {
+        registerError.value = 'Request timed out. Please try again.'
+        alertType.value = 'timeout'
       } else {
         console.error(err)
-        alert('Registration failed. Try again.')
+        registerError.value = 'Registration failed. Please try again.'
+        alertType.value = 'error'
       }
+    })
+    .finally(() => {
+      loading.value = false
     })
 }
 </script>

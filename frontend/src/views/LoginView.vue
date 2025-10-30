@@ -1,33 +1,34 @@
 <template>
   <div class="login-page">
+    <PageAlert v-if="loginError" type="error" :message="loginError" @update:show="loginError = ''" dismissible />
     <div class="login-container">
       <div class="login-card">
-        <h1>Welcome Back</h1>
-
+        <h1>Prihlásenie</h1>
+        <Spinner v-if="loading" overlay />
         <form @submit.prevent="handleLogin" class="login-form">
           <div class="form-group">
             <label for="email">Email</label>
-            <input id="email" v-model="form.email" type="email" placeholder="Enter your email" />
+            <input id="email" v-model="form.email" type="email" placeholder="Vlož svoj email" />
             <p v-if="errors.email" class="error">{{ errors.email }}</p>
           </div>
 
           <div class="form-group">
-            <label for="password">Password</label>
+            <label for="password">Heslo</label>
             <input
               id="password"
               v-model="form.password"
               type="password"
-              placeholder="Enter your password"
+              placeholder="Vlož svoje heslo"
             />
             <p v-if="errors.password" class="error">{{ errors.password }}</p>
           </div>
 
-          <button type="submit">Log In</button>
+          <button type="submit">Prihlásiť</button>
         </form>
 
         <div class="bottom-links">
-          <router-link to="/forgot-password" class="forgot">Forgot password?</router-link>
-          <router-link to="/register" class="register">Register</router-link>
+          <router-link to="/forgot-password" class="forgot">Zabudol si heslo?</router-link>
+          <!-- <router-link to="/register" class="register">Register</router-link> --> 
         </div>
       </div>
     </div>
@@ -35,8 +36,9 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import axios from 'axios'
+import PageAlert from '@/components/PageAlert.vue'
 
 const form = reactive({
   email: '',
@@ -48,6 +50,9 @@ const errors = reactive({
   password: '',
 })
 
+const loading = ref(false)
+const loginError = ref('')
+
 // Axios instance
 const api = axios.create({
   baseURL: 'http://localhost:8000/api', // your Laravel backend
@@ -56,6 +61,7 @@ const api = axios.create({
 function handleLogin() {
   errors.email = ''
   errors.password = ''
+  loginError.value = ''
 
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   let isValid = true
@@ -75,6 +81,8 @@ function handleLogin() {
 
   if (!isValid) return
 
+  loading.value = true
+
   // Call Laravel API
   api.post('/login-person', {
     email: form.email,
@@ -83,21 +91,25 @@ function handleLogin() {
     .then(res => {
       const token = res.data.token
       localStorage.setItem('token', token) // save token
-      alert(`Welcome back, ${form.email}!`)
+      // Success - redirect or show success message
       form.email = ''
       form.password = ''
+      // You might want to redirect here instead:
+      // router.push('/dashboard')
     })
     .catch(err => {
       if (err.response && err.response.data.message) {
-        alert(err.response.data.message) // e.g., invalid credentials
+        loginError.value = err.response.data.message
       } else {
         console.error(err)
-        alert('Login failed. Try again.')
+        loginError.value = 'Login failed. Please try again.'
       }
+    })
+    .finally(() => {
+      loading.value = false
     })
 }
 </script>
-
 
 <style scoped>
 /*  Full page background */
