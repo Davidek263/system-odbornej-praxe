@@ -4,7 +4,7 @@
       <!--  Logo + Title -->
       <div class="logo-section">
         
-        <h1 class="title">Evidencia odbornej praxe</h1>
+        <RouterLink to="/home" class="nav-item"><h1>Evidencia odbornej praxe</h1></RouterLink> 
       </div>
 
       <!--  Hamburger button (mobile only) -->
@@ -42,7 +42,7 @@ function toggleMenu() {
 .app-header {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 1000;
   background-color: #ffffff;
   border-bottom: 1px solid #dcdcdc;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
