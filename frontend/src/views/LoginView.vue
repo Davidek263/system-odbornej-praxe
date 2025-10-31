@@ -89,8 +89,6 @@ async function handleLogin() {
     localStorage.setItem('token', token)
     localStorage.setItem('user', JSON.stringify(user))
 
-    alert(`Welcome back, ${user.first_name || form.email}!`)
-
     // ✅ presmerovanie na dashboard
     router.push('/dashboard')
   } catch (err) {
