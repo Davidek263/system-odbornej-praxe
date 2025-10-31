@@ -1,119 +1,197 @@
 <template>
-  <div class="forgot-page">
-    <div class="forgot-container">
-      <div class="forgot-card">
-        <h1>Set New Password</h1>
-        <p class="info-text">
-          Please enter your new password below to activate your account.
-        </p>
-
-        <form @submit.prevent="handleSetPassword" class="forgot-form">
+  <div class="reset-password-page">
+    <PageAlert 
+      v-if="alert.show" 
+      :type="alert.type" 
+      :message="alert.message" 
+      @close="alert.show = false" 
+      dismissible 
+    />
+    <div class="reset-password-container">
+      <div class="reset-password-card">
+        <h1>Nové heslo</h1>
+        <p class="subtitle">Zadaj svoje nové heslo.</p>
+        
+        <Spinner v-if="loading" overlay />
+        
+        <form @submit.prevent="handleSubmit" class="reset-password-form">
           <div class="form-group">
-            <label for="password">New Password</label>
-            <input
-              id="password"
-              v-model="password"
-              type="password"
-              placeholder="Enter your new password"
+            <label for="password">Nové heslo</label>
+            <input 
+              id="password" 
+              v-model="form.password" 
+              type="password" 
+              placeholder="Vlož nové heslo" 
+              :disabled="loading"
             />
+            <p v-if="errors.password" class="error">{{ errors.password }}</p>
           </div>
 
           <div class="form-group">
-            <label for="confirmPassword">Confirm Password</label>
-            <input
-              id="confirmPassword"
-              v-model="confirmPassword"
-              type="password"
-              placeholder="Confirm your new password"
+            <label for="password_confirmation">Potvrdenie hesla</label>
+            <input 
+              id="password_confirmation" 
+              v-model="form.password_confirmation" 
+              type="password" 
+              placeholder="Zopakuj nové heslo" 
+              :disabled="loading"
             />
-            <p v-if="error" class="error">{{ error }}</p>
+            <p v-if="errors.password_confirmation" class="error">{{ errors.password_confirmation }}</p>
           </div>
 
-          <button type="submit" :disabled="loading">
-            {{ loading ? 'Saving...' : 'Set Password' }}
-          </button>
+          <button type="submit" :disabled="loading">Zmeniť heslo</button>
         </form>
 
-        <p v-if="success" class="success">{{ success }}</p>
-
-        <p class="login-link">
-          <router-link to="/login">Back to Login</router-link>
-        </p>
+        <div class="back-link">
+          <router-link to="/login">← Späť na prihlásenie</router-link>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import PageAlert from '@/components/PageAlert.vue'
+import Spinner from '@/components/Spinner.vue'
 
 const route = useRoute()
 const router = useRouter()
 
-const email = ref('')
-const token = ref('')
-const password = ref('')
-const confirmPassword = ref('')
-const error = ref('')
-const success = ref('')
 const loading = ref(false)
 
-onMounted(() => {
-  email.value = route.query.email || ''
-  token.value = route.query.token || ''
+const form = reactive({
+  password: '',
+  password_confirmation: '',
+  token: '',
+  email: ''
 })
 
-async function handleSetPassword() {
-  error.value = ''
-  success.value = ''
+const errors = reactive({
+  password: '',
+  password_confirmation: ''
+})
 
-  if (!password.value.trim() || !confirmPassword.value.trim()) {
-    error.value = 'All fields are required.'
-    return
+const alert = reactive({
+  show: false,
+  type: 'error',
+  message: ''
+})
+
+const api = axios.create({
+  baseURL: 'http://localhost:8000/api',
+})
+
+function showAlert(message, type = 'error') {
+  alert.message = message
+  alert.type = type
+  alert.show = true
+}
+
+onMounted(() => {
+  // Get token and email from URL query parameters
+  form.token = route.query.token || ''
+  form.email = route.query.email || ''
+  
+  if (!form.token || !form.email) {
+    showAlert('error.password.reset.invalid', 'error')
   }
-  if (password.value.length < 8) {
-    error.value = 'Password must be at least 8 characters long.'
-    return
+})
+
+function handleSubmit() {
+  // Reset
+  errors.password = ''
+  errors.password_confirmation = ''
+  alert.show = false
+
+  let isValid = true
+
+  // Validation
+  if (!form.password.trim()) {
+    errors.password = 'Heslo je povinné.'
+    isValid = false
+  } else if (form.password.length < 6) {
+    errors.password = 'Heslo musí mať aspoň 6 znakov.'
+    isValid = false
   }
-  if (password.value !== confirmPassword.value) {
-    error.value = 'Passwords do not match.'
+
+  if (!form.password_confirmation.trim()) {
+    errors.password_confirmation = 'Potvrdenie hesla je povinné.'
+    isValid = false
+  } else if (form.password !== form.password_confirmation) {
+    errors.password_confirmation = 'Heslá sa nezhodujú.'
+    isValid = false
+  }
+
+  if (!isValid) {
+    showAlert('validation.form', 'validation')
     return
   }
 
-  try {
-    loading.value = true
-    await axios.post('http://localhost:8000/api/set-password', {
-      email: email.value,
-      token: token.value,
-      password: password.value,
-      password_confirmation: confirmPassword.value,
+  loading.value = true
+
+  api.post('/reset-password', {
+    email: form.email,
+    token: form.token,
+    password: form.password,
+    password_confirmation: form.password_confirmation
+  })
+    .then(res => {
+      showAlert('success.password.reset', 'success')
+      
+      // Redirect to login after 2 seconds
+      setTimeout(() => {
+        router.push('/login')
+      }, 2000)
     })
-
-    success.value = 'Password successfully set! Redirecting to login...'
-
-    setTimeout(() => router.push('/login'), 2000)
-  } catch (err) {
-    error.value =
-      err.response?.data?.message || 'Error setting password. Try again.'
-  } finally {
-    loading.value = false
-  }
+    .catch(err => {
+      if (err.response) {
+        const status = err.response.status
+        
+        if (status === 400 || status === 422) {
+          if (err.response.data?.errors) {
+            Object.assign(errors, err.response.data.errors)
+            showAlert('validation.form', 'validation')
+          } else if (err.response.data?.message) {
+            showAlert(err.response.data.message, 'error')
+          } else {
+            showAlert('error.password.reset.invalid', 'error')
+          }
+        } else if (status === 429) {
+          showAlert('ratelimit.error', 'ratelimit')
+        } else if (status >= 500) {
+          showAlert('server.error', 'server')
+        } else {
+          showAlert('error.password.reset', 'error')
+        }
+      } else if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
+        showAlert('network.error', 'network')
+      } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+        showAlert('timeout.error', 'timeout')
+      } else {
+        console.error('Reset password error:', err)
+        showAlert('error.password.reset', 'error')
+      }
+    })
+    .finally(() => {
+      loading.value = false
+    })
 }
 </script>
 
 <style scoped>
 html,
 body,
-.forgot-page {
+.reset-password-page {
   height: 100%;
   margin: 0;
   background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
   font-family: 'Inter', sans-serif;
 }
 
-.forgot-container {
+.reset-password-container {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -121,33 +199,33 @@ body,
   padding: 20px;
 }
 
-.forgot-card {
+.reset-password-card {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   background: #fff;
   padding: 36px 28px;
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
   animation: fadeIn 0.6s ease;
 }
 
 h1 {
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   color: #2c3e50;
   font-size: 22px;
 }
 
-.info-text {
+.subtitle {
   text-align: center;
+  color: #666;
   font-size: 14px;
-  color: #555;
-  margin-bottom: 22px;
+  margin-bottom: 25px;
   line-height: 1.5;
 }
 
 .form-group {
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   display: flex;
   flex-direction: column;
 }
@@ -166,7 +244,12 @@ input {
   transition: all 0.2s ease;
 }
 
-input:focus {
+input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+input:focus:not(:disabled) {
   outline: none;
   border-color: #42b883;
   box-shadow: 0 0 0 2px rgba(66, 184, 131, 0.25);
@@ -182,49 +265,43 @@ button {
   cursor: pointer;
   font-size: 15px;
   font-weight: 600;
+  margin-top: 6px;
   transition: background 0.3s ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: #369f73;
 }
 
 button:disabled {
-  background: #9cd9bc;
+  background: #9ca3af;
   cursor: not-allowed;
 }
 
 .error {
   color: #e74c3c;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.back-link {
+  text-align: center;
+  margin-top: 18px;
   font-size: 13px;
-  margin-top: 3px;
 }
 
-.success {
-  color: #2ecc71;
-  font-size: 14px;
-  margin-top: 10px;
-  text-align: center;
-}
-
-.login-link {
-  text-align: center;
-  margin-top: 20px;
-  font-size: 14px;
-}
-
-.login-link a {
+.back-link a {
   color: #42b883;
   text-decoration: none;
   font-weight: 600;
 }
 
-.login-link a:hover {
+.back-link a:hover {
   text-decoration: underline;
 }
 
 @media (max-width: 480px) {
-  .forgot-card {
+  .reset-password-card {
     max-width: 90%;
     padding: 26px 20px;
   }
@@ -236,10 +313,6 @@ button:disabled {
   button {
     font-size: 14px;
     padding: 10px;
-  }
-
-  .info-text {
-    font-size: 13px;
   }
 }
 

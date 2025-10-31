@@ -1,19 +1,18 @@
 <template>
   <div class="register-page">
     <PageAlert 
-      v-if="registerError" 
-      :type="alertType" 
-      :message="registerError" 
-      @update:show="registerError = ''" 
+      v-if="alert.show" 
+      :type="alert.type" 
+      :message="alert.message" 
+      @close="alert.show = false" 
       dismissible 
     />
     <div class="register-container">
       <div class="register-card">
         <h1>{{ isCompany ? 'Registrácia Firmy' : 'Registrácia Študenta' }}</h1>
         
-        <!-- <Spinner v-if="loading" overlay /> -->
+        <Spinner v-if="loading" overlay />
 
-        <!-- Toggle switch -->
         <div class="toggle-buttons">
           <button :class="{ active: !isCompany }" @click="isCompany = false">Študent</button>
           <button :class="{ active: isCompany }" @click="isCompany = true">Firma</button>
@@ -129,8 +128,12 @@ import Spinner from '@/components/Spinner.vue'
 
 const isCompany = ref(false)
 const loading = ref(false)
-const registerError = ref('')
-const alertType = ref('error')
+
+const alert = reactive({
+  show: false,
+  type: 'error',
+  message: ''
+})
 
 const form = reactive({
   first_name: '',
@@ -144,10 +147,16 @@ const form = reactive({
 
 const errors = reactive({})
 
+function showAlert(message, type = 'error') {
+  alert.message = message
+  alert.type = type
+  alert.show = true
+}
+
 function handleRegister() {
-  // reset errors
+  // Reset errors
   Object.keys(errors).forEach((k) => (errors[k] = ''))
-  registerError.value = ''
+  alert.show = false
   
   let isValid = true
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -155,50 +164,49 @@ function handleRegister() {
   if (!isCompany.value) {
     // Validation for person
     if (!form.first_name.trim()) {
-      errors.first_name = 'First name is required.'
+      errors.first_name = 'Meno je povinné.'
       isValid = false
     }
     if (!form.last_name.trim()) {
-      errors.last_name = 'Last name is required.'
+      errors.last_name = 'Priezvisko je povinné.'
       isValid = false
     }
     if (!form.email.trim()) {
-      errors.email = 'Email is required.'
+      errors.email = 'Email je povinný.'
       isValid = false
     } else if (!emailPattern.test(form.email)) {
-      errors.email = 'Invalid email format.'
+      errors.email = 'Neplatný formát emailu.'
       isValid = false
     }
   } else {
     // Validation for company
     if (!form.companyName.trim()) {
-      errors.companyName = 'Company name is required.'
+      errors.companyName = 'Názov firmy je povinný.'
       isValid = false
     }
     if (!form.email.trim()) {
-      errors.email = 'Company email is required.'
+      errors.email = 'Firemný email je povinný.'
       isValid = false
     } else if (!emailPattern.test(form.email)) {
-      errors.email = 'Invalid email format.'
+      errors.email = 'Neplatný formát emailu.'
       isValid = false
     }
     if (!form.address.trim()) {
-      errors.address = 'Address is required.'
+      errors.address = 'Adresa je povinná.'
       isValid = false
     }
     if (!form.phone.trim()) {
-      errors.phone = 'Phone number is required.'
+      errors.phone = 'Telefónne číslo je povinné.'
       isValid = false
     }
     if (form.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters.'
+      errors.password = 'Heslo musí mať aspoň 6 znakov.'
       isValid = false
     }
   }
 
   if (!isValid) {
-    registerError.value = 'Please fix the errors below.'
-    alertType.value = 'validation'
+    showAlert('validation.form', 'validation')
     return
   }
 
@@ -227,10 +235,11 @@ function handleRegister() {
       const token = res.data.token
       localStorage.setItem('token', token)
       
-      alertType.value = 'success'
-      registerError.value = isCompany.value
-        ? `Company "${form.companyName}" registered successfully!`
-        : 'Registration successful! Check your email to set your password.'
+      const successMessage = isCompany.value 
+        ? 'success.register.company' 
+        : 'success.register.student'
+      
+      showAlert(successMessage, 'success')
       
       Object.keys(form).forEach((k) => (form[k] = ''))
       
@@ -240,26 +249,32 @@ function handleRegister() {
       // }, 2000)
     })
     .catch((err) => {
-      if (err.response && err.response.data) {
+      if (err.response) {
+        const status = err.response.status
+        
         // Handle validation errors from backend
-        if (err.response.data.errors) {
+        if (status === 422 && err.response.data.errors) {
           Object.assign(errors, err.response.data.errors)
-          registerError.value = 'Please fix the errors below.'
-          alertType.value = 'validation'
-        } else if (err.response.data.message) {
-          registerError.value = err.response.data.message
-          alertType.value = 'error'
+          showAlert('validation.form', 'validation')
+        } else if (status === 409) {
+          showAlert('duplicate.email', 'error')
+        } else if (status === 429) {
+          showAlert('ratelimit.error', 'ratelimit')
+        } else if (status >= 500) {
+          showAlert('server.error', 'server')
+        } else if (err.response.data?.message) {
+          // Custom message from server
+          showAlert(err.response.data.message, 'error')
+        } else {
+          showAlert('error.register', 'error')
         }
-      } else if (err.code === 'ERR_NETWORK') {
-        registerError.value = 'Unable to connect to server. Please check your connection.'
-        alertType.value = 'network'
-      } else if (err.code === 'ECONNABORTED') {
-        registerError.value = 'Request timed out. Please try again.'
-        alertType.value = 'timeout'
+      } else if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
+        showAlert('network.error', 'network')
+      } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+        showAlert('timeout.error', 'timeout')
       } else {
-        console.error(err)
-        registerError.value = 'Registration failed. Please try again.'
-        alertType.value = 'error'
+        console.error('Registration error:', err)
+        showAlert('error.register', 'error')
       }
     })
     .finally(() => {
@@ -278,7 +293,6 @@ body,
   font-family: 'Inter', sans-serif;
 }
 
-/* Center card */
 .register-container {
   display: flex;
   justify-content: center;
@@ -286,7 +300,6 @@ body,
   min-height: calc(100vh - 76px);
 }
 
-/* Card */
 .register-card {
   width: 100%;
   max-width: 420px;
@@ -297,7 +310,6 @@ body,
   animation: fadeIn 0.6s ease;
 }
 
-/* Responsive */
 @media (max-width: 480px) {
   .register-card {
     padding: 24px 20px;
@@ -315,7 +327,6 @@ body,
   }
 }
 
-/* Titles */
 h1 {
   text-align: center;
   margin-bottom: 20px;
@@ -323,7 +334,6 @@ h1 {
   font-size: 22px;
 }
 
-/* Toggle buttons */
 .toggle-buttons {
   display: flex;
   justify-content: center;
@@ -352,7 +362,6 @@ h1 {
   color: white;
 }
 
-/* Form */
 .form-group {
   margin-bottom: 14px;
   display: flex;
@@ -379,7 +388,6 @@ input:focus {
   box-shadow: 0 0 0 2px rgba(66, 184, 131, 0.25);
 }
 
-/* Button */
 button[type='submit'] {
   width: 100%;
   background: #42b883;
@@ -398,14 +406,12 @@ button[type='submit']:hover {
   background: #369f73;
 }
 
-/* Errors */
 .error {
   color: #e74c3c;
   font-size: 12px;
   margin-top: 4px;
 }
 
-/* Login link */
 .login-link {
   text-align: center;
   margin-top: 16px;
@@ -422,7 +428,6 @@ button[type='submit']:hover {
   text-decoration: underline;
 }
 
-/* Fade-in animation */
 @keyframes fadeIn {
   from {
     opacity: 0;

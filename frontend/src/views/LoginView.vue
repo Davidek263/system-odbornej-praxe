@@ -1,6 +1,12 @@
 <template>
   <div class="login-page">
-    <PageAlert v-if="loginError" type="error" :message="loginError" @update:show="loginError = ''" dismissible />
+    <PageAlert 
+      v-if="alert.show" 
+      :type="alert.type" 
+      :message="alert.message" 
+      @close="alert.show = false" 
+      dismissible 
+    />
     <div class="login-container">
       <div class="login-card">
         <h1>Prihlásenie</h1>
@@ -28,7 +34,6 @@
 
         <div class="bottom-links">
           <router-link to="/forgot-password" class="forgot">Zabudol si heslo?</router-link>
-          <!-- <router-link to="/register" class="register">Register</router-link> --> 
         </div>
       </div>
     </div>
@@ -39,6 +44,7 @@
 import { reactive, ref } from 'vue'
 import axios from 'axios'
 import PageAlert from '@/components/PageAlert.vue'
+import Spinner from '@/components/Spinner.vue'
 
 const form = reactive({
   email: '',
@@ -51,58 +57,97 @@ const errors = reactive({
 })
 
 const loading = ref(false)
-const loginError = ref('')
+
+const alert = reactive({
+  show: false,
+  type: 'error',
+  message: ''
+})
 
 // Axios instance
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api', // your Laravel backend
+  baseURL: 'http://localhost:8000/api',
 })
 
+function showAlert(message, type = 'error') {
+  alert.message = message
+  alert.type = type
+  alert.show = true
+}
+
 function handleLogin() {
+  // Reset
   errors.email = ''
   errors.password = ''
-  loginError.value = ''
+  alert.show = false
 
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   let isValid = true
 
+  // Validation
   if (!form.email.trim()) {
-    errors.email = 'Email is required.'
+    errors.email = 'Email je povinný.'
     isValid = false
   } else if (!emailPattern.test(form.email)) {
-    errors.email = 'Please enter a valid email address.'
+    errors.email = 'Zadaj platný email.'
     isValid = false
   }
 
   if (!form.password.trim()) {
-    errors.password = 'Password is required.'
+    errors.password = 'Heslo je povinné.'
     isValid = false
   }
 
-  if (!isValid) return
+  if (!isValid) {
+    showAlert('validation.form', 'validation')
+    return
+  }
 
   loading.value = true
 
-  // Call Laravel API
   api.post('/login-person', {
     email: form.email,
     password: form.password
   })
     .then(res => {
       const token = res.data.token
-      localStorage.setItem('token', token) // save token
-      // Success - redirect or show success message
+      localStorage.setItem('token', token)
+      
+      showAlert('success.login', 'success')
+      
       form.email = ''
       form.password = ''
-      // You might want to redirect here instead:
-      // router.push('/dashboard')
+      
+      // Optional: Redirect after success
+      // setTimeout(() => {
+      //   router.push('/dashboard')
+      // }, 1500)
     })
     .catch(err => {
-      if (err.response && err.response.data.message) {
-        loginError.value = err.response.data.message
+      if (err.response) {
+        const status = err.response.status
+        
+        if (status === 401 || status === 422) {
+          showAlert('auth.invalid', 'auth')
+        } else if (status === 403) {
+          showAlert('auth.forbidden', 'forbidden')
+        } else if (status === 429) {
+          showAlert('ratelimit.error', 'ratelimit')
+        } else if (status >= 500) {
+          showAlert('server.error', 'server')
+        } else if (err.response.data?.message) {
+          // Custom message from server
+          showAlert(err.response.data.message, 'error')
+        } else {
+          showAlert('error.login', 'error')
+        }
+      } else if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
+        showAlert('network.error', 'network')
+      } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+        showAlert('timeout.error', 'timeout')
       } else {
-        console.error(err)
-        loginError.value = 'Login failed. Please try again.'
+        console.error('Login error:', err)
+        showAlert('error.login', 'error')
       }
     })
     .finally(() => {
@@ -112,7 +157,6 @@ function handleLogin() {
 </script>
 
 <style scoped>
-/*  Full page background */
 html,
 body,
 .login-page {
@@ -122,16 +166,14 @@ body,
   font-family: 'Inter', sans-serif;
 }
 
-/*  Center container */
 .login-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 116px); /* keeps centered under navbar */
+  min-height: calc(100vh - 116px);
   padding: 20px;
 }
 
-/*  Card */
 .login-card {
   width: 100%;
   max-width: 420px;
@@ -142,7 +184,6 @@ body,
   animation: fadeIn 0.6s ease;
 }
 
-/*  Title */
 h1 {
   text-align: center;
   margin-bottom: 25px;
@@ -150,7 +191,6 @@ h1 {
   font-size: 22px;
 }
 
-/*  Form fields */
 .form-group {
   margin-bottom: 16px;
   display: flex;
@@ -177,7 +217,6 @@ input:focus {
   box-shadow: 0 0 0 2px rgba(66, 184, 131, 0.25);
 }
 
-/*  Button */
 button {
   width: 100%;
   background: #42b883;
@@ -196,14 +235,12 @@ button:hover {
   background: #369f73;
 }
 
-/*  Error messages */
 .error {
   color: #e74c3c;
   font-size: 12px;
   margin-top: 4px;
 }
 
-/*  Bottom links */
 .bottom-links {
   display: flex;
   justify-content: space-between;
@@ -221,7 +258,6 @@ button:hover {
   text-decoration: underline;
 }
 
-/*  Mobile responsive */
 @media (max-width: 480px) {
   .login-card {
     max-width: 90%;
@@ -238,7 +274,6 @@ button:hover {
   }
 }
 
-/*  Animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
