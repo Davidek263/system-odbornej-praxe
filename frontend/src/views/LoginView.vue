@@ -43,8 +43,9 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import axios from 'axios'
-import PageAlert from '@/components/PageAlert.vue'
-import Spinner from '@/components/Spinner.vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const form = reactive({
   email: '',
@@ -77,6 +78,12 @@ function showAlert(message, type = 'error') {
 
 function handleLogin() {
   // Reset
+const api = axios.create({
+  baseURL: 'http://localhost:8000/api',
+  headers: { Accept: 'application/json' },
+})
+
+async function handleLogin() {
   errors.email = ''
   errors.password = ''
   alert.show = false
@@ -91,8 +98,10 @@ function handleLogin() {
   } else if (!emailPattern.test(form.email)) {
     errors.email = 'Zadaj platný email.'
     isValid = false
+  if (!form.email.trim()) {
+    errors.email = 'Email is required.'
+    return
   }
-
   if (!form.password.trim()) {
     errors.password = 'Heslo je povinné.'
     isValid = false
@@ -153,6 +162,40 @@ function handleLogin() {
     .finally(() => {
       loading.value = false
     })
+    errors.password = 'Password is required.'
+    return
+  }
+
+  try {
+    const res = await api.post('/login-person', {
+      email: form.email,
+      password: form.password,
+    })
+
+    // ✅ backend vracia: { user: {...}, access_token: "...", token_type: "Bearer" }
+    const token = res.data.access_token
+    const user = res.data.user
+
+    if (!token) {
+      alert('Invalid server response.')
+      console.log('Response:', res.data)
+      return
+    }
+
+    // ✅ uloženie tokenu a používateľa do localStorage
+    localStorage.setItem('token', token)
+    localStorage.setItem('user', JSON.stringify(user))
+
+    // ✅ presmerovanie na dashboard
+    router.push('/dashboard')
+  } catch (err) {
+    console.error('Login error:', err)
+    if (err.response?.status === 401) {
+      alert('Invalid credentials. Please try again.')
+    } else {
+      alert('Login failed. Please try again later.')
+    }
+  }
 }
 </script>
 

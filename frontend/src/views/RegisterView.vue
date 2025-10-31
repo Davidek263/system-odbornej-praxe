@@ -19,7 +19,6 @@
         </div>
 
         <form @submit.prevent="handleRegister" class="register-form">
-          <!-- PERSON FORM -->
           <template v-if="!isCompany">
             <div class="form-group">
               <label for="first_name">Meno</label>
@@ -29,6 +28,8 @@
                 type="text"
                 placeholder="Vlož svoje meno"
               />
+              <label for="first_name">First Name</label>
+              <input id="first_name" v-model="form.first_name" type="text" placeholder="Enter your first name" />
               <p v-if="errors.first_name" class="error">{{ errors.first_name }}</p>
             </div>
 
@@ -40,6 +41,8 @@
                 type="text"
                 placeholder="Vlož svoje priezvisko"
               />
+              <label for="last_name">Last Name</label>
+              <input id="last_name" v-model="form.last_name" type="text" placeholder="Enter your last name" />
               <p v-if="errors.last_name" class="error">{{ errors.last_name }}</p>
             </div>
 
@@ -50,7 +53,6 @@
             </div>
           </template>
 
-          <!-- COMPANY FORM -->
           <template v-else>
             <div class="form-group">
               <label for="companyName">Názov firmy</label>
@@ -60,6 +62,8 @@
                 type="text"
                 placeholder="Vlož názov firmy"
               />
+              <label for="companyName">Company Name</label>
+              <input id="companyName" v-model="form.companyName" type="text" placeholder="Enter your company name" />
               <p v-if="errors.companyName" class="error">{{ errors.companyName }}</p>
             </div>
 
@@ -71,6 +75,8 @@
                 type="email"
                 placeholder="Vlož firemný email pre kontaktnú osobu"
               />
+              <label for="email">Company Email</label>
+              <input id="email" v-model="form.email" type="email" placeholder="Enter company email" />
               <p v-if="errors.email" class="error">{{ errors.email }}</p>
             </div>
 
@@ -82,6 +88,8 @@
                 type="text"
                 placeholder="Vlož adresu firmy"
               />
+              <label for="address">Address</label>
+              <input id="address" v-model="form.address" type="text" placeholder="Enter company address" />
               <p v-if="errors.address" class="error">{{ errors.address }}</p>
             </div>
 
@@ -93,6 +101,8 @@
                 type="text"
                 placeholder="Vlož telefónne číslo"
               />
+              <label for="phone">Phone</label>
+              <input id="phone" v-model="form.phone" type="text" placeholder="Enter company phone number" />
               <p v-if="errors.phone" class="error">{{ errors.phone }}</p>
             </div>
 
@@ -104,6 +114,8 @@
                 type="password"
                 placeholder="Vlož heslo"
               />
+              <label for="password">Password</label>
+              <input id="password" v-model="form.password" type="password" placeholder="Enter your password" />
               <p v-if="errors.password" class="error">{{ errors.password }}</p>
             </div>
           </template>
@@ -125,6 +137,11 @@ import { reactive, ref } from 'vue'
 import api from '../api.js'
 import PageAlert from '@/components/PageAlert.vue'
 import Spinner from '@/components/Spinner.vue'
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: 'http://localhost:8000/api',
+})
 
 const isCompany = ref(false)
 const loading = ref(false)
@@ -139,10 +156,10 @@ const form = reactive({
   first_name: '',
   last_name: '',
   email: '',
-  password: '',
   companyName: '',
   address: '',
   phone: '',
+  password: '',
 })
 
 const errors = reactive({})
@@ -209,9 +226,9 @@ function handleRegister() {
     showAlert('validation.form', 'validation')
     return
   }
+  Object.keys(errors).forEach((k) => (errors[k] = ''))
 
   const endpoint = isCompany.value ? '/register-company' : '/register-person'
-
   const payload = isCompany.value
     ? {
         companyName: form.companyName,
@@ -241,6 +258,13 @@ function handleRegister() {
       
       showAlert(successMessage, 'success')
       
+      if (isCompany.value) {
+        const token = res.data.token
+        localStorage.setItem('token', token)
+        alert(`Company "${form.companyName}" registered successfully!`)
+      } else {
+        alert('Registration successful! Check your email to set your password.')
+      }
       Object.keys(form).forEach((k) => (form[k] = ''))
       
       // Optional: Redirect after success
@@ -275,6 +299,7 @@ function handleRegister() {
       } else {
         console.error('Registration error:', err)
         showAlert('error.register', 'error')
+        alert('Registration failed. Try again.')
       }
     })
     .finally(() => {
