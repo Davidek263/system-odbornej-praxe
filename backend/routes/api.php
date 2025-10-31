@@ -10,7 +10,7 @@ Route::post('/login-person', [AuthController::class, 'loginUser']);
 Route::post('/login-company', [AuthController::class, 'loginCompany']);
 Route::post('/set-password', [AuthController::class, 'setPassword']);
 
-// Protected routes
+// Protected routes (pre oba typy tokenov)
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/users', fn() => \App\Models\User::all());

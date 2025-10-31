@@ -4,34 +4,22 @@
       <div class="register-card">
         <h1>{{ isCompany ? 'Register Company' : 'Register Account' }}</h1>
 
-        <!-- Toggle switch -->
         <div class="toggle-buttons">
           <button :class="{ active: !isCompany }" @click="isCompany = false">Person</button>
           <button :class="{ active: isCompany }" @click="isCompany = true">Company</button>
         </div>
 
         <form @submit.prevent="handleRegister" class="register-form">
-          <!-- PERSON FORM -->
           <template v-if="!isCompany">
             <div class="form-group">
               <label for="first_name">First Name</label>
-              <input
-                id="first_name"
-                v-model="form.first_name"
-                type="text"
-                placeholder="Enter your first name"
-              />
+              <input id="first_name" v-model="form.first_name" type="text" placeholder="Enter your first name" />
               <p v-if="errors.first_name" class="error">{{ errors.first_name }}</p>
             </div>
 
             <div class="form-group">
               <label for="last_name">Last Name</label>
-              <input
-                id="last_name"
-                v-model="form.last_name"
-                type="text"
-                placeholder="Enter your last name"
-              />
+              <input id="last_name" v-model="form.last_name" type="text" placeholder="Enter your last name" />
               <p v-if="errors.last_name" class="error">{{ errors.last_name }}</p>
             </div>
 
@@ -42,60 +30,34 @@
             </div>
           </template>
 
-          <!-- COMPANY FORM -->
           <template v-else>
             <div class="form-group">
               <label for="companyName">Company Name</label>
-              <input
-                id="companyName"
-                v-model="form.companyName"
-                type="text"
-                placeholder="Enter your company name"
-              />
+              <input id="companyName" v-model="form.companyName" type="text" placeholder="Enter your company name" />
               <p v-if="errors.companyName" class="error">{{ errors.companyName }}</p>
             </div>
 
             <div class="form-group">
               <label for="email">Company Email</label>
-              <input
-                id="email"
-                v-model="form.email"
-                type="email"
-                placeholder="Enter company email"
-              />
+              <input id="email" v-model="form.email" type="email" placeholder="Enter company email" />
               <p v-if="errors.email" class="error">{{ errors.email }}</p>
             </div>
 
             <div class="form-group">
               <label for="address">Address</label>
-              <input
-                id="address"
-                v-model="form.address"
-                type="text"
-                placeholder="Enter company address"
-              />
+              <input id="address" v-model="form.address" type="text" placeholder="Enter company address" />
               <p v-if="errors.address" class="error">{{ errors.address }}</p>
             </div>
 
             <div class="form-group">
               <label for="phone">Phone</label>
-              <input
-                id="phone"
-                v-model="form.phone"
-                type="text"
-                placeholder="Enter company phone number"
-              />
+              <input id="phone" v-model="form.phone" type="text" placeholder="Enter company phone number" />
               <p v-if="errors.phone" class="error">{{ errors.phone }}</p>
             </div>
 
             <div class="form-group">
               <label for="password">Password</label>
-              <input
-                id="password"
-                v-model="form.password"
-                type="password"
-                placeholder="Enter your password"
-              />
+              <input id="password" v-model="form.password" type="password" placeholder="Enter your password" />
               <p v-if="errors.password" class="error">{{ errors.password }}</p>
             </div>
           </template>
@@ -114,7 +76,11 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
-import api from '../api.js'
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: 'http://localhost:8000/api',
+})
 
 const isCompany = ref(false)
 
@@ -122,68 +88,18 @@ const form = reactive({
   first_name: '',
   last_name: '',
   email: '',
-  password: '',
   companyName: '',
   address: '',
   phone: '',
+  password: '',
 })
 
 const errors = reactive({})
 
 function handleRegister() {
-  // reset errors
   Object.keys(errors).forEach((k) => (errors[k] = ''))
-  let isValid = true
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-  if (!isCompany.value) {
-    // Validation for person
-    if (!form.first_name.trim()) {
-      errors.first_name = 'First name is required.'
-      isValid = false
-    }
-    if (!form.last_name.trim()) {
-      errors.last_name = 'Last name is required.'
-      isValid = false
-    }
-    if (!form.email.trim()) {
-      errors.email = 'Email is required.'
-      isValid = false
-    } else if (!emailPattern.test(form.email)) {
-      errors.email = 'Invalid email format.'
-      isValid = false
-    }
-  } else {
-    // Validation for company
-    if (!form.companyName.trim()) {
-      errors.companyName = 'Company name is required.'
-      isValid = false
-    }
-    if (!form.email.trim()) {
-      errors.email = 'Company email is required.'
-      isValid = false
-    } else if (!emailPattern.test(form.email)) {
-      errors.email = 'Invalid email format.'
-      isValid = false
-    }
-    if (!form.address.trim()) {
-      errors.address = 'Address is required.'
-      isValid = false
-    }
-    if (!form.phone.trim()) {
-      errors.phone = 'Phone number is required.'
-      isValid = false
-    }
-    if (form.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters.'
-      isValid = false
-    }
-  }
-
-  if (!isValid) return
 
   const endpoint = isCompany.value ? '/register-company' : '/register-person'
-
   const payload = isCompany.value
     ? {
         companyName: form.companyName,
@@ -202,20 +118,19 @@ function handleRegister() {
   api
     .post(endpoint, payload)
     .then((res) => {
-      const token = res.data.token
-      localStorage.setItem('token', token)
-      alert(
-        isCompany.value
-          ? `Company "${form.companyName}" registered successfully!`
-          : `Registration successful! Check your email to set your password.`
-      )
+      if (isCompany.value) {
+        const token = res.data.token
+        localStorage.setItem('token', token)
+        alert(`Company "${form.companyName}" registered successfully!`)
+      } else {
+        alert('Registration successful! Check your email to set your password.')
+      }
       Object.keys(form).forEach((k) => (form[k] = ''))
     })
     .catch((err) => {
       if (err.response && err.response.data) {
         Object.assign(errors, err.response.data)
       } else {
-        console.error(err)
         alert('Registration failed. Try again.')
       }
     })

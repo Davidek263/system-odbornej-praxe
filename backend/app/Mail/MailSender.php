@@ -10,24 +10,16 @@ class MailSender extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $user;
-    public $token;
+    public $password;
 
-    public function __construct($user, $token)
+    public function __construct($password)
     {
-        $this->user = $user;
-        $this->token = $token;
+        $this->password = $password;
     }
 
     public function build()
     {
-        $url = config('app.frontend_url') . '/set-password?token=' . $this->token . '&email=' . $this->user->email;
-
-        return $this->subject('Set your password')
-            ->view('emails.set_password')
-            ->with([
-                'name' => $this->user->first_name,
-                'url' => $url,
-            ]);
+        return $this->subject('Vaše dočasné heslo')
+                    ->view('emails.password');
     }
 }
