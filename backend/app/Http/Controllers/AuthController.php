@@ -51,7 +51,6 @@ class AuthController extends Controller
             'message' => 'Registration successful. Please check your email to set your password.'
         ], 201);
     }
-
     // ======================================
     // SET PASSWORD (from email link)
     // ======================================
