@@ -12,8 +12,8 @@ return new class extends Migration
             $table->id();
             $table->string('first_name', 20)->nullable();
             $table->string('last_name', 20)->nullable();
-            $table->string('student_email', 100)->unique();
-            $table->string('email', 100)->unique()->nullable();
+            $table->string('student_email', 100)->unique()->nullable();
+            $table->string('email', 100)->unique();
             $table->string('phone_number', 20)->nullable();
             $table->string('password', 255)->nullable();
             $table->boolean('active')->nullable();

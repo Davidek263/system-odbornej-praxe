@@ -1,11 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-// Views
+import LandingPageView from '../views/LandingView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import SetPasswordView from '../views/SetPassword.vue' 
-import LandingPageView from '../views/LandingView.vue'
 import StudentInfoView from '../views/StudentInfoView.vue'
 import CompanyInfoView from '../views/CompanyInfoView.vue'
 import InternshipInfoView from '../views/InternshipInfoView.vue'
@@ -13,32 +12,17 @@ import GuarantorInfoView from '../views/GuarantorInfoView.vue'
 
 const routes = [
   { path: '/', redirect: '/home' },
-import SetPasswordView from '../views/SetPassword.vue'
-import DashboardView from '../views/DashboardView.vue' // 👈 pridaj túto stránku
-
-const routes = [
-  { path: '/', redirect: '/login' },
-
+  { path: '/:pathMatch(.*)*', redirect: '/home' },
+  { path: '/home', name: 'home', component: LandingPageView },
   { path: '/login', name: 'login', component: LoginView },
   { path: '/register', name: 'register', component: RegisterView },
   { path: '/forgot-password', name: 'forgot', component: ForgotPasswordView },
   { path: '/set-password', name: 'setpassword', component: SetPasswordView },
-  { path: '/home', name: 'home', component: LandingPageView },
   { path: '/student-info', name: 'studentinfo', component: StudentInfoView },
-  { path: '/company-info', name: 'companyinfo', component: CompanyInfoView },
   { path: '/internship-info', name: 'internshipinfo', component: InternshipInfoView },
   { path: '/guarantor-info', name: 'guarantorinfo', component: GuarantorInfoView },
-
-  // 👇 chránená stránka po prihlásení
-  {
-    path: '/dashboard',
-    name: 'dashboard',
-    component: DashboardView,
-    meta: { requiresAuth: true },
-  },
-
-  // fallback pre neexistujúce cesty
-  { path: '/:pathMatch(.*)*', redirect: '/login' },
+  { path: '/company-info', name: 'companyinfo', component: CompanyInfoView },
+  //example { path: '/company-info', name: 'companyinfo', component: CompanyInfoView, meta: { requiresAuth: true , roles: ['admin', 'company']} },
 ]
 
 const router = createRouter({
@@ -46,20 +30,29 @@ const router = createRouter({
   routes,
 })
 
-// 🛡️ Middleware na ochranu chránených rout
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
 
-  // Ak stránka vyžaduje login a token chýba → redirect na /login
+  // Redirect logged-in users away from login/register pages
+  const guestOnlyRoutes = ['login', 'register']
+  if (token && guestOnlyRoutes.includes(to.name)) {
+    return next('/home')
+  }
+
+  // Require authentication for certain pages
   if (to.meta.requiresAuth && !token) {
-    next('/login')
+    return next('/login')
   }
-  // Ak je používateľ už prihlásený a ide na login/register → redirect na dashboard
-  else if ((to.name === 'login' || to.name === 'register') && token) {
-    next('/dashboard')
-  } else {
-    next()
+
+  // Check roles
+  if (to.meta.roles && (!user.role_name || !to.meta.roles.includes(user.role_name))) {
+    return next('/home')
   }
+
+  next()
 })
+
+
 
 export default router

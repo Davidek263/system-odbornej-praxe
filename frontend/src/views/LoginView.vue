@@ -1,40 +1,39 @@
 <template>
   <div class="login-page">
-    <PageAlert 
-      v-if="alert.show" 
-      :type="alert.type" 
-      :message="alert.message" 
-      @close="alert.show = false" 
-      dismissible 
+    <PageAlert
+      v-if="alert.show"
+      :type="alert.type"
+      :message="alert.message"
+      @close="alert.show = false"
+      dismissible
     />
+
     <div class="login-container">
       <div class="login-card">
         <h1>Prihlásenie</h1>
+
         <Spinner v-if="loading" overlay />
-        <form @submit.prevent="handleLogin" class="login-form">
+
+        <form @submit.prevent="handleLogin">
           <div class="form-group">
             <label for="email">Email</label>
-            <input id="email" v-model="form.email" type="email" placeholder="Vlož svoj email" />
-            <p v-if="errors.email" class="error">{{ errors.email }}</p>
+            <input id="email" v-model="form.email" type="email" placeholder="Email" />
+            <p v-if="errors.email" class="error">{{ errors.email[0] }}</p>
           </div>
 
           <div class="form-group">
             <label for="password">Heslo</label>
-            <input
-              id="password"
-              v-model="form.password"
-              type="password"
-              placeholder="Vlož svoje heslo"
-            />
-            <p v-if="errors.password" class="error">{{ errors.password }}</p>
+            <input id="password" v-model="form.password" type="password" placeholder="Heslo" />
+            <p v-if="errors.password" class="error">{{ errors.password[0] }}</p>
           </div>
 
-          <button type="submit">Prihlásiť</button>
+          <button type="submit">Prihlásiť sa</button>
         </form>
 
-        <div class="bottom-links">
-          <router-link to="/forgot-password" class="forgot">Zabudol si heslo?</router-link>
-        </div>
+        <p class="register-link">
+          Ešte nemáš účet?
+          <router-link to="/register">Registrácia</router-link>
+        </p>
       </div>
     </div>
   </div>
@@ -42,7 +41,9 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
-import axios from 'axios'
+import api from '@/api'
+import PageAlert from '@/components/PageAlert.vue'
+import Spinner from '@/components/Spinner.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -51,24 +52,9 @@ const form = reactive({
   email: '',
   password: '',
 })
-
-const errors = reactive({
-  email: '',
-  password: '',
-})
-
+const errors = reactive({})
+const alert = reactive({ show: false, type: 'error', message: '' })
 const loading = ref(false)
-
-const alert = reactive({
-  show: false,
-  type: 'error',
-  message: ''
-})
-
-// Axios instance
-const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
-})
 
 function showAlert(message, type = 'error') {
   alert.message = message
@@ -77,41 +63,8 @@ function showAlert(message, type = 'error') {
 }
 
 function handleLogin() {
-  // Reset
-const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
-  headers: { Accept: 'application/json' },
-})
-
-async function handleLogin() {
-  errors.email = ''
-  errors.password = ''
+  Object.keys(errors).forEach(k => delete errors[k])
   alert.show = false
-
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  let isValid = true
-
-  // Validation
-  if (!form.email.trim()) {
-    errors.email = 'Email je povinný.'
-    isValid = false
-  } else if (!emailPattern.test(form.email)) {
-    errors.email = 'Zadaj platný email.'
-    isValid = false
-  if (!form.email.trim()) {
-    errors.email = 'Email is required.'
-    return
-  }
-  if (!form.password.trim()) {
-    errors.password = 'Heslo je povinné.'
-    isValid = false
-  }
-
-  if (!isValid) {
-    showAlert('validation.form', 'validation')
-    return
-  }
-
   loading.value = true
 
   api.post('/login-person', {
@@ -119,83 +72,26 @@ async function handleLogin() {
     password: form.password
   })
     .then(res => {
-      const token = res.data.token
-      localStorage.setItem('token', token)
-      
-      showAlert('success.login', 'success')
-      
-      form.email = ''
-      form.password = ''
-      
-      // Optional: Redirect after success
-      // setTimeout(() => {
-      //   router.push('/dashboard')
-      // }, 1500)
-    })
-    .catch(err => {
-      if (err.response) {
-        const status = err.response.status
-        
-        if (status === 401 || status === 422) {
-          showAlert('auth.invalid', 'auth')
-        } else if (status === 403) {
-          showAlert('auth.forbidden', 'forbidden')
-        } else if (status === 429) {
-          showAlert('ratelimit.error', 'ratelimit')
-        } else if (status >= 500) {
-          showAlert('server.error', 'server')
-        } else if (err.response.data?.message) {
-          // Custom message from server
-          showAlert(err.response.data.message, 'error')
-        } else {
-          showAlert('error.login', 'error')
-        }
-      } else if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
-        showAlert('network.error', 'network')
-      } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-        showAlert('timeout.error', 'timeout')
-      } else {
-        console.error('Login error:', err)
-        showAlert('error.login', 'error')
+      localStorage.setItem('token', res.data.access_token)
+      localStorage.setItem('user', JSON.stringify(res.data.user))
+
+      showAlert(res.data.message, 'success')
+
+      const user = JSON.parse(localStorage.getItem('user'))
+      switch(user.role_name) {
+        case "student":
+          router.push('/student-info')
+          break;
+        case "guarantor":
+          router.push('/guarantor-info')
+          break;
+        default:
+          router.push('/home')
       }
     })
-    .finally(() => {
-      loading.value = false
+    .catch(err => {
+      showAlert(err.response?.data?.message || 'Login failed.', 'error')
     })
-    errors.password = 'Password is required.'
-    return
-  }
-
-  try {
-    const res = await api.post('/login-person', {
-      email: form.email,
-      password: form.password,
-    })
-
-    // ✅ backend vracia: { user: {...}, access_token: "...", token_type: "Bearer" }
-    const token = res.data.access_token
-    const user = res.data.user
-
-    if (!token) {
-      alert('Invalid server response.')
-      console.log('Response:', res.data)
-      return
-    }
-
-    // ✅ uloženie tokenu a používateľa do localStorage
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify(user))
-
-    // ✅ presmerovanie na dashboard
-    router.push('/dashboard')
-  } catch (err) {
-    console.error('Login error:', err)
-    if (err.response?.status === 401) {
-      alert('Invalid credentials. Please try again.')
-    } else {
-      alert('Login failed. Please try again later.')
-    }
-  }
 }
 </script>
 

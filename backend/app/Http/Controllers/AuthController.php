@@ -26,7 +26,10 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
         }
 
         // Dočasné heslo
@@ -38,34 +41,36 @@ class AuthController extends Controller
             'last_name'  => $request->last_name,
             'email'      => $request->email,
             'password'   => Hash::make($password),
+            'roles_id'    => 1, //student
         ]);
 
-        // Token na nastavenie hesla
-        $token = Str::random(64);
-        DB::table('password_resets')->updateOrInsert(
-            ['email' => $user->email],
-            ['token' => $token, 'created_at' => now()]
-        );
-
         return response()->json([
-            'message' => 'Registration successful. Please check your email to set your password.'
+            'message' => 'Registration successful. Please check your email to set your password.',
         ], 201);
     }
+
     // ======================================
     // SET PASSWORD (from email link)
     // ======================================
     public function setPassword(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email|exists:users,email',
-            'token' => 'required',
+        $validator = Validator::make($request->all(), [
+            'email'    => 'required|email|exists:users,email',
+            'token'    => 'required|string',
             'password' => 'required|min:8|confirmed',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
 
         $reset = DB::table('password_resets')->where('email', $request->email)->first();
 
         if (! $reset || $reset->token !== $request->token) {
-            return response()->json(['message' => 'Invalid or expired token'], 400);
+            return response()->json(['message' => 'Invalid or expired token.'], 400);
         }
 
         User::where('email', $request->email)->update([
@@ -74,7 +79,7 @@ class AuthController extends Controller
 
         DB::table('password_resets')->where('email', $request->email)->delete();
 
-        return response()->json(['message' => 'Password set successfully']);
+        return response()->json(['message' => 'Password set successfully.']);
     }
 
     // ======================================
@@ -91,7 +96,10 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
         }
 
         $company = Company::create([
@@ -105,9 +113,10 @@ class AuthController extends Controller
         $token = $company->createToken('company-api-token')->plainTextToken;
 
         return response()->json([
-            'company' => $company,
+            'message'      => 'Company registered successfully.',
+            'company'      => $company,
             'access_token' => $token,
-            'token_type' => 'Bearer',
+            'token_type'   => 'Bearer',
         ], 201);
     }
 
@@ -116,21 +125,35 @@ class AuthController extends Controller
     // ======================================
     public function loginUser(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
+        $validator = Validator::make($request->all(), [
+            'email'    => 'required|email',
             'password' => 'required|string',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
 
         $user = User::where('email', $request->email)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+            return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'user' => [
+                'id' => $user->id,
+                'email' => $user->email,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'roles_id' => $user->roles_id,
+                'role_name' => $user->role->role_name ?? null,
+            ],
             'access_token' => $token,
             'token_type' => 'Bearer',
         ]);
@@ -141,23 +164,31 @@ class AuthController extends Controller
     // ======================================
     public function loginCompany(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
+        $validator = Validator::make($request->all(), [
+            'email'    => 'required|email',
             'password' => 'required|string',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
 
         $company = Company::where('email', $request->email)->first();
 
         if (! $company || ! Hash::check($request->password, $company->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+            return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 
         $token = $company->createToken('company-api-token')->plainTextToken;
 
         return response()->json([
-            'company' => $company,
+            'message'      => 'Login successful.',
+            'company'      => $company,
             'access_token' => $token,
-            'token_type' => 'Bearer',
+            'token_type'   => 'Bearer',
         ]);
     }
 
@@ -171,6 +202,6 @@ class AuthController extends Controller
             $user->currentAccessToken()->delete();
         }
 
-        return response()->json(['message' => 'Logged out successfully']);
+        return response()->json(['message' => 'Logged out successfully.']);
     }
 }
