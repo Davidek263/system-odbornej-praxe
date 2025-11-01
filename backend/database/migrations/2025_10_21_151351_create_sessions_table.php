@@ -8,6 +8,9 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     * 
+     * NOTE: This sessions table is for non-authentication purposes only (CSRF, flash messages, etc.)
+     * Authentication MUST use personal_access_tokens per NFR-02 (OAuth 2.0)
      */
     public function up(): void
     {

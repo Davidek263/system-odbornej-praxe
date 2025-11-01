@@ -6,11 +6,15 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Timesheet (výkaz) statuses (FR-08)
+     */
     public function up(): void
     {
         Schema::create('timesheet_status', function (Blueprint $table) {
             $table->id();
-            $table->string('timesheet_status_name', 100)->nullable();
+            $table->string('timesheet_status_name', 100)->unique();
+            $table->string('description', 255)->nullable();
             $table->timestamps();
         });
     }
