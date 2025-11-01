@@ -1,16 +1,17 @@
 <template>
   <div class="register-page">
-    <PageAlert 
-      v-if="alert.show" 
-      :type="alert.type" 
-      :message="alert.message" 
-      @close="alert.show = false" 
-      dismissible 
+    <PageAlert
+      v-if="alert.show"
+      :type="alert.type"
+      :message="alert.message"
+      @close="alert.show = false"
+      dismissible
     />
+
     <div class="register-container">
       <div class="register-card">
         <h1>{{ isCompany ? 'Registrácia Firmy' : 'Registrácia Študenta' }}</h1>
-        
+
         <Spinner v-if="loading" overlay />
 
         <div class="toggle-buttons">
@@ -18,105 +19,56 @@
           <button :class="{ active: isCompany }" @click="isCompany = true">Firma</button>
         </div>
 
-        <form @submit.prevent="handleRegister" class="register-form">
+        <form @submit.prevent="handleRegister">
           <template v-if="!isCompany">
             <div class="form-group">
               <label for="first_name">Meno</label>
-              <input
-                id="first_name"
-                v-model="form.first_name"
-                type="text"
-                placeholder="Vlož svoje meno"
-              />
-              <label for="first_name">First Name</label>
-              <input id="first_name" v-model="form.first_name" type="text" placeholder="Enter your first name" />
-              <p v-if="errors.first_name" class="error">{{ errors.first_name }}</p>
+              <input id="first_name" v-model="form.first_name" type="text" placeholder="Meno" />
+              <p v-if="errors.first_name" class="error">{{ errors.first_name[0] }}</p>
             </div>
 
             <div class="form-group">
               <label for="last_name">Priezvisko</label>
-              <input
-                id="last_name"
-                v-model="form.last_name"
-                type="text"
-                placeholder="Vlož svoje priezvisko"
-              />
-              <label for="last_name">Last Name</label>
-              <input id="last_name" v-model="form.last_name" type="text" placeholder="Enter your last name" />
-              <p v-if="errors.last_name" class="error">{{ errors.last_name }}</p>
+              <input id="last_name" v-model="form.last_name" type="text" placeholder="Priezvisko" />
+              <p v-if="errors.last_name" class="error">{{ errors.last_name[0] }}</p>
             </div>
 
             <div class="form-group">
               <label for="email">Email</label>
-              <input id="email" v-model="form.email" type="email" placeholder="Vlož svoj email" />
-              <p v-if="errors.email" class="error">{{ errors.email }}</p>
+              <input id="email" v-model="form.email" type="email" placeholder="Email" />
+              <p v-if="errors.email" class="error">{{ errors.email[0] }}</p>
             </div>
           </template>
 
           <template v-else>
             <div class="form-group">
               <label for="companyName">Názov firmy</label>
-              <input
-                id="companyName"
-                v-model="form.companyName"
-                type="text"
-                placeholder="Vlož názov firmy"
-              />
-              <label for="companyName">Company Name</label>
-              <input id="companyName" v-model="form.companyName" type="text" placeholder="Enter your company name" />
-              <p v-if="errors.companyName" class="error">{{ errors.companyName }}</p>
+              <input id="companyName" v-model="form.companyName" type="text" placeholder="Názov firmy" />
+              <p v-if="errors.companyName" class="error">{{ errors.companyName[0] }}</p>
             </div>
 
             <div class="form-group">
-              <label for="email">Firemný email</label>
-              <input
-                id="email"
-                v-model="form.email"
-                type="email"
-                placeholder="Vlož firemný email pre kontaktnú osobu"
-              />
-              <label for="email">Company Email</label>
-              <input id="email" v-model="form.email" type="email" placeholder="Enter company email" />
-              <p v-if="errors.email" class="error">{{ errors.email }}</p>
+              <label for="email">Email</label>
+              <input id="email" v-model="form.email" type="email" placeholder="Firemný email" />
+              <p v-if="errors.email" class="error">{{ errors.email[0] }}</p>
             </div>
 
             <div class="form-group">
               <label for="address">Adresa</label>
-              <input
-                id="address"
-                v-model="form.address"
-                type="text"
-                placeholder="Vlož adresu firmy"
-              />
-              <label for="address">Address</label>
-              <input id="address" v-model="form.address" type="text" placeholder="Enter company address" />
-              <p v-if="errors.address" class="error">{{ errors.address }}</p>
+              <input id="address" v-model="form.address" type="text" placeholder="Adresa" />
+              <p v-if="errors.address" class="error">{{ errors.address[0] }}</p>
             </div>
 
             <div class="form-group">
               <label for="phone">Telefón</label>
-              <input
-                id="phone"
-                v-model="form.phone"
-                type="text"
-                placeholder="Vlož telefónne číslo"
-              />
-              <label for="phone">Phone</label>
-              <input id="phone" v-model="form.phone" type="text" placeholder="Enter company phone number" />
-              <p v-if="errors.phone" class="error">{{ errors.phone }}</p>
+              <input id="phone" v-model="form.phone" type="text" placeholder="Telefón" />
+              <p v-if="errors.phone" class="error">{{ errors.phone[0] }}</p>
             </div>
 
             <div class="form-group">
               <label for="password">Heslo</label>
-              <input
-                id="password"
-                v-model="form.password"
-                type="password"
-                placeholder="Vlož heslo"
-              />
-              <label for="password">Password</label>
-              <input id="password" v-model="form.password" type="password" placeholder="Enter your password" />
-              <p v-if="errors.password" class="error">{{ errors.password }}</p>
+              <input id="password" v-model="form.password" type="password" placeholder="Heslo" />
+              <p v-if="errors.password" class="error">{{ errors.password[0] }}</p>
             </div>
           </template>
 
@@ -134,24 +86,14 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
-import api from '../api.js'
+import api from '@/api'
 import PageAlert from '@/components/PageAlert.vue'
 import Spinner from '@/components/Spinner.vue'
-import axios from 'axios'
+import { useRouter } from 'vue-router'
 
-const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
-})
+const router = useRouter()
 
 const isCompany = ref(false)
-const loading = ref(false)
-
-const alert = reactive({
-  show: false,
-  type: 'error',
-  message: ''
-})
-
 const form = reactive({
   first_name: '',
   last_name: '',
@@ -161,8 +103,9 @@ const form = reactive({
   phone: '',
   password: '',
 })
-
 const errors = reactive({})
+const loading = ref(false)
+const alert = reactive({ show: false, type: 'error', message: '' })
 
 function showAlert(message, type = 'error') {
   alert.message = message
@@ -171,139 +114,23 @@ function showAlert(message, type = 'error') {
 }
 
 function handleRegister() {
-  // Reset errors
-  Object.keys(errors).forEach((k) => (errors[k] = ''))
+  Object.keys(errors).forEach(k => delete errors[k])
   alert.show = false
-  
-  let isValid = true
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-  if (!isCompany.value) {
-    // Validation for person
-    if (!form.first_name.trim()) {
-      errors.first_name = 'Meno je povinné.'
-      isValid = false
-    }
-    if (!form.last_name.trim()) {
-      errors.last_name = 'Priezvisko je povinné.'
-      isValid = false
-    }
-    if (!form.email.trim()) {
-      errors.email = 'Email je povinný.'
-      isValid = false
-    } else if (!emailPattern.test(form.email)) {
-      errors.email = 'Neplatný formát emailu.'
-      isValid = false
-    }
-  } else {
-    // Validation for company
-    if (!form.companyName.trim()) {
-      errors.companyName = 'Názov firmy je povinný.'
-      isValid = false
-    }
-    if (!form.email.trim()) {
-      errors.email = 'Firemný email je povinný.'
-      isValid = false
-    } else if (!emailPattern.test(form.email)) {
-      errors.email = 'Neplatný formát emailu.'
-      isValid = false
-    }
-    if (!form.address.trim()) {
-      errors.address = 'Adresa je povinná.'
-      isValid = false
-    }
-    if (!form.phone.trim()) {
-      errors.phone = 'Telefónne číslo je povinné.'
-      isValid = false
-    }
-    if (form.password.length < 6) {
-      errors.password = 'Heslo musí mať aspoň 6 znakov.'
-      isValid = false
-    }
-  }
-
-  if (!isValid) {
-    showAlert('validation.form', 'validation')
-    return
-  }
-  Object.keys(errors).forEach((k) => (errors[k] = ''))
-
-  const endpoint = isCompany.value ? '/register-company' : '/register-person'
-  const payload = isCompany.value
-    ? {
-        companyName: form.companyName,
-        email: form.email,
-        address: form.address,
-        phone: form.phone,
-        password: form.password,
-        password_confirmation: form.password,
-      }
-    : {
-        first_name: form.first_name,
-        last_name: form.last_name,
-        email: form.email,
-      }
-
   loading.value = true
 
-  api
-    .post(endpoint, payload)
-    .then((res) => {
-      const token = res.data.token
-      localStorage.setItem('token', token)
-      
-      const successMessage = isCompany.value 
-        ? 'success.register.company' 
-        : 'success.register.student'
-      
-      showAlert(successMessage, 'success')
-      
-      if (isCompany.value) {
-        const token = res.data.token
-        localStorage.setItem('token', token)
-        alert(`Company "${form.companyName}" registered successfully!`)
-      } else {
-        alert('Registration successful! Check your email to set your password.')
-      }
-      Object.keys(form).forEach((k) => (form[k] = ''))
-      
-      // Optional: Redirect after success
-      // setTimeout(() => {
-      //   router.push('/dashboard')
-      // }, 2000)
+  const endpoint = isCompany.value ? '/register-company' : '/register-person'
+  const payload = { ...form }
+
+  api.post(endpoint, payload)
+    .then(res => {
+      showAlert(res.data.message || 'Registration successful!', 'success')
+
+      setTimeout(() => {
+        router.push('/login')
+      }, 1500)
     })
-    .catch((err) => {
-      if (err.response) {
-        const status = err.response.status
-        
-        // Handle validation errors from backend
-        if (status === 422 && err.response.data.errors) {
-          Object.assign(errors, err.response.data.errors)
-          showAlert('validation.form', 'validation')
-        } else if (status === 409) {
-          showAlert('duplicate.email', 'error')
-        } else if (status === 429) {
-          showAlert('ratelimit.error', 'ratelimit')
-        } else if (status >= 500) {
-          showAlert('server.error', 'server')
-        } else if (err.response.data?.message) {
-          // Custom message from server
-          showAlert(err.response.data.message, 'error')
-        } else {
-          showAlert('error.register', 'error')
-        }
-      } else if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
-        showAlert('network.error', 'network')
-      } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-        showAlert('timeout.error', 'timeout')
-      } else {
-        console.error('Registration error:', err)
-        showAlert('error.register', 'error')
-        alert('Registration failed. Try again.')
-      }
-    })
-    .finally(() => {
-      loading.value = false
+    .catch(err => {
+      showAlert(err.response?.data?.message || 'Registration failed.', 'error')
     })
 }
 </script>
@@ -333,23 +160,6 @@ body,
   border-radius: 16px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
   animation: fadeIn 0.6s ease;
-}
-
-@media (max-width: 480px) {
-  .register-card {
-    padding: 24px 20px;
-    max-width: 90%;
-  }
-  h1 {
-    font-size: 20px;
-  }
-  input {
-    font-size: 13px;
-  }
-  button[type='submit'] {
-    font-size: 14px;
-    padding: 10px;
-  }
 }
 
 h1 {
@@ -451,6 +261,26 @@ button[type='submit']:hover {
 
 .login-link a:hover {
   text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .register-card {
+    padding: 24px 20px;
+    max-width: 90%;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  input {
+    font-size: 13px;
+  }
+
+  button[type='submit'] {
+    font-size: 14px;
+    padding: 10px;
+  }
 }
 
 @keyframes fadeIn {
