@@ -123,13 +123,15 @@ function handleRegister() {
 
   api.post(endpoint, payload)
     .then(res => {
+      loading.value = false
       showAlert(res.data.message || 'Registration successful!', 'success')
 
       setTimeout(() => {
         router.push('/login')
-      }, 1500)
+      }, 4000)
     })
     .catch(err => {
+      loading.value = false
       showAlert(err.response?.data?.message || 'Registration failed.', 'error')
     })
 }
