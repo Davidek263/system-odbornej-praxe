@@ -72,6 +72,7 @@ function handleLogin() {
     password: form.password
   })
     .then(res => {
+      loading.value = false
       localStorage.setItem('token', res.data.access_token)
       localStorage.setItem('user', JSON.stringify(res.data.user))
 
@@ -80,16 +81,17 @@ function handleLogin() {
       const user = JSON.parse(localStorage.getItem('user'))
       switch(user.role_name) {
         case "student":
-          router.push('/student-info')
+          router.push('/home')
           break;
         case "guarantor":
-          router.push('/guarantor-info')
+          router.push('/home')
           break;
         default:
           router.push('/home')
       }
     })
     .catch(err => {
+      loading.value = false
       showAlert(err.response?.data?.message || 'Login failed.', 'error')
     })
 }
@@ -180,20 +182,19 @@ button:hover {
   margin-top: 4px;
 }
 
-.bottom-links {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 18px;
+.register-link {
+  text-align: center;
+  margin-top: 16px;
   font-size: 13px;
 }
 
-.bottom-links a {
+.register-link a {
   color: #42b883;
   text-decoration: none;
   font-weight: 600;
 }
 
-.bottom-links a:hover {
+.register-link a:hover {
   text-decoration: underline;
 }
 

@@ -1,14 +1,20 @@
 <template>
-  <!-- Invisible wrapper that simply triggers scroll on mount -->
+  <!-- Invisible wrapper that simply triggers scroll on route change -->
   <span style="display:none" />
 </template>
 
-<script>
-export default {
-  name: 'ScrollTop',
-  mounted() {
-    // always posuň viewport na vrch po načítaní komponentu
-    window.scrollTo({ top: 0, left: 0 })
-  }
-}
+<script setup>
+import { watch } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+// Scroll to top whenever the route changes
+watch(
+  () => route.path,
+  () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  },
+  { immediate: true } // Also trigger on component mount
+)
 </script>

@@ -28,6 +28,14 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    // If the user clicked back/forward button, restore their scroll position
+    if (savedPosition) {
+      return savedPosition
+    }
+    // Otherwise, scroll to top for all route changes
+    return { top: 0, left: 0, behavior: 'instant' }
+  }
 })
 
 router.beforeEach((to, from, next) => {
