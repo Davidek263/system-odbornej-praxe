@@ -19,7 +19,7 @@ const routes = [
   { path: '/register', name: 'register', component: RegisterView },
   { path: '/forgot-password', name: 'forgot', component: ForgotPasswordView },
   { path: '/firmaview', name: 'firmaview', component: FirmaView},
-  { path: '/set-password', name: 'setpassword', component: SetPasswordView }
+  { path: '/set-password', name: 'setpassword', component: SetPasswordView },
   { path: '/student-info', name: 'studentinfo', component: StudentInfoView },
   { path: '/internship-info', name: 'internshipinfo', component: InternshipInfoView },
   { path: '/guarantor-info', name: 'guarantorinfo', component: GuarantorInfoView },
