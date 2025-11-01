@@ -14,9 +14,9 @@ use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
-    // -----------------------------
+    // ======================================
     // REGISTER PERSON (USER)
-    // -----------------------------
+    // ======================================
     public function registerUser(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -26,66 +26,65 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
         }
 
-        // Náhodné dočasné heslo (nebude sa posielať používateľovi)
+        // Dočasné heslo
         $password = Str::random(12);
+        Mail::to($request->email)->send(new MailSender($password));
 
         $user = User::create([
             'first_name' => $request->first_name,
             'last_name'  => $request->last_name,
             'email'      => $request->email,
             'password'   => Hash::make($password),
+            'roles_id'    => 1, //student
         ]);
-
-        // Token pre nastavenie hesla
-        $token = Str::random(64);
-
-        DB::table('password_resets')->insert([
-            'email' => $user->email,
-            'token' => $token,
-            'created_at' => now()
-        ]);
-
-        // Pošli e-mail s linkom
-        Mail::to($user->email)->send(new MailSender($user, $token));
 
         return response()->json([
-            'message' => 'Registration successful. Please check your email to set your password.'
+            'message' => 'Registration successful. Please check your email to set your password.',
         ], 201);
     }
 
-    // -----------------------------
+    // ======================================
     // SET PASSWORD (from email link)
-    // -----------------------------
+    // ======================================
     public function setPassword(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email|exists:users,email',
-            'token' => 'required',
+        $validator = Validator::make($request->all(), [
+            'email'    => 'required|email|exists:users,email',
+            'token'    => 'required|string',
             'password' => 'required|min:8|confirmed',
         ]);
 
-        $reset = DB::table('password_resets')->where('email', $request->email)->first();
-
-       if (!$reset || $request->token !== $reset->token) {
-         return response()->json(['message' => 'Invalid or expired token'], 400);
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
         }
 
+        $reset = DB::table('password_resets')->where('email', $request->email)->first();
+
+        if (! $reset || $reset->token !== $request->token) {
+            return response()->json(['message' => 'Invalid or expired token.'], 400);
+        }
 
         User::where('email', $request->email)->update([
-            'password' => Hash::make($request->password)
+            'password' => Hash::make($request->password),
         ]);
 
         DB::table('password_resets')->where('email', $request->email)->delete();
 
-        return response()->json(['message' => 'Password set successfully']);
+        return response()->json(['message' => 'Password set successfully.']);
     }
 
-    // -----------------------------
+    // ======================================
     // REGISTER COMPANY
-    // -----------------------------
+    // ======================================
     public function registerCompany(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -93,11 +92,14 @@ class AuthController extends Controller
             'email'       => 'required|email|unique:companies,email',
             'address'     => 'required|string|max:255',
             'phone'       => 'required|string|max:255',
-            'password'    => 'required|string|min:6|confirmed',
+            'password'    => 'required|string|min:8|confirmed',
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
         }
 
         $company = Company::create([
@@ -108,72 +110,98 @@ class AuthController extends Controller
             'password'    => Hash::make($request->password),
         ]);
 
-        $token = $company->createToken('api-token')->plainTextToken;
+        $token = $company->createToken('company-api-token')->plainTextToken;
 
         return response()->json([
-            'company' => $company,
-            'token' => $token
+            'message'      => 'Company registered successfully.',
+            'company'      => $company,
+            'access_token' => $token,
+            'token_type'   => 'Bearer',
         ], 201);
     }
 
-    // -----------------------------
+    // ======================================
     // LOGIN USER
-    // -----------------------------
+    // ======================================
     public function loginUser(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|string'
+        $validator = Validator::make($request->all(), [
+            'email'    => 'required|email',
+            'password' => 'required|string',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+        if (! $user || ! Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 
-        $token = $user->createToken('api-token')->plainTextToken;
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
-            'token' => $token
+            'user' => [
+                'id' => $user->id,
+                'email' => $user->email,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'roles_id' => $user->roles_id,
+                'role_name' => $user->role->role_name ?? null,
+            ],
+            'access_token' => $token,
+            'token_type' => 'Bearer',
         ]);
     }
 
-    // -----------------------------
+    // ======================================
     // LOGIN COMPANY
-    // -----------------------------
+    // ======================================
     public function loginCompany(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|string'
+        $validator = Validator::make($request->all(), [
+            'email'    => 'required|email',
+            'password' => 'required|string',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
 
         $company = Company::where('email', $request->email)->first();
 
-        if (!$company || !Hash::check($request->password, $company->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+        if (! $company || ! Hash::check($request->password, $company->password)) {
+            return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 
-        $token = $company->createToken('api-token')->plainTextToken;
+        $token = $company->createToken('company-api-token')->plainTextToken;
 
         return response()->json([
-            'company' => $company,
-            'token' => $token
+            'message'      => 'Login successful.',
+            'company'      => $company,
+            'access_token' => $token,
+            'token_type'   => 'Bearer',
         ]);
     }
 
-    // -----------------------------
-    // LOGOUT
-    // -----------------------------
+    // ======================================
+    // LOGOUT (invalidate token)
+    // ======================================
     public function logout(Request $request)
     {
         $user = $request->user();
-        if ($user) {
+        if ($user && $user->currentAccessToken()) {
             $user->currentAccessToken()->delete();
         }
 
-        return response()->json(['message' => 'Logged out']);
+        return response()->json(['message' => 'Logged out successfully.']);
     }
 }

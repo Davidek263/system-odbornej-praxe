@@ -1,106 +1,103 @@
 <template>
   <div class="login-page">
+    <PageAlert
+      v-if="alert.show"
+      :type="alert.type"
+      :message="alert.message"
+      @close="alert.show = false"
+      dismissible
+    />
+
     <div class="login-container">
       <div class="login-card">
-        <h1>Welcome Back</h1>
+        <h1>Prihlásenie</h1>
 
-        <form @submit.prevent="handleLogin" class="login-form">
+        <Spinner v-if="loading" overlay />
+
+        <form @submit.prevent="handleLogin">
           <div class="form-group">
             <label for="email">Email</label>
-            <input id="email" v-model="form.email" type="email" placeholder="Enter your email" />
-            <p v-if="errors.email" class="error">{{ errors.email }}</p>
+            <input id="email" v-model="form.email" type="email" placeholder="Email" />
+            <p v-if="errors.email" class="error">{{ errors.email[0] }}</p>
           </div>
 
           <div class="form-group">
-            <label for="password">Password</label>
-            <input
-              id="password"
-              v-model="form.password"
-              type="password"
-              placeholder="Enter your password"
-            />
-            <p v-if="errors.password" class="error">{{ errors.password }}</p>
+            <label for="password">Heslo</label>
+            <input id="password" v-model="form.password" type="password" placeholder="Heslo" />
+            <p v-if="errors.password" class="error">{{ errors.password[0] }}</p>
           </div>
 
-          <button type="submit">Log In</button>
+          <button type="submit">Prihlásiť sa</button>
         </form>
 
-        <div class="bottom-links">
-          <router-link to="/forgot-password" class="forgot">Forgot password?</router-link>
-          <router-link to="/register" class="register">Register</router-link>
-        </div>
+        <p class="register-link">
+          Ešte nemáš účet?
+          <router-link to="/register">Registrácia</router-link>
+        </p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive } from 'vue'
-import axios from 'axios'
+import { reactive, ref } from 'vue'
+import api from '@/api'
+import PageAlert from '@/components/PageAlert.vue'
+import Spinner from '@/components/Spinner.vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const form = reactive({
   email: '',
   password: '',
 })
+const errors = reactive({})
+const alert = reactive({ show: false, type: 'error', message: '' })
+const loading = ref(false)
 
-const errors = reactive({
-  email: '',
-  password: '',
-})
-
-// Axios instance
-const api = axios.create({
-  baseURL: 'http://localhost:8000/api', // your Laravel backend
-})
+function showAlert(message, type = 'error') {
+  alert.message = message
+  alert.type = type
+  alert.show = true
+}
 
 function handleLogin() {
-  errors.email = ''
-  errors.password = ''
+  Object.keys(errors).forEach(k => delete errors[k])
+  alert.show = false
+  loading.value = true
 
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  let isValid = true
-
-  if (!form.email.trim()) {
-    errors.email = 'Email is required.'
-    isValid = false
-  } else if (!emailPattern.test(form.email)) {
-    errors.email = 'Please enter a valid email address.'
-    isValid = false
-  }
-
-  if (!form.password.trim()) {
-    errors.password = 'Password is required.'
-    isValid = false
-  }
-
-  if (!isValid) return
-
-  // Call Laravel API
   api.post('/login-person', {
     email: form.email,
     password: form.password
   })
     .then(res => {
-      const token = res.data.token
-      localStorage.setItem('token', token) // save token
-      alert(`Welcome back, ${form.email}!`)
-      form.email = ''
-      form.password = ''
+      loading.value = false
+      localStorage.setItem('token', res.data.access_token)
+      localStorage.setItem('user', JSON.stringify(res.data.user))
+
+      showAlert(res.data.message, 'success')
+
+      const user = JSON.parse(localStorage.getItem('user'))
+      switch(user.role_name) {
+        case "student":
+          router.push('/home')
+          break;
+        case "guarantor":
+          router.push('/home')
+          break;
+        default:
+          router.push('/home')
+      }
     })
     .catch(err => {
-      if (err.response && err.response.data.message) {
-        alert(err.response.data.message) // e.g., invalid credentials
-      } else {
-        console.error(err)
-        alert('Login failed. Try again.')
-      }
+      loading.value = false
+      showAlert(err.response?.data?.message || 'Login failed.', 'error')
     })
 }
 </script>
 
-
 <style scoped>
-/*  Full page background */
 html,
 body,
 .login-page {
@@ -110,16 +107,14 @@ body,
   font-family: 'Inter', sans-serif;
 }
 
-/*  Center container */
 .login-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 116px); /* keeps centered under navbar */
+  min-height: calc(100vh - 116px);
   padding: 20px;
 }
 
-/*  Card */
 .login-card {
   width: 100%;
   max-width: 420px;
@@ -130,7 +125,6 @@ body,
   animation: fadeIn 0.6s ease;
 }
 
-/*  Title */
 h1 {
   text-align: center;
   margin-bottom: 25px;
@@ -138,7 +132,6 @@ h1 {
   font-size: 22px;
 }
 
-/*  Form fields */
 .form-group {
   margin-bottom: 16px;
   display: flex;
@@ -165,7 +158,6 @@ input:focus {
   box-shadow: 0 0 0 2px rgba(66, 184, 131, 0.25);
 }
 
-/*  Button */
 button {
   width: 100%;
   background: #42b883;
@@ -184,32 +176,28 @@ button:hover {
   background: #369f73;
 }
 
-/*  Error messages */
 .error {
   color: #e74c3c;
   font-size: 12px;
   margin-top: 4px;
 }
 
-/*  Bottom links */
-.bottom-links {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 18px;
+.register-link {
+  text-align: center;
+  margin-top: 16px;
   font-size: 13px;
 }
 
-.bottom-links a {
+.register-link a {
   color: #42b883;
   text-decoration: none;
   font-weight: 600;
 }
 
-.bottom-links a:hover {
+.register-link a:hover {
   text-decoration: underline;
 }
 
-/*  Mobile responsive */
 @media (max-width: 480px) {
   .login-card {
     max-width: 90%;
@@ -226,7 +214,6 @@ button:hover {
   }
 }
 
-/*  Animation */
 @keyframes fadeIn {
   from {
     opacity: 0;

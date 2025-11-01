@@ -1,112 +1,176 @@
 <template>
-  <div class="forgot-page">
-    <div class="forgot-container">
-      <div class="forgot-card">
-        <h1>Forgot Password</h1>
-        <p class="info-text">
-          Enter your email address and we’ll send you a link to reset your password.
-        </p>
-
-        <form @submit.prevent="handleReset" class="forgot-form">
+  <div class="forgot-password-page">
+    <PageAlert 
+      v-if="alert.show" 
+      :type="alert.type" 
+      :message="alert.message" 
+      @close="alert.show = false" 
+      dismissible 
+    />
+    <div class="forgot-password-container">
+      <div class="forgot-password-card">
+        <h1>Zabudnuté heslo</h1>
+        <p class="subtitle">Zadaj svoj email a pošleme ti odkaz na obnovenie hesla.</p>
+        
+        <Spinner v-if="loading" overlay />
+        
+        <form @submit.prevent="handleSubmit" class="forgot-password-form">
           <div class="form-group">
             <label for="email">Email</label>
-            <input id="email" v-model="email" type="email" placeholder="Enter your email" />
-            <p v-if="error" class="error">{{ error }}</p>
+            <input 
+              id="email" 
+              v-model="email" 
+              type="email" 
+              placeholder="Vlož svoj email" 
+              :disabled="loading"
+            />
+            <p v-if="errors.email" class="error">{{ errors.email }}</p>
           </div>
 
-          <button type="submit">Send Reset Link</button>
+          <button type="submit" :disabled="loading">Odoslať odkaz</button>
         </form>
 
-        <p class="login-link">
-          <router-link to="/login">Back to Login</router-link>
-        </p>
+        <div class="back-link">
+          <router-link to="/login">← Späť na prihlásenie</router-link>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive } from 'vue'
+import axios from 'axios'
+import PageAlert from '@/components/PageAlert.vue'
+import Spinner from '@/components/Spinner.vue'
 
 const email = ref('')
-const error = ref('')
-const router = useRouter()
+const loading = ref(false)
 
-function handleReset() {
-  error.value = ''
+const errors = reactive({
+  email: ''
+})
+
+const alert = reactive({
+  show: false,
+  type: 'error',
+  message: ''
+})
+
+const api = axios.create({
+  baseURL: 'http://localhost:8000/api',
+})
+
+function showAlert(message, type = 'error') {
+  alert.message = message
+  alert.type = type
+  alert.show = true
+}
+
+function handleSubmit() {
+  // Reset
+  errors.email = ''
+  alert.show = false
 
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  
+  // Validation
   if (!email.value.trim()) {
-    error.value = 'Email is required.'
+    errors.email = 'Email je povinný.'
+    showAlert('validation.email.required', 'validation')
     return
-  } else if (!emailPattern.test(email.value)) {
-    error.value = 'Please enter a valid email address.'
+  }
+  
+  if (!emailPattern.test(email.value)) {
+    errors.email = 'Zadaj platný email.'
+    showAlert('validation.email.invalid', 'validation')
     return
   }
 
-  //  Simulate sending email
-  alert(`A password reset link has been sent to ${email.value}.`)
+  loading.value = true
 
-  //  Redirect to login page after short delay
-  setTimeout(() => {
-    router.push('/login')
-  }, 700)
-
-  email.value = ''
+  api.post('/forgot-password', {
+    email: email.value
+  })
+    .then(res => {
+      showAlert('success.password.reset.sent', 'success')
+      email.value = ''
+    })
+    .catch(err => {
+      if (err.response) {
+        const status = err.response.status
+        
+        if (status === 404) {
+          showAlert('notfound.user', 'notfound')
+        } else if (status === 429) {
+          showAlert('ratelimit.error', 'ratelimit')
+        } else if (status >= 500) {
+          showAlert('server.error', 'server')
+        } else if (err.response.data?.message) {
+          showAlert(err.response.data.message, 'error')
+        } else {
+          showAlert('error.password.reset', 'error')
+        }
+      } else if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
+        showAlert('network.error', 'network')
+      } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+        showAlert('timeout.error', 'timeout')
+      } else {
+        console.error('Forgot password error:', err)
+        showAlert('error.password.reset', 'error')
+      }
+    })
+    .finally(() => {
+      loading.value = false
+    })
 }
 </script>
 
 <style scoped>
-/* Background covers full page */
 html,
 body,
-.forgot-page {
+.forgot-password-page {
   height: 100%;
   margin: 0;
   background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
   font-family: 'Inter', sans-serif;
 }
 
-/*  Center container (under navbar if fixed) */
-.forgot-container {
+.forgot-password-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 116px); /* adjust to match navbar height */
+  min-height: calc(100vh - 116px);
   padding: 20px;
 }
 
-/*  Card */
-.forgot-card {
+.forgot-password-card {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   background: #fff;
   padding: 36px 28px;
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
   animation: fadeIn 0.6s ease;
 }
 
-/*  Headings */
 h1 {
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   color: #2c3e50;
   font-size: 22px;
 }
 
-.info-text {
+.subtitle {
   text-align: center;
+  color: #666;
   font-size: 14px;
-  color: #555;
-  margin-bottom: 22px;
+  margin-bottom: 25px;
   line-height: 1.5;
 }
 
-/*  Form */
 .form-group {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
   display: flex;
   flex-direction: column;
 }
@@ -125,13 +189,17 @@ input {
   transition: all 0.2s ease;
 }
 
-input:focus {
+input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+input:focus:not(:disabled) {
   outline: none;
   border-color: #42b883;
   box-shadow: 0 0 0 2px rgba(66, 184, 131, 0.25);
 }
 
-/*  Button */
 button {
   width: 100%;
   background: #42b883;
@@ -145,37 +213,39 @@ button {
   transition: background 0.3s ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: #369f73;
 }
 
-/*  Error */
+button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
 .error {
   color: #e74c3c;
-  font-size: 13px;
-  margin-top: 3px;
+  font-size: 12px;
+  margin-top: 4px;
 }
 
-/*  Back to login */
-.login-link {
+.back-link {
   text-align: center;
-  margin-top: 20px;
-  font-size: 14px;
+  margin-top: 18px;
+  font-size: 13px;
 }
 
-.login-link a {
+.back-link a {
   color: #42b883;
   text-decoration: none;
   font-weight: 600;
 }
 
-.login-link a:hover {
+.back-link a:hover {
   text-decoration: underline;
 }
 
-/*  Responsive tweaks */
 @media (max-width: 480px) {
-  .forgot-card {
+  .forgot-password-card {
     max-width: 90%;
     padding: 26px 20px;
   }
@@ -188,13 +258,8 @@ button:hover {
     font-size: 14px;
     padding: 10px;
   }
-
-  .info-text {
-    font-size: 13px;
-  }
 }
 
-/* ✨ Fade in animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
