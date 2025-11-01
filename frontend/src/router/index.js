@@ -4,6 +4,7 @@ import LandingPageView from '../views/LandingView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
+import FirmaView from '../views/FirmaView.vue'
 import SetPasswordView from '../views/SetPassword.vue' 
 import StudentInfoView from '../views/StudentInfoView.vue'
 import CompanyInfoView from '../views/CompanyInfoView.vue'
@@ -17,7 +18,8 @@ const routes = [
   { path: '/login', name: 'login', component: LoginView },
   { path: '/register', name: 'register', component: RegisterView },
   { path: '/forgot-password', name: 'forgot', component: ForgotPasswordView },
-  { path: '/set-password', name: 'setpassword', component: SetPasswordView },
+  { path: '/firmaview', name: 'firmaview', component: FirmaView},
+  { path: '/set-password', name: 'setpassword', component: SetPasswordView }
   { path: '/student-info', name: 'studentinfo', component: StudentInfoView },
   { path: '/internship-info', name: 'internshipinfo', component: InternshipInfoView },
   { path: '/guarantor-info', name: 'guarantorinfo', component: GuarantorInfoView },
