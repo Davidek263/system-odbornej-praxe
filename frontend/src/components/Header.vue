@@ -25,11 +25,47 @@
           </RouterLink>
         </template>
 
-        <!-- Authenticated user navigation -->
-        <template v-else>
-          <RouterLink to="/praxe" class="nav-item" active-class="active-link">
+        <!-- Student navigation -->
+        <template v-else-if="userRole === 'student'">
+          <RouterLink to="/student-dashboard" class="nav-item" active-class="active-link">
             Praxe
           </RouterLink>
+          <RouterLink to="/profil" class="nav-item" active-class="active-link">
+            Profil
+          </RouterLink>
+          <button @click="handleLogout" class="nav-item logout-btn">
+            Odhlásiť
+          </button>
+        </template>
+
+        <!-- Company navigation -->
+        <template v-else-if="userRole === 'company'">
+          <RouterLink to="/company-dashboard" class="nav-item" active-class="active-link">
+            Praxe
+          </RouterLink>
+          <RouterLink to="/profil" class="nav-item" active-class="active-link">
+            Profil
+          </RouterLink>
+          <button @click="handleLogout" class="nav-item logout-btn">
+            Odhlásiť
+          </button>
+        </template>
+
+        <!-- Guarantor navigation -->
+        <template v-else-if="userRole === 'guarantor'">
+          <RouterLink to="/guarantor-dashboard" class="nav-item" active-class="active-link">
+            Praxe
+          </RouterLink>
+          <RouterLink to="/profil" class="nav-item" active-class="active-link">
+            Profil
+          </RouterLink>
+          <button @click="handleLogout" class="nav-item logout-btn">
+            Odhlásiť
+          </button>
+        </template>
+
+        <!-- Fallback for any other authenticated user -->
+        <template v-else>
           <RouterLink to="/profil" class="nav-item" active-class="active-link">
             Profil
           </RouterLink>

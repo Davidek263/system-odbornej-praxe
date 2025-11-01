@@ -1,15 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import LandingPageView from '../views/LandingView.vue'
-import LoginView from '../views/LoginView.vue'
-import RegisterView from '../views/RegisterView.vue'
+import LandingPageView from '../views/PublicViews/LandingPage.vue'
+import LoginView from '../views/PublicViews/LoginView.vue'
+import RegisterView from '../views/PublicViews/RegisterView.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
-import FirmaView from '../views/FirmaView.vue'
+import CompanyDashboard from '../views/CompanyViews/CompanyDashboard.vue'
 import SetPasswordView from '../views/SetPassword.vue' 
-import StudentInfoView from '../views/StudentInfoView.vue'
-import CompanyInfoView from '../views/CompanyInfoView.vue'
-import InternshipInfoView from '../views/InternshipInfoView.vue'
-import GuarantorInfoView from '../views/GuarantorInfoView.vue'
+import StudentInfoView from '../views/PublicViews/StudentInfo.vue'
+import CompanyInfoView from '../views/PublicViews/CompanyInfo.vue'
+import InternshipInfoView from '../views/PublicViews/InternshipInfo.vue'
+import GuarantorInfoView from '../views/PublicViews/GuarantorInfo.vue'
 
 const routes = [
   { path: '/', redirect: '/home' },
@@ -18,8 +18,8 @@ const routes = [
   { path: '/login', name: 'login', component: LoginView },
   { path: '/register', name: 'register', component: RegisterView },
   { path: '/forgot-password', name: 'forgot', component: ForgotPasswordView },
-  { path: '/firmaview', name: 'firmaview', component: FirmaView},
-  { path: '/set-password', name: 'setpassword', component: SetPasswordView }
+  { path: '/company-dashboard', name: 'comapnydashboard', component: CompanyDashboard, meta: { requiresAuth: true , roles: ['company']} },
+  { path: '/set-password', name: 'setpassword', component: SetPasswordView },
   { path: '/student-info', name: 'studentinfo', component: StudentInfoView },
   { path: '/internship-info', name: 'internshipinfo', component: InternshipInfoView },
   { path: '/guarantor-info', name: 'guarantorinfo', component: GuarantorInfoView },
