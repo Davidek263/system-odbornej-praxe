@@ -17,23 +17,43 @@
         <form @submit.prevent="handleLogin">
           <div class="form-group">
             <label for="email">Email</label>
-            <input id="email" v-model="form.email" type="email" placeholder="Email" />
+            <input 
+              id="email" 
+              v-model="form.email" 
+              type="email" 
+              placeholder="Email alebo študentský email"
+              :disabled="loading"
+            />
             <p v-if="errors.email" class="error">{{ errors.email[0] }}</p>
           </div>
 
           <div class="form-group">
             <label for="password">Heslo</label>
-            <input id="password" v-model="form.password" type="password" placeholder="Heslo" />
+            <input 
+              id="password" 
+              v-model="form.password" 
+              type="password" 
+              placeholder="Heslo"
+              :disabled="loading"
+            />
             <p v-if="errors.password" class="error">{{ errors.password[0] }}</p>
           </div>
 
-          <button type="submit">Prihlásiť sa</button>
+          <button type="submit" :disabled="loading">
+            {{ loading ? 'Prihlasovanie...' : 'Prihlásiť sa' }}
+          </button>
         </form>
 
-        <p class="register-link">
-          Ešte nemáš účet?
-          <router-link to="/register">Registrácia</router-link>
-        </p>
+        <div class="links">
+          <router-link to="/forgot-password" class="forgot-link">
+            Zabudli ste heslo?
+          </router-link>
+          
+          <p class="register-link">
+            Ešte nemáš účet?
+            <router-link to="/register">Registrácia</router-link>
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -63,36 +83,74 @@ function showAlert(message, type = 'error') {
 }
 
 function handleLogin() {
+  // Clear previous errors
   Object.keys(errors).forEach(k => delete errors[k])
   alert.show = false
   loading.value = true
 
-  api.post('/login-person', {
-    email: form.email,
+  api.post('/login', {
+    email: form.email.trim(),
     password: form.password
   })
     .then(res => {
       loading.value = false
+      
+      // Store authentication data
       localStorage.setItem('token', res.data.access_token)
       localStorage.setItem('user', JSON.stringify(res.data.user))
 
-      showAlert(res.data.message, 'success')
-
-      const user = JSON.parse(localStorage.getItem('user'))
-      switch(user.role_name) {
-        case "student":
-          router.push('/home')
-          break;
-        case "guarantor":
-          router.push('/home')
-          break;
-        default:
-          router.push('/home')
+      // Check if user must change password
+      if (res.data.user.must_change_password) {
+        showAlert('Prihlásenie úspešné. Prosím zmeňte si heslo.', 'success')
+        setTimeout(() => {
+          router.push('/change-password')
+        }, 1500)
+        return
       }
+
+      showAlert(res.data.message || 'Prihlásenie úspešné.', 'success')
+
+      // Redirect based on role
+      setTimeout(() => {
+        const user = res.data.user
+        switch(user.role_name) {
+          case 'student':
+            router.push('/student-dashboard')
+            break
+          case 'company':
+            router.push('/company-dashboard')
+            break
+          case 'guarantor':
+            router.push('/guarantor-dashboard')
+            break
+          default:
+            router.push('/home')
+        }
+      }, 1000)
     })
     .catch(err => {
       loading.value = false
-      showAlert(err.response?.data?.message || 'Login failed.', 'error')
+      
+      // Handle validation errors
+      if (err.response?.status === 422 && err.response?.data?.errors) {
+        Object.assign(errors, err.response.data.errors)
+        showAlert('Prosím opravte chyby vo formulári.', 'error')
+        return
+      }
+
+      // Handle specific error messages
+      if (err.response?.status === 403) {
+        showAlert('Váš účet nie je aktivovaný. Skontrolujte si email.', 'error')
+        return
+      }
+
+      if (err.response?.status === 401) {
+        showAlert('Nesprávny email alebo heslo.', 'error')
+        return
+      }
+
+      // Generic error
+      showAlert(err.response?.data?.message || 'Prihlásenie zlyhalo. Skúste to znova.', 'error')
     })
 }
 </script>
@@ -142,6 +200,7 @@ label {
   margin-bottom: 5px;
   font-weight: 600;
   color: #333;
+  font-size: 14px;
 }
 
 input {
@@ -150,6 +209,11 @@ input {
   border-radius: 8px;
   font-size: 14px;
   transition: all 0.2s ease;
+}
+
+input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
 }
 
 input:focus {
@@ -172,8 +236,13 @@ button {
   transition: background 0.3s ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: #369f73;
+}
+
+button:disabled {
+  background: #95d5b2;
+  cursor: not-allowed;
 }
 
 .error {
@@ -182,10 +251,29 @@ button:hover {
   margin-top: 4px;
 }
 
+.links {
+  margin-top: 20px;
+}
+
+.forgot-link {
+  display: block;
+  text-align: center;
+  color: #42b883;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
 .register-link {
   text-align: center;
   margin-top: 16px;
   font-size: 13px;
+  color: #666;
 }
 
 .register-link a {
