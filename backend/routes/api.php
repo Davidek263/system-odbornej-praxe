@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InternshipController;
+use App\Http\Controllers\DocumentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -109,5 +110,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('guarantor-internships')->group(function () {
         // Get all internships with filters
         Route::get('/', [InternshipController::class, 'getGuarantorInternships']);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Document Routes (FR-08: Timesheet approval/rejection)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('documents')->group(function () {
+        // Get document details
+        Route::get('/{id}', [DocumentController::class, 'getDocument']);
+        
+        // Timesheet approval/rejection (Company only)
+        Route::post('/{id}/approve-timesheet', [DocumentController::class, 'approveTimesheet']);
+        Route::post('/{id}/reject-timesheet', [DocumentController::class, 'rejectTimesheet']);
     });
 });

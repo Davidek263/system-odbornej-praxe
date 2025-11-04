@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Hash;
 class UserSeeder extends Seeder
 {
     /**
-     * Seed test users - one for each role
+     * Seed test users with proper email formats
+     * Student emails: meno.priezvisko@student.ukf.sk (no diacritics, lowercase)
      */
     public function run(): void
     {
@@ -19,12 +20,12 @@ class UserSeeder extends Seeder
         $guarantorRole = DB::table('roles')->where('role_name', 'guarantor')->first();
         
         // Get study field ID
-        $studyField = DB::table('study_field')->first();
+        $studyField = DB::table('study_field')->where('study_field_name', 'Aplikovaná informatika')->first();
         
-        // Get or create companies
-        $companies = [];
+        // ============================================
+        // CREATE COMPANIES WITH ADDRESSES
+        // ============================================
         
-        // Create addresses for companies
         $companyAddresses = [
             [
                 'street' => 'Hlavná',
@@ -49,13 +50,12 @@ class UserSeeder extends Seeder
             ],
         ];
         
+        $companyAddressIds = [];
         foreach ($companyAddresses as $addr) {
-            $addressId = DB::table('address')->insertGetId(array_merge($addr, [
+            $companyAddressIds[] = DB::table('address')->insertGetId(array_merge($addr, [
                 'created_at' => now(),
                 'updated_at' => now()
             ]));
-            
-            $companies[] = $addressId;
         }
         
         // Create company records
@@ -65,21 +65,21 @@ class UserSeeder extends Seeder
                 'contact_person_name' => 'Peter Novák',
                 'contact_person_email' => 'peter.novak@techsolutions.sk',
                 'contact_person_phone' => '+421 901 234 567',
-                'address_id' => $companies[0]
+                'address_id' => $companyAddressIds[0]
             ],
             [
                 'company_name' => 'Digital Agency Plus',
-                'contact_person_name' => 'Jana Horváthová',
+                'contact_person_name' => 'Jana Horvátová',
                 'contact_person_email' => 'jana.horvath@digitalagency.sk',
                 'contact_person_phone' => '+421 902 345 678',
-                'address_id' => $companies[1]
+                'address_id' => $companyAddressIds[1]
             ],
             [
                 'company_name' => 'Software House Pro',
                 'contact_person_name' => 'Martin Kováč',
                 'contact_person_email' => 'martin.kovac@swhouse.sk',
                 'contact_person_phone' => '+421 903 456 789',
-                'address_id' => $companies[2]
+                'address_id' => $companyAddressIds[2]
             ],
         ];
         
@@ -91,27 +91,30 @@ class UserSeeder extends Seeder
             ]));
         }
         
-        // Create student addresses
+        // ============================================
+        // CREATE STUDENT ADDRESSES
+        // ============================================
+        
         $studentAddresses = [
             [
                 'street' => 'Družstevná',
                 'street_number' => '15',
-                'city' => 'Bratislava',
-                'postal_code' => '82105',
+                'city' => 'Nitra',
+                'postal_code' => '94901',
                 'country' => 'Slovakia'
             ],
             [
                 'street' => 'Botanická',
                 'street_number' => '23',
-                'city' => 'Bratislava',
-                'postal_code' => '84104',
+                'city' => 'Nitra',
+                'postal_code' => '94901',
                 'country' => 'Slovakia'
             ],
             [
-                'street' => 'Štefánikova',
+                'street' => 'Štúrova',
                 'street_number' => '67',
-                'city' => 'Košice',
-                'postal_code' => '04001',
+                'city' => 'Nitra',
+                'postal_code' => '94901',
                 'country' => 'Slovakia'
             ],
         ];
@@ -124,14 +127,17 @@ class UserSeeder extends Seeder
             ]));
         }
         
-        // Create users
+        // ============================================
+        // CREATE USERS
+        // ============================================
+        
         $users = [
-            // Student 1
+            // ========== STUDENT 1 ==========
             [
                 'first_name' => 'Ján',
                 'last_name' => 'Študent',
-                'email' => 'jan.student@stuba.sk',
-                'student_email' => 'xstudent01@stuba.sk',
+                'email' => 'jan.student@student.ukf.sk',
+                'student_email' => 'jan.student@student.ukf.sk',
                 'alternative_email' => 'jan.student@gmail.com',
                 'phone_number' => '+421 910 111 222',
                 'password' => Hash::make('password'),
@@ -146,12 +152,13 @@ class UserSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now()
             ],
-            // Student 2
+            
+            // ========== STUDENT 2 ==========
             [
                 'first_name' => 'Mária',
                 'last_name' => 'Nováková',
-                'email' => 'maria.novakova@stuba.sk',
-                'student_email' => 'xnovakova02@stuba.sk',
+                'email' => 'maria.novakova@student.ukf.sk',
+                'student_email' => 'maria.novakova@student.ukf.sk',
                 'alternative_email' => 'maria.novakova@gmail.com',
                 'phone_number' => '+421 910 222 333',
                 'password' => Hash::make('password'),
@@ -166,12 +173,13 @@ class UserSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now()
             ],
-            // Student 3
+            
+            // ========== STUDENT 3 ==========
             [
                 'first_name' => 'Peter',
                 'last_name' => 'Horváth',
-                'email' => 'peter.horvath@stuba.sk',
-                'student_email' => 'xhorvath03@stuba.sk',
+                'email' => 'peter.horvath@student.ukf.sk',
+                'student_email' => 'peter.horvath@student.ukf.sk',
                 'alternative_email' => 'peter.horvath@gmail.com',
                 'phone_number' => '+421 910 333 444',
                 'password' => Hash::make('password'),
@@ -186,11 +194,12 @@ class UserSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now()
             ],
-            // Company user
+            
+            // ========== COMPANY USER 1 ==========
             [
-                'first_name' => 'Company',
-                'last_name' => 'Representative',
-                'email' => 'company@techsolutions.sk',
+                'first_name' => 'Peter',
+                'last_name' => 'Novák',
+                'email' => 'peter.novak@techsolutions.sk',
                 'student_email' => null,
                 'alternative_email' => null,
                 'phone_number' => '+421 901 234 567',
@@ -205,11 +214,52 @@ class UserSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now()
             ],
-            // Guarantor
+            
+            // ========== COMPANY USER 2 ==========
             [
-                'first_name' => 'Doc.',
-                'last_name' => 'Garant',
-                'email' => 'garant@stuba.sk',
+                'first_name' => 'Jana',
+                'last_name' => 'Horvátová',
+                'email' => 'jana.horvath@digitalagency.sk',
+                'student_email' => null,
+                'alternative_email' => null,
+                'phone_number' => '+421 902 345 678',
+                'password' => Hash::make('password'),
+                'active' => true,
+                'must_change_password' => false,
+                'activated_at' => now(),
+                'email_verified_at' => now(),
+                'company_id' => $companyIds[1],
+                'address_id' => null,
+                'roles_id' => $companyRole?->id,
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            
+            // ========== COMPANY USER 3 ==========
+            [
+                'first_name' => 'Martin',
+                'last_name' => 'Kováč',
+                'email' => 'martin.kovac@swhouse.sk',
+                'student_email' => null,
+                'alternative_email' => null,
+                'phone_number' => '+421 903 456 789',
+                'password' => Hash::make('password'),
+                'active' => true,
+                'must_change_password' => false,
+                'activated_at' => now(),
+                'email_verified_at' => now(),
+                'company_id' => $companyIds[2],
+                'address_id' => null,
+                'roles_id' => $companyRole?->id,
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            
+            // ========== GUARANTOR ==========
+            [
+                'first_name' => 'Doc. Ing.',
+                'last_name' => 'Garant PhD.',
+                'email' => 'garant@ukf.sk',
                 'student_email' => null,
                 'alternative_email' => 'garant.personal@gmail.com',
                 'phone_number' => '+421 905 123 456',
@@ -229,11 +279,21 @@ class UserSeeder extends Seeder
             DB::table('users')->insert($user);
         }
         
-        $this->command->info('✓ Users seeded successfully!');
-        $this->command->info('  Student 1: jan.student@stuba.sk / password');
-        $this->command->info('  Student 2: maria.novakova@stuba.sk / password');
-        $this->command->info('  Student 3: peter.horvath@stuba.sk / password');
-        $this->command->info('  Company:   company@techsolutions.sk / password');
-        $this->command->info('  Guarantor: garant@stuba.sk / password');
+        $this->command->info(' Users seeded successfully!');
+        $this->command->newLine();
+        $this->command->info(' Student Login Credentials:');
+        $this->command->info('  Student 1: jan.student@student.ukf.sk / password');
+        $this->command->info('  Student 2: maria.novakova@student.ukf.sk / password');
+        $this->command->info('  Student 3: peter.horvath@student.ukf.sk / password');
+        $this->command->newLine();
+        $this->command->info(' Company Login Credentials:');
+        $this->command->info('  Company 1: peter.novak@techsolutions.sk / password');
+        $this->command->info('  Company 2: jana.horvath@digitalagency.sk / password');
+        $this->command->info('  Company 3: martin.kovac@swhouse.sk / password');
+        $this->command->newLine();
+        $this->command->info(' Guarantor Login Credentials:');
+        $this->command->info('  Guarantor: garant@ukf.sk / password');
+        $this->command->newLine();
+        $this->command->info(' Note: Student emails follow format: meno.priezvisko@student.ukf.sk (no diacritics)');
     }
 }

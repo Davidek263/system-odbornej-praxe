@@ -36,6 +36,10 @@
         <form @submit.prevent="handleRegister">
           <!-- STUDENT FORM -->
           <template v-if="!isCompany">
+            <div class="info-box">
+              <p>Po registrácii Vám bude na študentský email odoslané dočasné heslo. Pri prvom prihlásení budete musieť heslo zmeniť.</p>
+            </div>
+
             <div class="form-row">
               <div class="form-group">
                 <label for="first_name">Meno <span class="required">*</span></label>
@@ -46,7 +50,6 @@
                   placeholder="Meno"
                   :disabled="loading"
                 />
-                <p v-if="errors.first_name" class="error">{{ errors.first_name[0] }}</p>
               </div>
 
               <div class="form-group">
@@ -58,7 +61,6 @@
                   placeholder="Priezvisko"
                   :disabled="loading"
                 />
-                <p v-if="errors.last_name" class="error">{{ errors.last_name[0] }}</p>
               </div>
             </div>
 
@@ -73,7 +75,6 @@
                 @blur="validateStudentEmail"
               />
               <p class="hint">Formát: meno.priezvisko@student.ukf.sk (bez diakritiky)</p>
-              <p v-if="errors.student_email" class="error">{{ errors.student_email[0] }}</p>
             </div>
 
             <div class="form-group">
@@ -85,7 +86,6 @@
                 placeholder="osobny.email@gmail.com (voliteľné)"
                 :disabled="loading"
               />
-              <p v-if="errors.alternative_email" class="error">{{ errors.alternative_email[0] }}</p>
             </div>
 
             <div class="form-group">
@@ -97,7 +97,6 @@
                 placeholder="+421 XXX XXX XXX"
                 :disabled="loading"
               />
-              <p v-if="errors.phone_number" class="error">{{ errors.phone_number[0] }}</p>
             </div>
 
             <div class="form-group">
@@ -116,7 +115,6 @@
                   {{ field.study_field_name }} ({{ field.abbreviation }})
                 </option>
               </select>
-              <p v-if="errors.study_field_id" class="error">{{ errors.study_field_id[0] }}</p>
             </div>
 
             <div class="section-title">Adresa <span class="required">*</span></div>
@@ -131,7 +129,6 @@
                   placeholder="Ulica"
                   :disabled="loading"
                 />
-                <p v-if="errors.street" class="error">{{ errors.street[0] }}</p>
               </div>
 
               <div class="form-group flex-1">
@@ -143,7 +140,6 @@
                   placeholder="123"
                   :disabled="loading"
                 />
-                <p v-if="errors.street_number" class="error">{{ errors.street_number[0] }}</p>
               </div>
             </div>
 
@@ -157,7 +153,6 @@
                   placeholder="Mesto"
                   :disabled="loading"
                 />
-                <p v-if="errors.city" class="error">{{ errors.city[0] }}</p>
               </div>
 
               <div class="form-group">
@@ -169,7 +164,6 @@
                   placeholder="94901"
                   :disabled="loading"
                 />
-                <p v-if="errors.postal_code" class="error">{{ errors.postal_code[0] }}</p>
               </div>
             </div>
 
@@ -182,12 +176,15 @@
                 placeholder="Slovakia"
                 :disabled="loading"
               />
-              <p v-if="errors.country" class="error">{{ errors.country[0] }}</p>
             </div>
           </template>
 
           <!-- COMPANY FORM -->
           <template v-else>
+            <div class="info-box">
+              <p>Po registrácii Vám bude na kontaktný email odoslané dočasné heslo a link na aktiváciu účtu. Pri prvom prihlásení budete musieť heslo zmeniť.</p>
+            </div>
+
             <div class="form-group">
               <label for="company_name">Názov firmy <span class="required">*</span></label>
               <input 
@@ -197,22 +194,35 @@
                 placeholder="Názov firmy"
                 :disabled="loading"
               />
-              <p v-if="errors.company_name" class="error">{{ errors.company_name[0] }}</p>
             </div>
 
             <div class="section-title">Kontaktná osoba <span class="required">*</span></div>
 
-            <div class="form-group">
-              <label for="contact_person_name">Meno a priezvisko <span class="required">*</span></label>
-              <input 
-                id="contact_person_name" 
-                v-model="companyForm.contact_person_name" 
-                type="text" 
-                placeholder="Meno a priezvisko"
-                :disabled="loading"
-              />
-              <p v-if="errors.contact_person_name" class="error">{{ errors.contact_person_name[0] }}</p>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="contact_person_first_name">Meno <span class="required">*</span></label>
+                <input 
+                  id="contact_person_first_name" 
+                  v-model="companyForm.contact_person_first_name" 
+                  type="text" 
+                  placeholder="Meno"
+                  :disabled="loading"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="contact_person_last_name">Priezvisko <span class="required">*</span></label>
+                <input 
+                  id="contact_person_last_name" 
+                  v-model="companyForm.contact_person_last_name" 
+                  type="text" 
+                  placeholder="Priezvisko"
+                  :disabled="loading"
+                />
+              </div>
             </div>
+
+
 
             <div class="form-group">
               <label for="contact_person_email">Email <span class="required">*</span></label>
@@ -223,7 +233,6 @@
                 placeholder="kontakt@firma.sk"
                 :disabled="loading"
               />
-              <p v-if="errors.contact_person_email" class="error">{{ errors.contact_person_email[0] }}</p>
             </div>
 
             <div class="form-group">
@@ -235,7 +244,6 @@
                 placeholder="+421 XXX XXX XXX"
                 :disabled="loading"
               />
-              <p v-if="errors.contact_person_phone" class="error">{{ errors.contact_person_phone[0] }}</p>
             </div>
 
             <div class="section-title">Adresa firmy <span class="required">*</span></div>
@@ -250,7 +258,6 @@
                   placeholder="Ulica"
                   :disabled="loading"
                 />
-                <p v-if="errors.street" class="error">{{ errors.street[0] }}</p>
               </div>
 
               <div class="form-group flex-1">
@@ -262,7 +269,6 @@
                   placeholder="123"
                   :disabled="loading"
                 />
-                <p v-if="errors.street_number" class="error">{{ errors.street_number[0] }}</p>
               </div>
             </div>
 
@@ -276,7 +282,6 @@
                   placeholder="Mesto"
                   :disabled="loading"
                 />
-                <p v-if="errors.city" class="error">{{ errors.city[0] }}</p>
               </div>
 
               <div class="form-group">
@@ -288,7 +293,6 @@
                   placeholder="82109"
                   :disabled="loading"
                 />
-                <p v-if="errors.postal_code" class="error">{{ errors.postal_code[0] }}</p>
               </div>
             </div>
 
@@ -301,33 +305,6 @@
                 placeholder="Slovakia"
                 :disabled="loading"
               />
-              <p v-if="errors.country" class="error">{{ errors.country[0] }}</p>
-            </div>
-
-            <div class="section-title">Heslo <span class="required">*</span></div>
-
-            <div class="form-group">
-              <label for="password">Heslo <span class="required">*</span></label>
-              <input 
-                id="password" 
-                v-model="companyForm.password" 
-                type="password" 
-                placeholder="Minimálne 8 znakov"
-                :disabled="loading"
-              />
-              <p v-if="errors.password" class="error">{{ errors.password[0] }}</p>
-            </div>
-
-            <div class="form-group">
-              <label for="password_confirmation">Potvrdenie hesla <span class="required">*</span></label>
-              <input 
-                id="password_confirmation" 
-                v-model="companyForm.password_confirmation" 
-                type="password" 
-                placeholder="Zopakujte heslo"
-                :disabled="loading"
-              />
-              <p v-if="errors.password_confirmation" class="error">{{ errors.password_confirmation[0] }}</p>
             </div>
           </template>
 
@@ -375,7 +352,8 @@ const studentForm = reactive({
 
 const companyForm = reactive({
   company_name: '',
-  contact_person_name: '',
+  contact_person_first_name: '',
+  contact_person_last_name: '',
   contact_person_email: '',
   contact_person_phone: '',
   street: '',
@@ -383,11 +361,8 @@ const companyForm = reactive({
   city: '',
   postal_code: '',
   country: 'Slovakia',
-  password: '',
-  password_confirmation: '',
 })
 
-const errors = reactive({})
 const alert = reactive({ show: false, type: 'error', message: '' })
 
 function showAlert(message, type = 'error') {
@@ -399,14 +374,12 @@ function showAlert(message, type = 'error') {
 function switchToStudent() {
   if (loading.value) return
   isCompany.value = false
-  Object.keys(errors).forEach(k => delete errors[k])
   alert.show = false
 }
 
 function switchToCompany() {
   if (loading.value) return
   isCompany.value = true
-  Object.keys(errors).forEach(k => delete errors[k])
   alert.show = false
 }
 
@@ -415,9 +388,7 @@ function validateStudentEmail() {
   const pattern = /^[a-z]+\.[a-z]+@student\.ukf\.sk$/
   
   if (email && !pattern.test(email)) {
-    errors.student_email = ['Email musí byť vo formáte: meno.priezvisko@student.ukf.sk (bez diakritiky, malé písmená)']
-  } else {
-    delete errors.student_email
+    showAlert('Email musí byť vo formáte: meno.priezvisko@student.ukf.sk (bez diakritiky, malé písmená)', 'warning')
   }
 }
 
@@ -435,8 +406,6 @@ async function fetchStudyFields() {
 }
 
 function handleRegister() {
-  // Clear previous errors
-  Object.keys(errors).forEach(k => delete errors[k])
   alert.show = false
   loading.value = true
 
@@ -450,6 +419,14 @@ function handleRegister() {
     }
   })
 
+  // For company: combine first and last name into contact_person_name for backend
+  if (isCompany.value) {
+    payload.contact_person_name = `${payload.contact_person_first_name} ${payload.contact_person_last_name}`.trim()
+    // Remove the separate fields so backend doesn't get confused
+    delete payload.contact_person_first_name
+    delete payload.contact_person_last_name
+  }
+
   // Convert study_field_id to number for student
   if (!isCompany.value && payload.study_field_id) {
     payload.study_field_id = parseInt(payload.study_field_id)
@@ -458,31 +435,39 @@ function handleRegister() {
   api.post(endpoint, payload)
     .then(res => {
       loading.value = false
+      const defaultMessage = isCompany.value 
+        ? 'Registrácia úspešná! Dočasné heslo bolo odoslané na Váš email. Po prihlásení budete musieť zmeniť heslo.'
+        : 'Registrácia úspešná! Dočasné heslo bolo odoslané na Váš študentský email. Po prihlásení budete musieť zmeniť heslo.'
+      
       showAlert(
-        res.data.message || 'Registrácia úspešná! Skontrolujte si email pre aktiváciu účtu.', 
+        res.data.message || defaultMessage, 
         'success'
       )
 
-      // Redirect to login after 4 seconds
+      // Redirect to login after 5 seconds
       setTimeout(() => {
         router.push('/login')
-      }, 4000)
+      }, 5000)
     })
     .catch(err => {
       loading.value = false
       
       // Handle validation errors
       if (err.response?.status === 422 && err.response?.data?.errors) {
-        Object.assign(errors, err.response.data.errors)
-        showAlert('Prosím opravte chyby vo formulári.', 'error')
+        const validationErrors = err.response.data.errors
         
-        // Scroll to first error
-        setTimeout(() => {
-          const firstError = document.querySelector('.error')
-          if (firstError) {
-            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        // Build error message from all validation errors
+        let errorMessage = 'Prosím opravte nasledujúce chyby:\n\n'
+        Object.keys(validationErrors).forEach(field => {
+          const fieldErrors = validationErrors[field]
+          if (Array.isArray(fieldErrors)) {
+            fieldErrors.forEach(error => {
+              errorMessage += `• ${error}\n`
+            })
           }
-        }, 100)
+        })
+        
+        showAlert(errorMessage, 'error')
         return
       }
 
@@ -566,6 +551,21 @@ h1 {
 .toggle-buttons button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.info-box {
+  background-color: #e8f5e9;
+  border-left: 4px solid #42b883;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+
+.info-box p {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .section-title {

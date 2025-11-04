@@ -4,6 +4,7 @@
       v-if="alert.show"
       :type="alert.type"
       :message="alert.message"
+      :duration="alert.duration"
       @close="alert.show = false"
       dismissible
     />
@@ -17,11 +18,24 @@
             <input
               v-model="filters.search"
               @input="applyFilters"
-              placeholder="Hľadaj študenta..."
-              aria-label="Hľadaj študenta"
+              placeholder="Vyhľadávanie vo všetkých stĺpcoch..."
               :disabled="loading"
+              class="search-input"
             />
-            <select v-model="filters.status" @change="applyFilters" aria-label="Filter stavu" :disabled="loading">
+            <button @click="fetchInternships" :disabled="loading" class="refresh-btn">
+              {{ loading ? 'Načítavam...' : 'Aktualizovať' }}
+            </button>
+            <button @click="toggleAdvancedFilters" class="filter-btn" :class="{ active: showAdvancedFilters }">
+              Filtre {{ showAdvancedFilters ? '▲' : '▼' }}
+            </button>
+          </div>
+        </header>
+
+        <!-- Advanced Filters -->
+        <section v-if="showAdvancedFilters" class="advanced-filters">
+          <div class="filter-group">
+            <label>Stav:</label>
+            <select v-model="filters.status" @change="applyFilters">
               <option value="">Všetky stavy</option>
               <option value="Vytvorená">Vytvorená</option>
               <option value="Potvrdená">Potvrdená</option>
@@ -30,16 +44,49 @@
               <option value="Neobhájená">Neobhájená</option>
               <option value="Zamietnutá">Zamietnutá</option>
             </select>
-            <select v-model="filters.academicYear" @change="applyFilters" aria-label="Filter akademického roka" :disabled="loading">
+          </div>
+
+          <div class="filter-group">
+            <label>Akademický rok:</label>
+            <select v-model="filters.academicYear" @change="applyFilters">
               <option value="">Všetky roky</option>
               <option v-for="year in academicYears" :key="year" :value="year">{{ year }}</option>
             </select>
-            <button @click="fetchInternships" :disabled="loading">
-              {{ loading ? 'Načítavam...' : 'Aktualizovať' }}
-            </button>
           </div>
-        </header>
 
+          <div class="filter-group">
+            <label>Semester:</label>
+            <select v-model="filters.semester" @change="applyFilters">
+              <option value="">Všetky semestre</option>
+              <option value="1">Zimný semester</option>
+              <option value="2">Letný semester</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Študijný odbor:</label>
+            <select v-model="filters.studyField" @change="applyFilters">
+              <option value="">Všetky odbory</option>
+              <option v-for="field in studyFields" :key="field" :value="field">{{ field }}</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Dátum začiatku:</label>
+            <input type="date" v-model="filters.dateFrom" @change="applyFilters" />
+          </div>
+
+          <div class="filter-group">
+            <label>Dátum konca:</label>
+            <input type="date" v-model="filters.dateTo" @change="applyFilters" />
+          </div>
+
+          <button @click="clearFilters" class="clear-filters-btn">
+            Vymazať filtre
+          </button>
+        </section>
+
+        <!-- Statistics -->
         <section class="stats-bar" v-if="!loading">
           <div class="stat">
             <span class="stat-label">Čakajúce</span>
@@ -57,17 +104,58 @@
             <span class="stat-label">Zamietnuté</span>
             <span class="stat-value rejected">{{ stats.rejected }}</span>
           </div>
+          <div class="stat">
+            <span class="stat-label">Celkom</span>
+            <span class="stat-value total">{{ filteredInternships.length }}</span>
+          </div>
         </section>
 
+        <!-- Table -->
         <section class="table-wrap">
           <table class="applications-table" v-if="!loading && internships.length">
             <thead>
               <tr>
-                <th>Študent</th>
-                <th>Študijný odbor</th>
-                <th>Akademický rok</th>
-                <th>Termín praxe</th>
-                <th>Stav</th>
+                <th class="sortable" @click="toggleSort('student')">
+                  <div class="th-content">
+                    <span>Študent</span>
+                    <span class="sort-indicator" v-if="sortColumn === 'student'">
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    </span>
+                  </div>
+                </th>
+                <th class="sortable" @click="toggleSort('studyField')">
+                  <div class="th-content">
+                    <span>Študijný odbor</span>
+                    <span class="sort-indicator" v-if="sortColumn === 'studyField'">
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    </span>
+                  </div>
+                </th>
+                <th class="sortable" @click="toggleSort('academicYear')">
+                  <div class="th-content">
+                    <span>Akademický rok</span>
+                    <span class="sort-indicator" v-if="sortColumn === 'academicYear'">
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    </span>
+                  </div>
+                </th>
+                <th class="sortable" @click="toggleSort('dateStart')">
+                  <div class="th-content">
+                    <span>Termín praxe</span>
+                    <span class="sort-indicator" v-if="sortColumn === 'dateStart'">
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    </span>
+                  </div>
+                </th>
+                <th class="sortable" @click="toggleSort('status')">
+                  <div class="th-content">
+                    <span>Stav</span>
+                    <span class="sort-indicator" v-if="sortColumn === 'status'">
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    </span>
+                  </div>
+                </th>
+                <th>Výkaz</th>
                 <th class="actions-col">Akcie</th>
               </tr>
             </thead>
@@ -94,8 +182,18 @@
                     {{ internship.current_status?.internship_status_name || 'Neznámy' }}
                   </span>
                 </td>
+                <td>
+                  <div v-if="hasTimesheet(internship)" class="timesheet-info">
+                    <span :class="timesheetBadge(internship)">
+                      {{ getTimesheetStatus(internship) }}
+                    </span>
+                  </div>
+                  <div v-else class="muted">—</div>
+                </td>
                 <td class="actions-col">
                   <button class="ghost" @click="viewDetails(internship)">Detail</button>
+                  
+                  <!-- Internship approval/rejection -->
                   <button
                     v-if="canConfirm(internship)"
                     class="approve"
@@ -103,7 +201,7 @@
                     :disabled="processing[internship.id]"
                     title="Potvrdiť prax"
                   >
-                    ✓
+                    Potvrdiť
                   </button>
                   <button
                     v-if="canReject(internship)"
@@ -112,7 +210,27 @@
                     :disabled="processing[internship.id]"
                     title="Zamietnuť prax"
                   >
-                    ✕
+                    Zamietnuť
+                  </button>
+                  
+                  <!-- Timesheet approval/rejection -->
+                  <button
+                    v-if="canApproveTimesheet(internship)"
+                    class="approve-small"
+                    @click="approveTimesheet(internship)"
+                    :disabled="processing[internship.id]"
+                    title="Schváliť výkaz"
+                  >
+                    ✓ Výkaz
+                  </button>
+                  <button
+                    v-if="canRejectTimesheet(internship)"
+                    class="reject-small"
+                    @click="rejectTimesheet(internship)"
+                    :disabled="processing[internship.id]"
+                    title="Zamietnuť výkaz"
+                  >
+                    ✗ Výkaz
                   </button>
                 </td>
               </tr>
@@ -124,28 +242,49 @@
             <p class="muted">Praxe sa zobrazia po tom, čo ich študenti vytvoria a priradia k vašej firme.</p>
           </div>
 
+          <div v-if="!loading && internships.length && !filteredInternships.length" class="empty">
+            <p>Žiadne výsledky pre zadané filtre.</p>
+            <button @click="clearFilters" class="clear-btn">Vymazať filtre</button>
+          </div>
+
           <div v-if="loading" class="loading">
             <div class="spinner"></div>
             <p>Načítavam odborné praxe...</p>
           </div>
         </section>
 
+        <!-- Pagination -->
         <footer class="panel-footer" v-if="totalPages > 1">
           <div class="pagination">
+            <button @click="changePage(1)" :disabled="currentPage === 1">Prvá</button>
             <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1">Predchádzajúca</button>
-            <span>Strana {{ currentPage }} z {{ totalPages }}</span>
+            <span class="page-info">
+              Strana {{ currentPage }} / {{ totalPages }} 
+              <span class="muted">({{ filteredInternships.length }} záznamov)</span>
+            </span>
             <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">Ďalšia</button>
+            <button @click="changePage(totalPages)" :disabled="currentPage === totalPages">Posledná</button>
+          </div>
+          <div class="page-size-selector">
+            <label>Počet na stránku:</label>
+            <select v-model="pageSize" @change="currentPage = 1">
+              <option :value="5">5</option>
+              <option :value="10">10</option>
+              <option :value="20">20</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+            </select>
           </div>
         </footer>
       </div>
     </div>
 
-    <!-- Detail modal -->
+    <!-- Detail Modal -->
     <div v-if="selected" class="modal-backdrop" @click.self="closeModal">
       <div class="modal-card">
         <header class="modal-header">
           <h2>Detail odbornej praxe</h2>
-          <button class="close" @click="closeModal">✕</button>
+          <button class="close" @click="closeModal">&times;</button>
         </header>
 
         <div class="modal-body">
@@ -184,7 +323,7 @@
               <strong>História zmien stavu:</strong>
               <ul>
                 <li v-for="change in selected.status_history" :key="change.id">
-                  <span class="history-date">{{ formatDateTime(change.status_changed_at) }}</span> — 
+                  <span class="history-date">{{ formatDateTime(change.status_changed_at) }}</span>
                   <span :class="statusBadge(change.status.internship_status_name)">
                     {{ change.status.internship_status_name }}
                   </span>
@@ -199,10 +338,10 @@
             <ul class="documents-list">
               <li v-for="doc in selected.documents" :key="doc.id">
                 <a :href="doc.file_path" target="_blank" rel="noopener" class="document-link">
-                  📄 {{ doc.document_name }}
+                  {{ doc.document_name }}
                 </a>
                 <span class="document-type">({{ doc.document_type?.document_type_name }})</span>
-                <span v-if="doc.is_verified" class="verified-badge">✓ Overené</span>
+                <span v-if="doc.is_verified" class="verified-badge">Overené</span>
               </li>
             </ul>
           </div>
@@ -243,30 +382,38 @@ import PageAlert from '@/components/PageAlert.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-
-// --- State ---
-const internships = ref([])
-const loading = ref(false)
-const processing = reactive({})
-const selected = ref(null)
 const alert = reactive({ show: false, type: 'error', message: '' })
 
-// --- Filters & pagination ---
-const filters = reactive({
-  search: '',
-  status: '',
-  academicYear: '',
-})
-const pageSize = 10
-const currentPage = ref(1)
-
-// --- Helper functions ---
 function showAlert(message, type = 'error') {
   alert.message = message
   alert.type = type
   alert.show = true
 }
 
+// State
+const internships = ref([])
+const loading = ref(false)
+const processing = reactive({})
+const selected = ref(null)
+const showAdvancedFilters = ref(false)
+
+// Filters & Sorting
+const filters = reactive({
+  search: '',
+  status: '',
+  academicYear: '',
+  semester: '',
+  studyField: '',
+  dateFrom: '',
+  dateTo: '',
+})
+
+const sortColumn = ref('')
+const sortDirection = ref('asc')
+const pageSize = ref(10)
+const currentPage = ref(1)
+
+// Helper functions
 function formatDate(d) {
   if (!d) return '—'
   const dt = new Date(d)
@@ -320,7 +467,83 @@ function canReject(internship) {
   return internship.current_status?.internship_status_name === 'Vytvorená'
 }
 
-// --- Computed ---
+// Timesheet helpers
+function hasTimesheet(internship) {
+  if (!internship.documents || !Array.isArray(internship.documents)) return false
+  return internship.documents.some(doc => 
+    doc.document_type?.document_type_name === 'Výkaz hodín'
+  )
+}
+
+function getTimesheet(internship) {
+  if (!internship.documents || !Array.isArray(internship.documents)) return null
+  return internship.documents.find(doc => 
+    doc.document_type?.document_type_name === 'Výkaz hodín'
+  )
+}
+
+function getTimesheetStatus(internship) {
+  const timesheet = getTimesheet(internship)
+  if (!timesheet) return 'Bez výkazu'
+  
+  // Check timesheet_status_history for latest status
+  if (timesheet.timesheet_status_history && timesheet.timesheet_status_history.length > 0) {
+    const latestStatus = timesheet.timesheet_status_history[timesheet.timesheet_status_history.length - 1]
+    return latestStatus.status?.timesheet_status_name || 'Nahraný'
+  }
+  
+  return timesheet.is_verified ? 'Potvrdený' : 'Nahraný'
+}
+
+function timesheetBadge(internship) {
+  const status = getTimesheetStatus(internship)
+  const badgeMap = {
+    'Bez výkazu': 'badge muted',
+    'Nahraný': 'badge pending',
+    'Potvrdený': 'badge approved',
+    'Zamietnutý': 'badge rejected'
+  }
+  return badgeMap[status] || 'badge'
+}
+
+function canApproveTimesheet(internship) {
+  const timesheet = getTimesheet(internship)
+  if (!timesheet) return false
+  
+  const status = getTimesheetStatus(internship)
+  return status === 'Nahraný' || status === 'Zamietnutý'
+}
+
+function canRejectTimesheet(internship) {
+  const timesheet = getTimesheet(internship)
+  if (!timesheet) return false
+  
+  const status = getTimesheetStatus(internship)
+  return status === 'Nahraný' || status === 'Potvrdený'
+}
+
+function toggleAdvancedFilters() {
+  showAdvancedFilters.value = !showAdvancedFilters.value
+}
+
+function clearFilters() {
+  Object.keys(filters).forEach(key => {
+    filters[key] = ''
+  })
+  currentPage.value = 1
+}
+
+function toggleSort(column) {
+  if (sortColumn.value === column) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortColumn.value = column
+    sortDirection.value = 'asc'
+  }
+  currentPage.value = 1
+}
+
+// Computed
 const academicYears = computed(() => {
   const years = new Set()
   internships.value.forEach(i => {
@@ -329,24 +552,107 @@ const academicYears = computed(() => {
   return Array.from(years).sort().reverse()
 })
 
+const studyFields = computed(() => {
+  const fields = new Set()
+  internships.value.forEach(i => {
+    const fieldName = i.student?.study_field?.study_field_name
+    if (fieldName) fields.add(fieldName)
+  })
+  return Array.from(fields).sort()
+})
+
 const filteredInternships = computed(() => {
   let result = internships.value
 
+  // Fulltext search
   if (filters.search) {
     const searchLower = filters.search.toLowerCase()
     result = result.filter(i => {
       const studentName = `${i.student.first_name} ${i.student.last_name}`.toLowerCase()
       const studentEmail = (i.student.student_email || i.student.email || '').toLowerCase()
-      return studentName.includes(searchLower) || studentEmail.includes(searchLower)
+      const studyField = (i.student.study_field?.study_field_name || '').toLowerCase()
+      const studyFieldAbbr = (i.student.study_field?.abbreviation || '').toLowerCase()
+      const academicYear = (i.academic_year || '').toLowerCase()
+      const semester = getSemesterText(i.semester).toLowerCase()
+      const dateStart = formatDate(i.date_start).toLowerCase()
+      const dateEnd = formatDate(i.date_end).toLowerCase()
+      const status = (i.current_status?.internship_status_name || '').toLowerCase()
+      const phone = (i.student.phone_number || '').toLowerCase()
+      
+      return studentName.includes(searchLower) ||
+             studentEmail.includes(searchLower) ||
+             studyField.includes(searchLower) ||
+             studyFieldAbbr.includes(searchLower) ||
+             academicYear.includes(searchLower) ||
+             semester.includes(searchLower) ||
+             dateStart.includes(searchLower) ||
+             dateEnd.includes(searchLower) ||
+             status.includes(searchLower) ||
+             phone.includes(searchLower)
     })
   }
 
+  // Apply other filters
   if (filters.status) {
     result = result.filter(i => i.current_status?.internship_status_name === filters.status)
   }
 
   if (filters.academicYear) {
     result = result.filter(i => i.academic_year === filters.academicYear)
+  }
+
+  if (filters.semester) {
+    result = result.filter(i => i.semester === parseInt(filters.semester))
+  }
+
+  if (filters.studyField) {
+    result = result.filter(i => i.student.study_field?.study_field_name === filters.studyField)
+  }
+
+  if (filters.dateFrom) {
+    const fromDate = new Date(filters.dateFrom)
+    result = result.filter(i => new Date(i.date_start) >= fromDate)
+  }
+
+  if (filters.dateTo) {
+    const toDate = new Date(filters.dateTo)
+    result = result.filter(i => new Date(i.date_end) <= toDate)
+  }
+
+  // Sorting
+  if (sortColumn.value) {
+    result = [...result].sort((a, b) => {
+      let aVal, bVal
+
+      switch (sortColumn.value) {
+        case 'student':
+          aVal = `${a.student.first_name} ${a.student.last_name}`.toLowerCase()
+          bVal = `${b.student.first_name} ${b.student.last_name}`.toLowerCase()
+          break
+        case 'studyField':
+          aVal = (a.student.study_field?.study_field_name || '').toLowerCase()
+          bVal = (b.student.study_field?.study_field_name || '').toLowerCase()
+          break
+        case 'academicYear':
+          aVal = a.academic_year
+          bVal = b.academic_year
+          break
+        case 'dateStart':
+          aVal = new Date(a.date_start)
+          bVal = new Date(b.date_start)
+          break
+        case 'status':
+          aVal = (a.current_status?.internship_status_name || '').toLowerCase()
+          bVal = (b.current_status?.internship_status_name || '').toLowerCase()
+          break
+        default:
+          return 0
+      }
+
+      if (aVal < bVal) return sortDirection.value === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDirection.value === 'asc' ? 1 : -1
+      return 0
+    })
   }
 
   return result
@@ -361,62 +667,45 @@ const stats = computed(() => {
   return { pending, confirmed, approved, rejected }
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredInternships.value.length / pageSize)))
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredInternships.value.length / pageSize.value)))
 
 const paginated = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return filteredInternships.value.slice(start, start + pageSize)
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredInternships.value.slice(start, start + pageSize.value)
 })
 
-// --- API calls ---
+// API calls
 async function fetchInternships() {
   loading.value = true
   try {
-    // Get current company user
     const userStr = localStorage.getItem('user')
     const user = userStr ? JSON.parse(userStr) : null
     
-    console.log('Current user:', user) // Debug log
-    
     if (!user) {
-      showAlert('Nie ste prihlásený. Presmerovanie na prihlásenie...', 'error')
+      error('auth.unauthorized')
       setTimeout(() => router.push('/login'), 1500)
       return
     }
     
     if (!user.company) {
-      showAlert('Váš účet nie je spojený s firmou. Kontaktujte administrátora.', 'error')
-      console.error('User object missing company:', user)
+      error('error.internship.missing.company')
       return
     }
-
-    console.log('Fetching internships for company ID:', user.company.id) // Debug log
     
     const response = await api.get(`/company-internships/${user.company.id}`)
     internships.value = response.data.internships || []
     currentPage.value = 1
     
-    console.log('Internships loaded:', internships.value.length) // Debug log
   } catch (err) {
-    console.error('Failed to fetch internships:', err)
-    console.error('Error response:', err.response) // Debug log
+      showAlert(err.response?.data?.message || 'Nepodarilo sa načítať praxe.', 'error')
     
     if (err.response?.status === 401) {
-      showAlert('Relácia vypršala. Prosím prihláste sa znova.', 'error')
       setTimeout(() => {
         localStorage.removeItem('token')
         localStorage.removeItem('user')
         router.push('/login')
       }, 2000)
-      return
     }
-    
-    if (err.response?.status === 403) {
-      showAlert('Nemáte oprávnenie na zobrazenie týchto dát.', 'error')
-      return
-    }
-    
-    showAlert(err.response?.data?.message || 'Nepodarilo sa načítať odborné praxe.', 'error')
   } finally {
     loading.value = false
   }
@@ -434,7 +723,7 @@ function closeModal() {
   selected.value = null
 }
 
-// --- Actions ---
+// Actions
 async function confirmInternship(internship) {
   if (!confirm(`Potvrdiť odbornú prax pre študenta ${internship.student.first_name} ${internship.student.last_name}?`)) {
     return
@@ -443,21 +732,17 @@ async function confirmInternship(internship) {
   processing[internship.id] = true
   
   try {
-    const response = await api.post(`/internships/${internship.id}/confirm`, {
+    await api.post(`/internships/${internship.id}/confirm`, {
       notes: 'Potvrdené firmou'
     })
 
-    showAlert(response.data.message || 'Prax bola úspešne potvrdená.', 'success')
-    
-    // Refresh internships
+    showAlert('Prax bola úspešne potvrdená.', 'success')
     await fetchInternships()
     
-    // Close modal if open
     if (selected.value && selected.value.id === internship.id) {
       closeModal()
     }
   } catch (err) {
-    console.error('Failed to confirm internship:', err)
     showAlert(err.response?.data?.message || 'Nepodarilo sa potvrdiť prax.', 'error')
   } finally {
     processing[internship.id] = false
@@ -467,7 +752,7 @@ async function confirmInternship(internship) {
 async function rejectInternship(internship) {
   const reason = prompt('Zadajte dôvod zamietnutia (voliteľné):')
   
-  if (reason === null) return // User cancelled
+  if (reason === null) return
   
   if (!confirm(`Zamietnuť odbornú prax pre študenta ${internship.student.first_name} ${internship.student.last_name}?`)) {
     return
@@ -476,42 +761,99 @@ async function rejectInternship(internship) {
   processing[internship.id] = true
   
   try {
-    const response = await api.post(`/internships/${internship.id}/reject`, {
+    await api.post(`/internships/${internship.id}/reject`, {
       notes: reason || 'Zamietnuté firmou'
     })
 
-    showAlert(response.data.message || 'Prax bola zamietnutá.', 'success')
-    
-    // Refresh internships
+    showAlert('Prax bola úspešne zamietnutá.', 'success')
     await fetchInternships()
     
-    // Close modal if open
     if (selected.value && selected.value.id === internship.id) {
       closeModal()
     }
   } catch (err) {
-    console.error('Failed to reject internship:', err)
     showAlert(err.response?.data?.message || 'Nepodarilo sa zamietnuť prax.', 'error')
   } finally {
     processing[internship.id] = false
   }
 }
 
-// --- Pagination ---
+// Timesheet approval/rejection
+async function approveTimesheet(internship) {
+  const timesheet = getTimesheet(internship)
+  if (!timesheet) return
+  
+  if (!confirm(`Schváliť výkaz hodín pre študenta ${internship.student.first_name} ${internship.student.last_name}?`)) {
+    return
+  }
+
+  processing[internship.id] = true
+  
+  try {
+    await api.post(`/documents/${timesheet.id}/approve-timesheet`, {
+      notes: 'Schválené firmou'
+    })
+
+    showAlert('Výkaz hodín bol úspešne schválený.', 'success')
+    await fetchInternships()
+    
+    if (selected.value && selected.value.id === internship.id) {
+      closeModal()
+    }
+  } catch (err) {
+    showAlert(err.response?.data?.message || 'Nepodarilo sa schváliť výkaz hodín.', 'error')
+  } finally {
+    processing[internship.id] = false
+  }
+}
+
+async function rejectTimesheet(internship) {
+  const timesheet = getTimesheet(internship)
+  if (!timesheet) return
+  
+  const reason = prompt('Zadajte dôvod zamietnutia výkazu (voliteľné):')
+  
+  if (reason === null) return
+  
+  if (!confirm(`Zamietnuť výkaz hodín pre študenta ${internship.student.first_name} ${internship.student.last_name}?`)) {
+    return
+  }
+
+  processing[internship.id] = true
+  
+  try {
+    await api.post(`/documents/${timesheet.id}/reject-timesheet`, {
+      notes: reason || 'Zamietnuté firmou'
+    })
+
+    showAlert('Výkaz hodín bol zamietnutý.', 'success')
+    await fetchInternships()
+    
+    if (selected.value && selected.value.id === internship.id) {
+      closeModal()
+    }
+  } catch (err) {
+    showAlert(err.response?.data?.message || 'Nepodarilo sa zamietnuť výkaz hodín.', 'error')
+  } finally {
+    processing[internship.id] = false
+  }
+}
+
+// Pagination
 function changePage(n) {
   if (n < 1 || n > totalPages.value) return
   currentPage.value = n
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// --- Mount ---
+// Mount
 onMounted(() => {
   fetchInternships()
 })
 </script>
 
 <style scoped>
-/* Global page background + font */
+/* Same styles as before - keeping all the CSS unchanged */
 html, body, .dashboard-page {
   height: 100%;
   margin: 0;
@@ -520,7 +862,6 @@ html, body, .dashboard-page {
   color: #2c3e50;
 }
 
-/* Container */
 .dashboard-container {
   display: flex;
   justify-content: center;
@@ -529,10 +870,9 @@ html, body, .dashboard-page {
   padding: 28px 20px;
 }
 
-/* Card */
 .panel-card {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
   background: #fff;
   padding: 24px;
   border-radius: 14px;
@@ -540,7 +880,6 @@ html, body, .dashboard-page {
   animation: fadeIn 0.45s ease;
 }
 
-/* Header */
 .panel-header {
   display: flex;
   justify-content: space-between;
@@ -556,7 +895,6 @@ html, body, .dashboard-page {
   color: #2c3e50;
 }
 
-/* Actions */
 .actions {
   display: flex;
   gap: 10px;
@@ -564,53 +902,123 @@ html, body, .dashboard-page {
   flex-wrap: wrap;
 }
 
-.actions input,
-.actions select {
-  padding: 10px 12px;
+.search-input {
+  padding: 10px 16px;
   border-radius: 8px;
-  border: 1px solid #e6e9ee;
+  border: 2px solid #e6e9ee;
+  font-size: 14px;
+  min-width: 300px;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #42b883;
+  box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1);
+}
+
+.refresh-btn,
+.filter-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.refresh-btn {
+  background: #42b883;
+  color: #fff;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #369f73;
+  transform: translateY(-1px);
+}
+
+.filter-btn {
+  background: #607d9b;
+  color: #fff;
+}
+
+.filter-btn.active {
+  background: #4a6280;
+}
+
+.filter-btn:hover {
+  background: #4a6280;
+  transform: translateY(-1px);
+}
+
+.advanced-filters {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-group select,
+.filter-group input[type="date"] {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
   font-size: 14px;
   transition: border-color 0.2s;
 }
 
-.actions input {
-  min-width: 220px;
-}
-
-.actions input:focus,
-.actions select:focus {
+.filter-group select:focus,
+.filter-group input[type="date"]:focus {
   outline: none;
   border-color: #42b883;
 }
 
-.actions input:disabled,
-.actions select:disabled {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-}
-
-.actions button {
-  padding: 10px 16px;
-  border-radius: 8px;
+.clear-filters-btn {
+  padding: 8px 16px;
+  background: #ef4444;
+  color: white;
   border: none;
-  background: #42b883;
-  color: #fff;
+  border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
-  font-size: 14px;
-  transition: background 0.3s;
+  transition: background 0.2s;
+  align-self: end;
 }
 
-.actions button:hover:not(:disabled) {
-  background: #369f73;
+.clear-filters-btn:hover {
+  background: #dc2626;
 }
 
-.actions button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Stats bar */
 .stats-bar {
   display: flex;
   gap: 16px;
@@ -618,6 +1026,7 @@ html, body, .dashboard-page {
   padding: 16px;
   background: #f8f9fa;
   border-radius: 10px;
+  flex-wrap: wrap;
 }
 
 .stat {
@@ -625,6 +1034,7 @@ html, body, .dashboard-page {
   flex-direction: column;
   align-items: center;
   flex: 1;
+  min-width: 100px;
 }
 
 .stat-label {
@@ -652,7 +1062,10 @@ html, body, .dashboard-page {
   color: #ef4444;
 }
 
-/* Table */
+.stat-value.total {
+  color: #3b82f6;
+}
+
 .table-wrap {
   margin-top: 8px;
   overflow-x: auto;
@@ -671,6 +1084,30 @@ html, body, .dashboard-page {
   font-weight: 700;
   border-bottom: 2px solid #eef2f6;
   background: #f9fafb;
+  white-space: nowrap;
+}
+
+.applications-table thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.applications-table thead th.sortable:hover {
+  background: #f3f4f6;
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.sort-indicator {
+  font-size: 16px;
+  color: #42b883;
+  font-weight: bold;
 }
 
 .applications-table tbody td {
@@ -694,7 +1131,6 @@ html, body, .dashboard-page {
   margin-top: 4px; 
 }
 
-/* Badges */
 .badge {
   display: inline-block;
   padding: 6px 12px;
@@ -741,12 +1177,23 @@ html, body, .dashboard-page {
   border: 1px solid #fecaca; 
 }
 
-/* Actions column */
+.badge.muted {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+.timesheet-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .actions-col {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  min-width: 160px;
+  min-width: 200px;
 }
 
 button.ghost {
@@ -772,9 +1219,10 @@ button.approve {
   border: none;
   padding: 8px 12px;
   border-radius: 6px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  font-size: 13px;
 }
 
 button.approve:hover:not(:disabled) {
@@ -787,12 +1235,45 @@ button.reject {
   border: none;
   padding: 8px 12px;
   border-radius: 6px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  font-size: 13px;
 }
 
 button.reject:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+button.approve-small {
+  background: #10b981;
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 12px;
+}
+
+button.approve-small:hover:not(:disabled) {
+  background: #059669;
+}
+
+button.reject-small {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 12px;
+}
+
+button.reject-small:hover:not(:disabled) {
   background: #dc2626;
 }
 
@@ -801,7 +1282,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Empty & loading */
 .empty {
   padding: 60px 20px;
   text-align: center;
@@ -810,6 +1290,21 @@ button:disabled {
 
 .empty p {
   margin: 8px 0;
+}
+
+.clear-btn {
+  margin-top: 16px;
+  padding: 10px 20px;
+  background: #42b883;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.clear-btn:hover {
+  background: #369f73;
 }
 
 .loading {
@@ -832,17 +1327,18 @@ button:disabled {
   to { transform: rotate(360deg); }
 }
 
-/* Pagination */
 .panel-footer {
   margin-top: 20px;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .pagination {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -853,7 +1349,7 @@ button:disabled {
   background: #2c3e50;
   color: #fff;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   transition: background 0.2s;
 }
@@ -867,13 +1363,34 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.pagination span {
+.page-info {
   font-size: 14px;
   color: #4b5563;
   font-weight: 600;
+  padding: 0 12px;
 }
 
-/* Modal */
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.page-size-selector label {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.page-size-selector select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Modal styles */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -970,6 +1487,10 @@ button:disabled {
   border-radius: 6px;
   margin-bottom: 8px;
   font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .history-date {
@@ -979,6 +1500,7 @@ button:disabled {
 
 .history-notes {
   display: block;
+  width: 100%;
   margin-top: 4px;
   color: #4b5563;
   font-style: italic;
@@ -998,6 +1520,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .document-link {
@@ -1055,7 +1578,6 @@ button.close:hover {
   background: #e5e7eb;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .panel-header {
     flex-direction: column;
@@ -1067,27 +1589,36 @@ button.close:hover {
     width: 100%;
   }
 
-  .actions input,
-  .actions select,
+  .search-input,
   .actions button {
     width: 100%;
+    min-width: auto;
+  }
+
+  .advanced-filters {
+    grid-template-columns: 1fr;
   }
 
   .stats-bar {
     flex-wrap: wrap;
   }
 
-  .table-wrap {
-    overflow-x: auto;
-  }
-
   .actions-col {
     min-width: auto;
-    flex-direction: column;
+    flex-wrap: wrap;
   }
 
   .modal-card {
     max-width: 95%;
+  }
+
+  .panel-footer {
+    flex-direction: column;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }
 

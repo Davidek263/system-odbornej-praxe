@@ -26,6 +26,8 @@ class InternshipController extends Controller
                 'statusHistory.status',
                 'statusHistory.changedByUser',
                 'documents.documentType',
+                'documents.timesheetStatusHistory.status',
+                'documents.timesheetStatusHistory.changedByUser',
                 'company'
             ])
             ->where('company_id', $companyId)
@@ -59,6 +61,8 @@ class InternshipController extends Controller
                 'statusHistory.status',
                 'statusHistory.changedByUser',
                 'documents.documentType',
+                'documents.timesheetStatusHistory.status',
+                'documents.timesheetStatusHistory.changedByUser',
                 'company.address'
             ])->findOrFail($id);
 

@@ -66,7 +66,7 @@ class AuthController extends Controller
             // Get student role
             $studentRole = DB::table('roles')->where('role_name', 'student')->first();
 
-            // Create user account
+            // Create user account  
             $user = User::create([
                 'first_name' => $request->first_name,
                 'last_name' => $request->last_name,
@@ -160,9 +160,9 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'company_name' => 'required|string|max:100',
             'contact_person_name' => 'required|string|max:100',
+            'contact_person_last_name' => 'required|string|max:100',
             'contact_person_email' => 'required|email|max:100|unique:company,contact_person_email',
             'contact_person_phone' => 'required|string|max:25',
-            'password' => 'required|string|min:8|confirmed',
             
             // Company address fields (all required)
             'street' => 'required|string|max:100',
@@ -206,14 +206,14 @@ class AuthController extends Controller
             // Create user account for company
             $user = User::create([
                 'first_name' => $request->contact_person_name,
-                'last_name' => '', // Company representative
+                'last_name' => $request->contact_person_last_name, // Company representative
                 'email' => $request->contact_person_email,
                 'password' => Hash::make($request->password),
                 'phone_number' => $request->contact_person_phone,
                 'company_id' => $company->id,
                 'roles_id' => $companyRole->id,
                 'active' => false, // Inactive until email verified
-                'must_change_password' => false, // They set password during registration
+                'must_change_password' => true, // They set password during registration
             ]);
 
             // Generate activation token
