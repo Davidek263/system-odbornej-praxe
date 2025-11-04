@@ -6,14 +6,46 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Timesheet status change history (FR-08)
+     */
     public function up(): void
     {
         Schema::create('timesheet_status_history', function (Blueprint $table) {
             $table->id();
             $table->timestamp('status_changed_at')->useCurrent();
-            $table->foreignId('timesheet_status_id')->nullable()->constrained('timesheet_status')->onDelete('cascade')->onUpdate('cascade');
-            $table->foreignId('documents_id')->nullable()->constrained('documents')->onDelete('cascade')->onUpdate('cascade');
+            
+            // Foreign keys
+            $table->unsignedBigInteger('changed_by_user_id')->nullable();
+            $table->unsignedBigInteger('timesheet_status_id');
+            $table->unsignedBigInteger('documents_id');
+            
+            // Optional notes
+            $table->text('notes')->nullable();
+            
             $table->timestamps();
+            
+            // Define constraints
+            $table->foreign('changed_by_user_id')
+                ->references('id')
+                ->on('users')
+                ->onDelete('set null');
+            
+            $table->foreign('timesheet_status_id')
+                ->references('id')
+                ->on('timesheet_status')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+            
+            $table->foreign('documents_id')
+                ->references('id')
+                ->on('documents')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+            
+            // Indexes
+            $table->index(['documents_id', 'status_changed_at']);
+            $table->index('changed_by_user_id');
         });
     }
 

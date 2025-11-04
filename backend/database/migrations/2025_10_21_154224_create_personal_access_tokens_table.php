@@ -7,14 +7,14 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * OAuth 2.0 token-based authentication per NFR-02
      */
     public function up(): void
     {
         Schema::create('personal_access_tokens', function (Blueprint $table) {
             $table->id();
             $table->morphs('tokenable');
-            $table->text('name');
+            $table->string('name');
             $table->string('token', 64)->unique();
             $table->text('abilities')->nullable();
             $table->timestamp('last_used_at')->nullable();
@@ -23,9 +23,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('personal_access_tokens');
