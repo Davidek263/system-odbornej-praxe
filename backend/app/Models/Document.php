@@ -62,26 +62,9 @@ class Document extends Model
         return $this->belongsTo(User::class, 'verified_by_user_id', 'id');
     }
 
-    // Timesheet status history relationship
     public function timesheetStatusHistory()
     {
         return $this->hasMany(TimesheetStatusHistory::class, 'documents_id', 'id')
             ->orderBy('status_changed_at', 'desc');
-    }
-
-    // Get current timesheet status
-    public function getCurrentTimesheetStatus()
-    {
-        return $this->timesheetStatusHistory()
-            ->with('status')
-            ->latest('status_changed_at')
-            ->first();
-    }
-
-    // Check if document is a timesheet
-    public function isTimesheet()
-    {
-        return $this->documentType && 
-               $this->documentType->document_type_name === 'Výkaz hodín';
     }
 }

@@ -22,7 +22,7 @@ class TimesheetStatus extends Model
     ];
 
     // Relationships
-    public function timesheetHistory()
+    public function timesheetStatusHistory()
     {
         return $this->hasMany(TimesheetStatusHistory::class, 'timesheet_status_id', 'id');
     }

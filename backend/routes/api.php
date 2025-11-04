@@ -4,7 +4,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InternshipController;
-use App\Http\Controllers\DocumentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -94,6 +93,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Document/Timesheet Routes
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('documents')->group(function () {
+        // Timesheet approval/rejection (FR-08)
+        Route::post('/{id}/approve-timesheet', [InternshipController::class, 'approveTimesheet']);
+        Route::post('/{id}/reject-timesheet', [InternshipController::class, 'rejectTimesheet']);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
     | Student Routes
     |--------------------------------------------------------------------------
     */
@@ -110,19 +120,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('guarantor-internships')->group(function () {
         // Get all internships with filters
         Route::get('/', [InternshipController::class, 'getGuarantorInternships']);
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Document Routes (FR-08: Timesheet approval/rejection)
-    |--------------------------------------------------------------------------
-    */
-    Route::prefix('documents')->group(function () {
-        // Get document details
-        Route::get('/{id}', [DocumentController::class, 'getDocument']);
-        
-        // Timesheet approval/rejection (Company only)
-        Route::post('/{id}/approve-timesheet', [DocumentController::class, 'approveTimesheet']);
-        Route::post('/{id}/reject-timesheet', [DocumentController::class, 'rejectTimesheet']);
     });
 });
