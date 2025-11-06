@@ -16,7 +16,7 @@ Route::post('/register-student', [AuthController::class, 'registerStudent']);
 Route::post('/register-company', [AuthController::class, 'registerCompany']);
 
 // Account Activation
-Route::post('/activate-account', [AuthController::class, 'activateAccount']);
+Route::get('/activate-account', [AuthController::class, 'activateAccount']);
 Route::post('/resend-activation', [AuthController::class, 'resendActivation']);
 
 // Login

@@ -3,15 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Models\Company;
 use App\Models\Address;
+use App\Models\Company;
+use App\Mail\PasswordMail;
 use Illuminate\Support\Str;
+use App\Mail\ActivationMail;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -62,6 +64,13 @@ class AuthController extends Controller
 
             // Generate temporary password
             $temporaryPassword = Str::random(12);
+            
+            $emailToSend = $request->filled('alternative_email')
+                ? $request->alternative_email
+                : $request->student_email;
+
+            // Send temporary password
+            Mail::to($emailToSend)->send(new PasswordMail($temporaryPassword));
 
             // Get student role
             $studentRole = DB::table('roles')->where('role_name', 'student')->first();
@@ -88,6 +97,8 @@ class AuthController extends Controller
                 'activation_token' => $activationToken,
                 'activation_token_expires_at' => now()->addHours(48), // 48 hour expiry
             ]);
+
+            Mail::to($emailToSend)->send(new ActivationMail($request, $activationToken));
 
             // Send activation email with temporary password
             // TODO: Implement email sending
