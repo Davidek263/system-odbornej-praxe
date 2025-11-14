@@ -1,14 +1,14 @@
 @component('mail::message')
-# Welcome, {{ $name }} 🎉
+# Vitajte, {{ $name }} 🎉
 
-To activate your account, click the button below:
+Pre aktiváciu účtu kliknite na tlačidlo nižšie. Po aktivácii budete automaticky presmerovaní na stránku pre nastavenie hesla:
 
 @component('mail::button', ['url' => $activationUrl])
-Activate My Account
+Aktivovať účet a nastaviť heslo
 @endcomponent
 
-If you did not create this account, you can safely ignore this email.
+Ak ste si účet nevytvorili vy, ignorujte tento email.
 
-Thanks,<br>
+S pozdravom,<br>
 {{ config('app.name') }}
 @endcomponent

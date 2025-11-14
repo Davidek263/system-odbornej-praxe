@@ -126,42 +126,68 @@ class AuthController extends Controller
     // ======================================
     // ACTIVATE STUDENT ACCOUNT
     // ======================================
-    public function activateAccount(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'token' => 'required|string',
-        ]);
+  public function activateAccount(Request $request)
+{
+    $token = $request->query('token');
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
+    $user = User::where('activation_token', $token)->first();
 
-        $user = User::where('activation_token', $request->token)
-            ->where('activation_token_expires_at', '>', now())
-            ->first();
-
-        if (!$user) {
-            return response()->json([
-                'message' => 'Invalid or expired activation token.',
-            ], 400);
-        }
-
-        $user->update([
-            'active' => true,
-            'activated_at' => now(),
-            'email_verified_at' => now(),
-            'student_email_verified_at' => now(),
-            'activation_token' => null,
-            'activation_token_expires_at' => null,
-        ]);
-
-        return response()->json([
-            'message' => 'Account activated successfully. You can now log in.',
-        ], 200);
+    if (!$user) {
+        return response()->json(['message' => 'Invalid activation link.'], 400);
     }
+
+    if ($user->activation_token_expires_at < now()) {
+        return response()->json(['message' => 'Activation link expired.'], 400);
+    }
+
+    // Activate user
+    $user->update([
+        'active' => true,
+        'activation_token' => null,
+        'activation_token_expires_at' => null,
+    ]);
+
+    // Redirect to set-password page on frontend
+    return redirect()->away(env('FRONTEND_URL') . '/set-password?email=' . urlencode($user->email) . '&activated=1');
+
+}
+public function setInitialPassword(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+        'temporary_password' => 'required|string',
+        'password' => 'required|string|min:8|confirmed',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'message' => 'Validation failed.',
+            'errors' => $validator->errors(),
+        ], 422);
+    }
+
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user) {
+        return response()->json(['message' => 'User not found.'], 404);
+    }
+
+    // Check temporary password
+    if (!Hash::check($request->temporary_password, $user->password)) {
+        return response()->json(['message' => 'Temporary password is incorrect.'], 400);
+    }
+
+    // Update password
+    $user->update([
+        'password' => Hash::make($request->password),
+        'must_change_password' => false,
+        'password_changed_at' => now(),
+    ]);
+
+    return response()->json(['message' => 'Password updated successfully.'], 200);
+}
+
+
 
     // ======================================
     // REGISTER COMPANY
@@ -326,56 +352,64 @@ class AuthController extends Controller
         ], 200);
     }
 
-    // ======================================
-    // FORGOT PASSWORD (Request Reset)
-    // ======================================
-    public function forgotPassword(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-        ]);
+   // ======================================
+// FORGOT PASSWORD (Request Reset)
+// ======================================
+public function forgotPassword(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        // Find user by primary email or student email (NOT alternative email per requirements)
-        $user = User::where('email', $request->email)
-            ->orWhere('student_email', $request->email)
-            ->first();
-
-        if (!$user) {
-            // Don't reveal if email exists or not
-            return response()->json([
-                'message' => 'If the email exists in our system, a password reset link has been sent.',
-            ], 200);
-        }
-
-        // Generate reset token
-        $token = Str::random(64);
-
-        // Store in password_resets table
-        DB::table('password_resets')->updateOrInsert(
-            ['email' => $user->email],
-            [
-                'token' => $token,
-                'created_at' => now(),
-            ]
-        );
-
-        // Send password reset email
-        // TODO: Implement email sending
-        // Mail::to($user->email)->send(new PasswordResetMail($user, $token));
-
+    if ($validator->fails()) {
         return response()->json([
-            'message' => 'If the email exists in our system, a password reset link has been sent.',
-            // For development/testing only - remove in production
-            'reset_token' => $token,
-        ], 200);
+            'message' => 'Validation failed.',
+            'errors' => $validator->errors(),
+        ], 422);
     }
+
+    // Find user by primary or student email
+    $user = User::where('email', $request->email)
+        ->orWhere('student_email', $request->email)
+        ->first();
+
+    $genericMessage = 'If the email exists in our system, a password reset link has been sent.';
+
+    if (!$user) {
+        return response()->json(['message' => $genericMessage], 200);
+    }
+
+    // Generate token
+    $token = Str::random(64);
+
+    // Save token
+    DB::table('password_resets')->updateOrInsert(
+        ['email' => $user->email],
+        [
+            'token' => $token,
+            'created_at' => now(),
+        ]
+    );
+
+    // Build frontend reset URL
+    $frontendUrl = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173')), '/');
+
+$resetUrl = $frontendUrl
+    . '/set-password?token=' . $token
+    . '&email=' . urlencode($user->email);
+
+
+    // Send email
+    Mail::send('emails.password_reset', ['url' => $resetUrl], function ($message) use ($user) {
+        $message->to($user->email);
+        $message->subject('Obnovenie hesla');
+    });
+
+    return response()->json([
+        'message' => $genericMessage,
+    ], 200);
+}
+
 
     // ======================================
     // RESET PASSWORD
@@ -437,6 +471,7 @@ class AuthController extends Controller
             'message' => 'Password reset successfully. You can now log in with your new password.',
         ], 200);
     }
+    
 
     // ======================================
     // CHANGE PASSWORD (Authenticated)

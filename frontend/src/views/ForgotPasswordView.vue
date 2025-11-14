@@ -37,7 +37,6 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, reactive } from 'vue'
 import axios from 'axios'
@@ -73,17 +72,17 @@ function handleSubmit() {
   alert.show = false
 
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  
+
   // Validation
   if (!email.value.trim()) {
     errors.email = 'Email je povinný.'
-    showAlert('validation.email.required', 'validation')
+    showAlert('Email je povinný.', 'validation')
     return
   }
-  
+
   if (!emailPattern.test(email.value)) {
     errors.email = 'Zadaj platný email.'
-    showAlert('validation.email.invalid', 'validation')
+    showAlert('Zadaj platný email.', 'validation')
     return
   }
 
@@ -93,31 +92,20 @@ function handleSubmit() {
     email: email.value
   })
     .then(res => {
-      showAlert('success.password.reset.sent', 'success')
+      // Backend always returns safe message
+      showAlert('Ak email existuje, poslali sme ti odkaz na obnovenie hesla.', 'success')
       email.value = ''
     })
     .catch(err => {
-      if (err.response) {
-        const status = err.response.status
-        
-        if (status === 404) {
-          showAlert('notfound.user', 'notfound')
-        } else if (status === 429) {
-          showAlert('ratelimit.error', 'ratelimit')
-        } else if (status >= 500) {
-          showAlert('server.error', 'server')
-        } else if (err.response.data?.message) {
-          showAlert(err.response.data.message, 'error')
-        } else {
-          showAlert('error.password.reset', 'error')
-        }
-      } else if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
-        showAlert('network.error', 'network')
-      } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-        showAlert('timeout.error', 'timeout')
+      console.error(err)
+
+      // Laravel still returns 200 for non-existent emails, so this mostly catches server/network errors
+      if (err.response?.status >= 500) {
+        showAlert('Serverová chyba. Skús to znova neskôr.', 'server')
+      } else if (err.code === 'ERR_NETWORK') {
+        showAlert('Chyba sieťového pripojenia.', 'network')
       } else {
-        console.error('Forgot password error:', err)
-        showAlert('error.password.reset', 'error')
+        showAlert('Nepodarilo sa odoslať žiadosť o obnovenie hesla.', 'error')
       }
     })
     .finally(() => {

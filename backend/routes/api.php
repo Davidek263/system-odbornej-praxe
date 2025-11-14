@@ -4,6 +4,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InternshipController;
+use App\Http\Controllers\Auth\PasswordResetController;
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +21,8 @@ Route::post('/register-company', [AuthController::class, 'registerCompany']);
 // Account Activation
 Route::get('/activate-account', [AuthController::class, 'activateAccount']);
 Route::post('/resend-activation', [AuthController::class, 'resendActivation']);
+Route::post('/set-initial-password', [AuthController::class, 'setInitialPassword']);
+
 
 // Login
 Route::post('/login', [AuthController::class, 'login']);
@@ -25,6 +30,7 @@ Route::post('/login', [AuthController::class, 'login']);
 // Password Reset
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
 
 // Public data
 Route::get('/study-fields', [AuthController::class, 'getStudyFields']);
