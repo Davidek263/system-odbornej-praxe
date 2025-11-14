@@ -10,11 +10,31 @@
     <div class="reset-password-container">
       <div class="reset-password-card">
         <h1>Nové heslo</h1>
-        <p class="subtitle">Zadaj svoje nové heslo.</p>
+
+        <p class="subtitle" v-if="isActivationMode">
+          Zadaj svoje pôvodné (dočasné) heslo a nastav nové heslo.
+        </p>
+        <p class="subtitle" v-else>
+          Zadaj svoje nové heslo.
+        </p>
         
         <Spinner v-if="loading" overlay />
         
         <form @submit.prevent="handleSubmit" class="reset-password-form">
+
+          <!-- Temporary password (ONLY for activation mode) -->
+          <div class="form-group" v-if="isActivationMode">
+            <label for="temporary_password">Dočasné heslo</label>
+            <input 
+              id="temporary_password" 
+              v-model="form.temporary_password" 
+              type="password" 
+              placeholder="Zadaj dočasné heslo"
+              :disabled="loading"
+            />
+            <p v-if="errors.temporary_password" class="error">{{ errors.temporary_password }}</p>
+          </div>
+
           <div class="form-group">
             <label for="password">Nové heslo</label>
             <input 
@@ -62,7 +82,10 @@ const router = useRouter()
 
 const loading = ref(false)
 
+const isActivationMode = ref(false) // <–– determines which mode we are in
+
 const form = reactive({
+  temporary_password: '',
   password: '',
   password_confirmation: '',
   token: '',
@@ -70,6 +93,7 @@ const form = reactive({
 })
 
 const errors = reactive({
+  temporary_password: '',
   password: '',
   password_confirmation: ''
 })
@@ -91,29 +115,44 @@ function showAlert(message, type = 'error') {
 }
 
 onMounted(() => {
-  // Get token and email from URL query parameters
   form.token = route.query.token || ''
   form.email = route.query.email || ''
-  
-  if (!form.token || !form.email) {
-    showAlert('error.password.reset.invalid', 'error')
+
+  // ✔ Check if activation mode
+  isActivationMode.value = route.query.activated === '1'
+
+  if (!form.email) {
+    showAlert('Nesprávny alebo chýbajúci email.', 'error')
+    return
+  }
+
+  // ✔ For reset password: token MUST exist
+  if (!isActivationMode.value && !form.token) {
+    showAlert('Nesprávny alebo chýbajúci odkaz na obnovenie hesla.', 'error')
+    return
   }
 })
 
 function handleSubmit() {
-  // Reset
+  errors.temporary_password = ''
   errors.password = ''
   errors.password_confirmation = ''
   alert.show = false
 
   let isValid = true
 
-  // Validation
+  if (isActivationMode.value) {
+    if (!form.temporary_password.trim()) {
+      errors.temporary_password = 'Dočasné heslo je povinné.'
+      isValid = false
+    }
+  }
+
   if (!form.password.trim()) {
     errors.password = 'Heslo je povinné.'
     isValid = false
-  } else if (form.password.length < 6) {
-    errors.password = 'Heslo musí mať aspoň 6 znakov.'
+  } else if (form.password.length < 8) {
+    errors.password = 'Heslo musí mať aspoň 8 znakov.'
     isValid = false
   }
 
@@ -126,53 +165,38 @@ function handleSubmit() {
   }
 
   if (!isValid) {
-    showAlert('validation.form', 'validation')
+    showAlert('Skontrolujte správnosť údajov.', 'validation')
     return
   }
 
   loading.value = true
 
-  api.post('/reset-password', {
+  // ✔ Select correct endpoint
+  const endpoint = isActivationMode.value ? '/set-initial-password' : '/reset-password'
+
+  // ✔ Build payload
+  const payload = {
     email: form.email,
-    token: form.token,
     password: form.password,
-    password_confirmation: form.password_confirmation
-  })
-    .then(res => {
-      showAlert('success.password.reset', 'success')
-      
-      // Redirect to login after 2 seconds
-      setTimeout(() => {
-        router.push('/login')
-      }, 2000)
+    password_confirmation: form.password_confirmation,
+  }
+
+  if (!isActivationMode.value) {
+    payload.token = form.token // reset password mode
+  } else {
+    payload.temporary_password = form.temporary_password // activation mode
+  }
+
+  api.post(endpoint, payload)
+    .then(() => {
+      showAlert('Heslo bolo úspešne zmenené.', 'success')
+      setTimeout(() => router.push('/login'), 2000)
     })
     .catch(err => {
-      if (err.response) {
-        const status = err.response.status
-        
-        if (status === 400 || status === 422) {
-          if (err.response.data?.errors) {
-            Object.assign(errors, err.response.data.errors)
-            showAlert('validation.form', 'validation')
-          } else if (err.response.data?.message) {
-            showAlert(err.response.data.message, 'error')
-          } else {
-            showAlert('error.password.reset.invalid', 'error')
-          }
-        } else if (status === 429) {
-          showAlert('ratelimit.error', 'ratelimit')
-        } else if (status >= 500) {
-          showAlert('server.error', 'server')
-        } else {
-          showAlert('error.password.reset', 'error')
-        }
-      } else if (err.code === 'ERR_NETWORK' || err.message.includes('Network Error')) {
-        showAlert('network.error', 'network')
-      } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-        showAlert('timeout.error', 'timeout')
+      if (err.response?.data?.message) {
+        showAlert(err.response.data.message, 'error')
       } else {
-        console.error('Reset password error:', err)
-        showAlert('error.password.reset', 'error')
+        showAlert('Chyba pri zmene hesla.', 'error')
       }
     })
     .finally(() => {
@@ -182,6 +206,7 @@ function handleSubmit() {
 </script>
 
 <style scoped>
+/* unchanged CSS */
 html,
 body,
 .reset-password-page {
