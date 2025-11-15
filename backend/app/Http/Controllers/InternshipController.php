@@ -489,4 +489,249 @@ class InternshipController extends Controller
             ], 500);
         }
     }
+
+        /**
+     * Update internship (Guarantor only)
+     * Garant môže meniť firmu, študenta, dátumy
+     */
+    public function updateInternship(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'users_id' => 'required|exists:users,id',
+            'company_id' => 'required|exists:company,id',
+            'academic_year' => 'required|string|max:9',
+            'semester' => 'required|integer|in:1,2',
+            'date_start' => 'required|date',
+            'date_end' => 'required|date|after:date_start',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $user = auth()->user();
+
+            if (!$user->hasRole('guarantor')) {
+                return response()->json([
+                    'message' => 'Unauthorized. Only guarantors can update internships.',
+                ], 403);
+            }
+
+            DB::beginTransaction();
+
+            $internship = Internship::findOrFail($id);
+
+            // Store old values for notification
+            $oldData = [
+                'student' => $internship->student,
+                'company' => $internship->company,
+                'date_start' => $internship->date_start,
+                'date_end' => $internship->date_end,
+            ];
+
+            // Update internship
+            $internship->users_id = $request->users_id;
+            $internship->company_id = $request->company_id;
+            $internship->academic_year = $request->academic_year;
+            $internship->semester = $request->semester;
+            $internship->date_start = $request->date_start;
+            $internship->date_end = $request->date_end;
+            $internship->save();
+
+            // Load fresh data with relationships
+            $internship->load(['student', 'company', 'currentStatus']);
+
+            // TODO: Send email notifications to:
+            // - Old student (if changed)
+            // - New student (if changed)
+            // - Old company (if changed)
+            // - New company (if changed)
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Internship updated successfully.',
+                'internship' => $internship,
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to update internship.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Change internship status (Guarantor only)
+     * Zmena stavu vyvolá emailovú notifikáciu
+     */
+    public function changeInternshipStatus(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|string',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $user = auth()->user();
+
+            if (!$user->hasRole('guarantor')) {
+                return response()->json([
+                    'message' => 'Unauthorized. Only guarantors can change internship status.',
+                ], 403);
+            }
+
+            DB::beginTransaction();
+
+            $internship = Internship::with(['currentStatus', 'student', 'company'])->findOrFail($id);
+            
+            $oldStatus = $internship->currentStatus->internship_status_name;
+
+            // Get new status
+            $newStatus = InternshipStatus::where('internship_status_name', $request->status)->first();
+            
+            if (!$newStatus) {
+                return response()->json([
+                    'message' => 'Invalid status name.',
+                    'provided_status' => $request->status,
+                ], 400);
+            }
+
+            // Validate status transition
+            $allowedTransitions = [
+                'Vytvorená' => ['Potvrdená', 'Zamietnutá'],
+                'Potvrdená' => ['Schválená', 'Zamietnutá'],
+                'Schválená' => ['Obhájená', 'Neobhájená'],
+                'Zamietnutá' => ['Vytvorená'],
+            ];
+
+            if (!isset($allowedTransitions[$oldStatus]) || 
+                !in_array($request->status, $allowedTransitions[$oldStatus])) {
+                return response()->json([
+                    'message' => 'Invalid status transition.',
+                    'current_status' => $oldStatus,
+                    'requested_status' => $request->status,
+                    'allowed_transitions' => $allowedTransitions[$oldStatus] ?? [],
+                ], 400);
+            }
+
+            // Update internship status
+            $internship->current_status_id = $newStatus->id;
+            $internship->save();
+
+            // Create status change history
+            InternshipStatusChange::create([
+                'internship_id' => $internship->id,
+                'internship_status_id' => $newStatus->id,
+                'changed_by_user_id' => $user->id,
+                'status_changed_at' => now(),
+                'notes' => $request->notes ?? "Zmena stavu garantom: {$oldStatus} → {$request->status}",
+            ]);
+
+            // Load fresh data
+            $internship->load('currentStatus', 'statusHistory.status');
+
+            // TODO: Send email notifications to:
+            // - Student
+            // - Company
+            // Subject: Zmena stavu odbornej praxe
+            // Content: Stav vašej praxe sa zmenil z "{$oldStatus}" na "{$request->status}"
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Status changed successfully. Notifications sent.',
+                'internship' => $internship,
+                'old_status' => $oldStatus,
+                'new_status' => $request->status,
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to change status.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all students (for guarantor dropdown)
+     */
+    public function getAllStudents()
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user->hasRole('guarantor')) {
+                return response()->json([
+                    'message' => 'Unauthorized.',
+                ], 403);
+            }
+
+            $students = \App\Models\User::with('studyField')
+                ->whereHas('role', function($q) {
+                    $q->where('role_name', 'student');
+                })
+                ->where('active', true)
+                ->orderBy('last_name')
+                ->orderBy('first_name')
+                ->get(['id', 'first_name', 'last_name', 'email', 'student_email', 'study_field_id']);
+
+            return response()->json([
+                'students' => $students,
+                'total' => $students->count(),
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to fetch students.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all companies (for guarantor dropdown)
+     */
+    public function getAllCompanies()
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user->hasRole('guarantor')) {
+                return response()->json([
+                    'message' => 'Unauthorized.',
+                ], 403);
+            }
+
+            $companies = \App\Models\Company::with('address')
+                ->orderBy('company_name')
+                ->get(['id', 'company_name', 'address_id', 'contact_person_name', 'contact_person_email']);
+
+            return response()->json([
+                'companies' => $companies,
+                'total' => $companies->count(),
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to fetch companies.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

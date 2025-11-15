@@ -128,3 +128,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [InternshipController::class, 'getGuarantorInternships']);
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Guarantor Routes
+|--------------------------------------------------------------------------
+*/
+Route::prefix('guarantor')->middleware('auth:sanctum')->group(function () {
+    // Get all internships with filters
+    Route::get('/internships', [InternshipController::class, 'getGuarantorInternships']);
+    
+    // Update internship
+    Route::put('/internships/{id}', [InternshipController::class, 'updateInternship']);
+    
+    // Change internship status
+    Route::post('/internships/{id}/change-status', [InternshipController::class, 'changeInternshipStatus']);
+    
+    // Get students and companies for dropdowns
+    Route::get('/students', [InternshipController::class, 'getAllStudents']);
+    Route::get('/companies', [InternshipController::class, 'getAllCompanies']);
+});
