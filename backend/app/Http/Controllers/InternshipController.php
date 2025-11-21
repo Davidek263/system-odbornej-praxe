@@ -611,20 +611,9 @@ class InternshipController extends Controller
             }
 
             // Validate status transition
-            $allowedTransitions = [
-                'Vytvorená' => ['Potvrdená', 'Zamietnutá'],
-                'Potvrdená' => ['Schválená', 'Zamietnutá'],
-                'Schválená' => ['Obhájená', 'Neobhájená'],
-                'Zamietnutá' => ['Vytvorená'],
-            ];
-
-            if (!isset($allowedTransitions[$oldStatus]) || 
-                !in_array($request->status, $allowedTransitions[$oldStatus])) {
+            if ($newStatus == $oldStatus) {
                 return response()->json([
                     'message' => 'Invalid status transition.',
-                    'current_status' => $oldStatus,
-                    'requested_status' => $request->status,
-                    'allowed_transitions' => $allowedTransitions[$oldStatus] ?? [],
                 ], 400);
             }
 

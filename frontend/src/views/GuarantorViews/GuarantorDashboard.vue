@@ -104,6 +104,14 @@
             <span class="stat-value success">{{ stats.defended }}</span>
           </div>
           <div class="stat">
+            <span class="stat-label">Neobhájené</span>
+            <span class="stat-value failed">{{ stats.failed }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Zamietnuté</span>
+            <span class="stat-value denied">{{ stats.rejected }}</span>
+          </div>
+          <div class="stat">
             <span class="stat-label">Celkom</span>
             <span class="stat-value total">{{ filteredInternships.length }}</span>
           </div>
@@ -430,9 +438,7 @@
               <select v-model="statusForm.new_status" required>
                 <option value="">Vyberte nový stav</option>
                 <option 
-                  v-for="status in availableStatuses" 
-                  :key="status" 
-                  :value="status"
+                  v-for="status in statuses" 
                 >
                   {{ status }}
                 </option>
@@ -530,20 +536,14 @@ const sortDirection = ref('asc')
 const pageSize = ref(10)
 const currentPage = ref(1)
 
-// Available status transitions
-const statusTransitions = {
-  'Vytvorená': ['Potvrdená', 'Zamietnutá'],
-  'Potvrdená': ['Schválená', 'Zamietnutá'],
-  'Schválená': ['Obhájená', 'Neobhájená'],
-  'Obhájená': [],
-  'Neobhájená': [],
-  'Zamietnutá': ['Vytvorená']
-}
-
-const availableStatuses = computed(() => {
-  if (!statusForm.currentStatus) return []
-  return statusTransitions[statusForm.currentStatus] || []
-})
+const statuses = [
+  'Vytvorená',
+  'Potvrdená',
+  'Schválená',
+  'Obhájená',
+  'Neobhájená',
+  'Zamietnutá'
+]
 
 // Helper functions
 function formatDate(d) {
@@ -735,8 +735,10 @@ const stats = computed(() => {
   const confirmed = filteredInternships.value.filter(i => i.current_status?.internship_status_name === 'Potvrdená').length
   const approved = filteredInternships.value.filter(i => i.current_status?.internship_status_name === 'Schválená').length
   const defended = filteredInternships.value.filter(i => i.current_status?.internship_status_name === 'Obhájená').length
+  const failed = filteredInternships.value.filter(i => i.current_status?.internship_status_name === 'Neobhájená').length
+  const rejected = filteredInternships.value.filter(i => i.current_status?.internship_status_name === 'Zamietnutá').length
 
-  return { created, confirmed, approved, defended }
+  return { created, confirmed, approved, defended, failed, rejected }
 })
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredInternships.value.length / pageSize.value)))
@@ -805,10 +807,12 @@ function editInternship(internship) {
   editForm.id = internship.id
   editForm.student_id = internship.student.id || internship.users_id
   editForm.company_id = internship.company?.id || ''
-  editForm.academic_year = internship.academic_year
-  editForm.semester = internship.semester
-  editForm.date_start = internship.date_start
-  editForm.date_end = internship.date_end
+  editForm.academic_year = internship.academic_year || ''
+  editForm.semester = internship.semester || ''
+  
+  // Správne formátovanie dátumov pre HTML input type="date"
+  editForm.date_start = internship.date_start ? new Date(internship.date_start).toISOString().split('T')[0] : ''
+  editForm.date_end = internship.date_end ? new Date(internship.date_end).toISOString().split('T')[0] : ''
   
   editMode.value = true
   selected.value = null
@@ -916,7 +920,7 @@ onMounted(() => {
 html, body, .dashboard-page {
   height: 100%;
   margin: 0;
-  background: linear-gradient(135deg, #76cbec 0%, #607d9b 100%);
+  background: linear-gradient(135deg, #ffb74d 0%, #ff8a65 100%);
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
   color: #2c3e50;
 }
@@ -1111,19 +1115,27 @@ html, body, .dashboard-page {
 }
 
 .stat-value.pending {
-  color: #f59e0b;
+  color: #a17516;
 }
 
 .stat-value.confirmed {
-  color: #3b82f6;
+  color: #2563eb; 
 }
 
 .stat-value.approved {
-  color: #10b981;
+  color: #047857;
 }
 
 .stat-value.success {
-  color: #059669;
+  color: #16a34a; 
+}
+
+.stat-value.failed {
+  color: #dc2626; 
+}
+
+.stat-value.denied {
+  color: #dc2626;
 }
 
 .stat-value.total {
@@ -1207,38 +1219,38 @@ html, body, .dashboard-page {
 
 .badge-pending { 
   background: #fef3c7; 
-  color: #92400e; 
-  border: 1px solid #fde68a; 
+  color: #78350f; 
+  border: 1px solid #fde047; 
 }
 
 .badge-confirmed { 
   background: #dbeafe; 
-  color: #1e40af; 
-  border: 1px solid #bfdbfe; 
+  color: #1e3a8a; 
+  border: 1px solid #93c5fd; 
 }
 
 .badge-approved { 
-  background: #d1fae5; 
-  color: #065f46; 
-  border: 1px solid #a7f3d0; 
+  background: #ccfbf1; 
+  color: #134e4a; 
+  border: 1px solid #5eead4; 
 }
 
 .badge-success { 
-  background: #d1fae5; 
-  color: #065f46; 
-  border: 1px solid #6ee7b7; 
+  background: #dcfce7; 
+  color: #14532d; 
+  border: 1px solid #86efac; 
 }
 
 .badge-failed { 
   background: #fee2e2; 
-  color: #991b1b; 
-  border: 1px solid #fecaca; 
+  color: #7f1d1d; 
+  border: 1px solid #fca5a5; 
 }
 
 .badge-rejected { 
-  background: #fee2e2; 
-  color: #991b1b; 
-  border: 1px solid #fecaca; 
+  background: #fecaca; 
+  color: #7f1d1d; 
+  border: 1px solid #ef4444; 
 }
 
 .actions-col {
