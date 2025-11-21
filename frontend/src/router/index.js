@@ -10,6 +10,7 @@ import StudentInfoView from '../views/PublicViews/StudentInfo.vue'
 import CompanyInfoView from '../views/PublicViews/CompanyInfo.vue'
 import InternshipInfoView from '../views/PublicViews/InternshipInfo.vue'
 import GuarantorInfoView from '../views/PublicViews/GuarantorInfo.vue'
+import GuarantorDashboard from '@/views/GuarantorViews/GuarantorDashboard.vue'
 
 const routes = [
   { path: '/', redirect: '/home' },
@@ -19,6 +20,7 @@ const routes = [
   { path: '/register', name: 'register', component: RegisterView },
   { path: '/forgot-password', name: 'forgot', component: ForgotPasswordView },
   { path: '/company-dashboard', name: 'comapnydashboard', component: CompanyDashboard, meta: { requiresAuth: true , roles: ['company']} },
+  { path: '/guarantor-dashboard', name: 'guarantordashboard', component: GuarantorDashboard, meta: { requiresAuth: true , roles: ['guarantor']} },
   { path: '/set-password', name: 'setpassword', component: SetPasswordView },
   { path: '/student-info', name: 'studentinfo', component: StudentInfoView },
   { path: '/internship-info', name: 'internshipinfo', component: InternshipInfoView },

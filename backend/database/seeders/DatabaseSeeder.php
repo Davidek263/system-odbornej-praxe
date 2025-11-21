@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             // Lookup tables first
             RoleSeeder::class,
             InternshipStatusSeeder::class,
+            DocumentSeeder::class,
             DocumentTypeSeeder::class,
             TimesheetStatusSeeder::class,
             StudyFieldSeeder::class,
