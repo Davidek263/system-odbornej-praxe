@@ -4,6 +4,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InternshipController;
+use App\Http\Controllers\Auth\PasswordResetController;
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +21,8 @@ Route::post('/register-company', [AuthController::class, 'registerCompany']);
 // Account Activation
 Route::get('/activate-account', [AuthController::class, 'activateAccount']);
 Route::post('/resend-activation', [AuthController::class, 'resendActivation']);
+Route::post('/set-initial-password', [AuthController::class, 'setInitialPassword']);
+
 
 // Login
 Route::post('/login', [AuthController::class, 'login']);
@@ -25,6 +30,7 @@ Route::post('/login', [AuthController::class, 'login']);
 // Password Reset
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
 
 // Public data
 Route::get('/study-fields', [AuthController::class, 'getStudyFields']);
@@ -120,4 +126,24 @@ Route::middleware('auth:sanctum')->group(function () {
         // Get all internships with filters
         Route::get('/', [InternshipController::class, 'getGuarantorInternships']);
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Guarantor Routes
+|--------------------------------------------------------------------------
+*/
+Route::prefix('guarantor')->middleware('auth:sanctum')->group(function () {
+    // Get all internships with filters
+    Route::get('/internships', [InternshipController::class, 'getGuarantorInternships']);
+    
+    // Update internship
+    Route::put('/internships/{id}', [InternshipController::class, 'updateInternship']);
+    
+    // Change internship status
+    Route::post('/internships/{id}/change-status', [InternshipController::class, 'changeInternshipStatus']);
+    
+    // Get students and companies for dropdowns
+    Route::get('/students', [InternshipController::class, 'getAllStudents']);
+    Route::get('/companies', [InternshipController::class, 'getAllCompanies']);
 });

@@ -21,7 +21,9 @@ class ActivationMail extends Mailable
 
     public function build()
     {
+        // FRONTEND activation URL (Vue → Laravel → redirect to set-password)
         $activationUrl = url('/api/activate-account?token=' . $this->activationToken);
+
 
         return $this->subject('Activate Your Account')
                     ->markdown('emails.activation')
