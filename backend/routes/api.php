@@ -115,9 +115,8 @@ Route::middleware('auth:sanctum')->group(function () {
     */
     Route::prefix('student-internships')->group(function () {
         // Get all internships for student
-        Route::get('/', [InternshipController::class, 'getStudentInternships']);
+        Route::get('/{studentId}', [InternshipController::class, 'getStudentInternships']);
     });
-
     /*
     |--------------------------------------------------------------------------
     | Guarantor Routes
