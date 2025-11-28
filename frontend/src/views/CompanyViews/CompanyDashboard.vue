@@ -18,7 +18,7 @@
             <input
               v-model="filters.search"
               @input="applyFilters"
-              placeholder="Vyhľadávanie vo všetkých stĺpcoch..."
+              placeholder="Vyhľadávanie..."
               :disabled="loading"
               class="search-input"
             />
@@ -69,16 +69,6 @@
               <option value="">Všetky odbory</option>
               <option v-for="field in studyFields" :key="field" :value="field">{{ field }}</option>
             </select>
-          </div>
-
-          <div class="filter-group">
-            <label>Dátum začiatku:</label>
-            <input type="date" v-model="filters.dateFrom" @change="applyFilters" />
-          </div>
-
-          <div class="filter-group">
-            <label>Dátum konca:</label>
-            <input type="date" v-model="filters.dateTo" @change="applyFilters" />
           </div>
 
           <button @click="clearFilters" class="clear-filters-btn">
@@ -141,7 +131,7 @@
                 </th>
                 <th class="sortable" @click="toggleSort('dateStart')">
                   <div class="th-content">
-                    <span>Termín praxe</span>
+                    <span>Termín</span>
                     <span class="sort-indicator" v-if="sortColumn === 'dateStart'">
                       {{ sortDirection === 'asc' ? '↑' : '↓' }}
                     </span>
@@ -149,13 +139,13 @@
                 </th>
                 <th class="sortable" @click="toggleSort('status')">
                   <div class="th-content">
-                    <span>Stav</span>
+                    <span>Stav praxe</span>
                     <span class="sort-indicator" v-if="sortColumn === 'status'">
                       {{ sortDirection === 'asc' ? '↑' : '↓' }}
                     </span>
                   </div>
                 </th>
-                <th>Výkaz</th>
+                <th>Stav výkazu</th>
                 <th class="actions-col">Akcie</th>
               </tr>
             </thead>
@@ -183,55 +173,89 @@
                   </span>
                 </td>
                 <td>
-                  <div v-if="hasTimesheet(internship)" class="timesheet-info">
+                  <div v-if="hasTimesheet(internship)" class="timesheet-status">
                     <span :class="timesheetBadge(internship)">
                       {{ getTimesheetStatus(internship) }}
                     </span>
+                    <div v-if="!isInternshipConfirmed(internship)" class="warning-note">
+                      ⚠️ Najprv potvrďte prax
+                    </div>
                   </div>
-                  <div v-else class="muted">—</div>
+                  <div v-else class="muted">Bez výkazu</div>
                 </td>
                 <td class="actions-col">
-                  <button class="ghost" @click="viewDetails(internship)">Detail</button>
-                  
-                  <!-- Internship approval/rejection -->
-                  <button
-                    v-if="canConfirm(internship)"
-                    class="approve"
-                    @click="confirmInternship(internship)"
-                    :disabled="processing[internship.id]"
-                    title="Potvrdiť prax"
-                  >
-                    Potvrdiť
-                  </button>
-                  <button
-                    v-if="canReject(internship)"
-                    class="reject"
-                    @click="rejectInternship(internship)"
-                    :disabled="processing[internship.id]"
-                    title="Zamietnuť prax"
-                  >
-                    Zamietnuť
-                  </button>
-                  
-                  <!-- Timesheet approval/rejection -->
-                  <button
-                    v-if="canApproveTimesheet(internship)"
-                    class="approve-small"
-                    @click="approveTimesheet(internship)"
-                    :disabled="processing[internship.id]"
-                    title="Schváliť výkaz"
-                  >
-                    ✓ Výkaz
-                  </button>
-                  <button
-                    v-if="canRejectTimesheet(internship)"
-                    class="reject-small"
-                    @click="rejectTimesheet(internship)"
-                    :disabled="processing[internship.id]"
-                    title="Zamietnuť výkaz"
-                  >
-                    ✗ Výkaz
-                  </button>
+                  <div class="actions-wrapper">
+                    <!-- Step 1: Internship Actions -->
+                    <div class="action-group internship-actions">
+                      <div class="action-label">Prax:</div>
+                      <button class="ghost-small" @click="viewDetails(internship)">Detail</button>
+                      
+                      <button
+                        v-if="canConfirm(internship)"
+                        class="approve"
+                        @click="confirmInternship(internship)"
+                        :disabled="processing[internship.id]"
+                        title="Potvrdiť prax"
+                      >
+                        ✓ Potvrdiť
+                      </button>
+                      <button
+                        v-if="canReject(internship)"
+                        class="reject"
+                        @click="rejectInternship(internship)"
+                        :disabled="processing[internship.id]"
+                        title="Zamietnuť prax"
+                      >
+                        ✗ Zamietnuť
+                      </button>
+
+                      <span v-if="isInternshipConfirmed(internship) && !canConfirm(internship)" class="status-confirmed">
+                        ✓ Potvrdené
+                      </span>
+                    </div>
+                    
+                    <!-- Step 2: Timesheet Actions -->
+                    <div 
+                      class="action-group timesheet-actions" 
+                      :class="{ disabled: !isInternshipConfirmed(internship) }"
+                    >
+                      <div class="action-label">Výkaz:</div>
+                      
+                      <template v-if="isInternshipConfirmed(internship)">
+                        <button
+                          v-if="canApproveTimesheet(internship)"
+                          class="approve-small"
+                          @click="approveTimesheet(internship)"
+                          :disabled="processing[internship.id]"
+                          title="Schváliť výkaz"
+                        >
+                          ✓ Schváliť
+                        </button>
+                        <button
+                          v-if="canRejectTimesheet(internship)"
+                          class="reject-small"
+                          @click="rejectTimesheet(internship)"
+                          :disabled="processing[internship.id]"
+                          title="Zamietnuť výkaz"
+                        >
+                          ✗ Zamietnuť
+                        </button>
+                        
+                        <span v-if="!hasTimesheet(internship)" class="muted-small">
+                          Žiadny výkaz
+                        </span>
+                        <span v-else-if="getTimesheetStatus(internship) === 'Potvrdený'" class="status-confirmed-small">
+                          ✓ Schválený
+                        </span>
+                      </template>
+                      
+                      <template v-else>
+                        <span class="disabled-note" title="Najprv potvrďte prax">
+                          🔒 Uzamknuté
+                        </span>
+                      </template>
+                    </div>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -272,7 +296,6 @@
               <option :value="10">10</option>
               <option :value="20">20</option>
               <option :value="50">50</option>
-              <option :value="100">100</option>
             </select>
           </div>
         </footer>
@@ -382,7 +405,7 @@ import PageAlert from '@/components/PageAlert.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const alert = reactive({ show: false, type: 'error', message: '' })
+const alert = reactive({ show: false, type: 'error', message: '', duration: 5000 })
 
 function showAlert(message, type = 'error') {
   alert.message = message
@@ -404,8 +427,6 @@ const filters = reactive({
   academicYear: '',
   semester: '',
   studyField: '',
-  dateFrom: '',
-  dateTo: '',
 })
 
 const sortColumn = ref('')
@@ -459,6 +480,12 @@ function statusBadge(statusName) {
   return badges[statusName] || 'badge'
 }
 
+// Check if internship is confirmed
+function isInternshipConfirmed(internship) {
+  const status = internship.current_status?.internship_status_name
+  return status && status !== 'Vytvorená' && status !== 'Zamietnutá'
+}
+
 function canConfirm(internship) {
   return internship.current_status?.internship_status_name === 'Vytvorená'
 }
@@ -486,12 +513,13 @@ function getTimesheetStatus(internship) {
   const timesheet = getTimesheet(internship)
   if (!timesheet) return 'Bez výkazu'
   
-  // Check timesheet_status_history for latest status
+  // Check timesheet_status_history for latest status (ordered by desc in backend)
   if (timesheet.timesheet_status_history && timesheet.timesheet_status_history.length > 0) {
-    const latestStatus = timesheet.timesheet_status_history[timesheet.timesheet_status_history.length - 1]
+    const latestStatus = timesheet.timesheet_status_history[0]
     return latestStatus.status?.timesheet_status_name || 'Nahraný'
   }
   
+  // Fallback to is_verified flag
   return timesheet.is_verified ? 'Potvrdený' : 'Nahraný'
 }
 
@@ -507,6 +535,8 @@ function timesheetBadge(internship) {
 }
 
 function canApproveTimesheet(internship) {
+  if (!isInternshipConfirmed(internship)) return false
+  
   const timesheet = getTimesheet(internship)
   if (!timesheet) return false
   
@@ -515,6 +545,8 @@ function canApproveTimesheet(internship) {
 }
 
 function canRejectTimesheet(internship) {
+  if (!isInternshipConfirmed(internship)) return false
+  
   const timesheet = getTimesheet(internship)
   if (!timesheet) return false
   
@@ -526,13 +558,6 @@ function toggleAdvancedFilters() {
   showAdvancedFilters.value = !showAdvancedFilters.value
 }
 
-function clearFilters() {
-  Object.keys(filters).forEach(key => {
-    filters[key] = ''
-  })
-  currentPage.value = 1
-}
-
 function toggleSort(column) {
   if (sortColumn.value === column) {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
@@ -540,6 +565,14 @@ function toggleSort(column) {
     sortColumn.value = column
     sortDirection.value = 'asc'
   }
+}
+
+function clearFilters() {
+  filters.search = ''
+  filters.status = ''
+  filters.academicYear = ''
+  filters.semester = ''
+  filters.studyField = ''
   currentPage.value = 1
 }
 
@@ -564,35 +597,23 @@ const studyFields = computed(() => {
 const filteredInternships = computed(() => {
   let result = internships.value
 
-  // Fulltext search
   if (filters.search) {
     const searchLower = filters.search.toLowerCase()
     result = result.filter(i => {
       const studentName = `${i.student.first_name} ${i.student.last_name}`.toLowerCase()
       const studentEmail = (i.student.student_email || i.student.email || '').toLowerCase()
       const studyField = (i.student.study_field?.study_field_name || '').toLowerCase()
-      const studyFieldAbbr = (i.student.study_field?.abbreviation || '').toLowerCase()
       const academicYear = (i.academic_year || '').toLowerCase()
-      const semester = getSemesterText(i.semester).toLowerCase()
-      const dateStart = formatDate(i.date_start).toLowerCase()
-      const dateEnd = formatDate(i.date_end).toLowerCase()
       const status = (i.current_status?.internship_status_name || '').toLowerCase()
-      const phone = (i.student.phone_number || '').toLowerCase()
       
       return studentName.includes(searchLower) ||
              studentEmail.includes(searchLower) ||
              studyField.includes(searchLower) ||
-             studyFieldAbbr.includes(searchLower) ||
              academicYear.includes(searchLower) ||
-             semester.includes(searchLower) ||
-             dateStart.includes(searchLower) ||
-             dateEnd.includes(searchLower) ||
-             status.includes(searchLower) ||
-             phone.includes(searchLower)
+             status.includes(searchLower)
     })
   }
 
-  // Apply other filters
   if (filters.status) {
     result = result.filter(i => i.current_status?.internship_status_name === filters.status)
   }
@@ -607,16 +628,6 @@ const filteredInternships = computed(() => {
 
   if (filters.studyField) {
     result = result.filter(i => i.student.study_field?.study_field_name === filters.studyField)
-  }
-
-  if (filters.dateFrom) {
-    const fromDate = new Date(filters.dateFrom)
-    result = result.filter(i => new Date(i.date_start) >= fromDate)
-  }
-
-  if (filters.dateTo) {
-    const toDate = new Date(filters.dateTo)
-    result = result.filter(i => new Date(i.date_end) <= toDate)
   }
 
   // Sorting
@@ -682,13 +693,13 @@ async function fetchInternships() {
     const user = userStr ? JSON.parse(userStr) : null
     
     if (!user) {
-      error('auth.unauthorized')
+      showAlert('Neautorizovaný prístup.', 'error')
       setTimeout(() => router.push('/login'), 1500)
       return
     }
     
     if (!user.company) {
-      error('error.internship.missing.company')
+      showAlert('Používateľ nie je priradený k žiadnej firme.', 'error')
       return
     }
     
@@ -697,7 +708,7 @@ async function fetchInternships() {
     currentPage.value = 1
     
   } catch (err) {
-      showAlert(err.response?.data?.message || 'Nepodarilo sa načítať praxe.', 'error')
+    showAlert(err.response?.data?.message || 'Nepodarilo sa načítať praxe.', 'error')
     
     if (err.response?.status === 401) {
       setTimeout(() => {
@@ -778,10 +789,18 @@ async function rejectInternship(internship) {
   }
 }
 
-// Timesheet approval/rejection
+// Timesheet approval/rejection using DocumentController endpoints
 async function approveTimesheet(internship) {
   const timesheet = getTimesheet(internship)
-  if (!timesheet) return
+  if (!timesheet) {
+    showAlert('Výkaz nebol nájdený.', 'error')
+    return
+  }
+  
+  if (!isInternshipConfirmed(internship)) {
+    showAlert('Najprv musíte potvrdiť odbornú prax pred schválením výkazu.', 'error')
+    return
+  }
   
   if (!confirm(`Schváliť výkaz hodín pre študenta ${internship.student.first_name} ${internship.student.last_name}?`)) {
     return
@@ -809,7 +828,15 @@ async function approveTimesheet(internship) {
 
 async function rejectTimesheet(internship) {
   const timesheet = getTimesheet(internship)
-  if (!timesheet) return
+  if (!timesheet) {
+    showAlert('Výkaz nebol nájdený.', 'error')
+    return
+  }
+  
+  if (!isInternshipConfirmed(internship)) {
+    showAlert('Najprv musíte potvrdiť odbornú prax pred zamietnutím výkazu.', 'error')
+    return
+  }
   
   const reason = prompt('Zadajte dôvod zamietnutia výkazu (voliteľné):')
   
@@ -853,84 +880,92 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Same styles as before - keeping all the CSS unchanged */
-html, body, .dashboard-page {
-  height: 100%;
-  margin: 0;
+* {
+  box-sizing: border-box;
+}
+
+.dashboard-page {
+  min-height: 100vh;
   background: linear-gradient(135deg, #76cbec 0%, #607d9b 100%);
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-  color: #2c3e50;
+  padding: 24px;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 12px;
+  }
 }
 
 .dashboard-container {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: calc(100vh - 80px);
-  padding: 28px 20px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .panel-card {
-  width: 100%;
-  max-width: 1400px;
   background: #fff;
-  padding: 24px;
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(12, 38, 52, 0.12);
-  animation: fadeIn 0.45s ease;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: fadeIn 0.6s ease;
 }
 
 .panel-header {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: #fff;
+  padding: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
   flex-wrap: wrap;
+  gap: 16px;
 }
 
 .panel-header h1 {
-  font-size: 22px;
   margin: 0;
-  color: #2c3e50;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
 .actions {
   display: flex;
   gap: 10px;
-  align-items: center;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .search-input {
-  padding: 10px 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
-  border: 2px solid #e6e9ee;
   font-size: 14px;
-  min-width: 300px;
+  min-width: 280px;
+  background: rgba(255, 255, 255, 0.95);
   transition: all 0.2s;
 }
 
 .search-input:focus {
   outline: none;
+  background: #fff;
   border-color: #42b883;
-  box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1);
+  box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.2);
 }
 
 .refresh-btn,
 .filter-btn {
-  padding: 10px 16px;
-  border-radius: 8px;
+  padding: 10px 18px;
   border: none;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .refresh-btn {
   background: #42b883;
-  color: #fff;
+  color: white;
 }
 
 .refresh-btn:hover:not(:disabled) {
@@ -939,38 +974,41 @@ html, body, .dashboard-page {
 }
 
 .filter-btn {
-  background: #607d9b;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.filter-btn.active {
-  background: #4a6280;
-}
-
+.filter-btn.active,
 .filter-btn:hover {
-  background: #4a6280;
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.3);
 }
 
+.refresh-btn:disabled,
+.filter-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Advanced Filters */
 .advanced-filters {
   background: #f8f9fa;
-  border-radius: 10px;
   padding: 20px;
-  margin-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
+  gap: 16px;
   animation: slideDown 0.3s ease;
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    max-height: 0;
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    max-height: 500px;
   }
 }
 
@@ -981,72 +1019,71 @@ html, body, .dashboard-page {
 }
 
 .filter-group label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #4b5563;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-.filter-group select,
-.filter-group input[type="date"] {
+.filter-group select {
   padding: 8px 12px;
-  border-radius: 6px;
   border: 1px solid #d1d5db;
+  border-radius: 6px;
   font-size: 14px;
-  transition: border-color 0.2s;
+  background: white;
+  cursor: pointer;
+  transition: border 0.2s;
 }
 
-.filter-group select:focus,
-.filter-group input[type="date"]:focus {
+.filter-group select:focus {
   outline: none;
   border-color: #42b883;
+  box-shadow: 0 0 0 2px rgba(66, 184, 131, 0.2);
 }
 
 .clear-filters-btn {
-  padding: 8px 16px;
-  background: #ef4444;
+  grid-column: 1 / -1;
+  padding: 10px 16px;
+  background: #e74c3c;
   color: white;
   border: none;
   border-radius: 6px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
-  align-self: end;
+  max-width: 200px;
 }
 
 .clear-filters-btn:hover {
-  background: #dc2626;
+  background: #c0392b;
 }
 
+/* Statistics Bar */
 .stats-bar {
   display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 10px;
-  flex-wrap: wrap;
+  justify-content: space-around;
+  padding: 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
-  min-width: 100px;
+  gap: 6px;
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7280;
   font-weight: 600;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
 }
 
@@ -1066,9 +1103,10 @@ html, body, .dashboard-page {
   color: #3b82f6;
 }
 
+/* Table */
 .table-wrap {
-  margin-top: 8px;
   overflow-x: auto;
+  padding: 20px;
 }
 
 .applications-table {
@@ -1077,183 +1115,279 @@ html, body, .dashboard-page {
   font-size: 14px;
 }
 
-.applications-table thead th {
-  text-align: left;
-  padding: 12px 10px;
-  color: #4b5563;
-  font-weight: 700;
-  border-bottom: 2px solid #eef2f6;
+.applications-table thead {
   background: #f9fafb;
-  white-space: nowrap;
+  border-bottom: 2px solid #e5e7eb;
 }
 
-.applications-table thead th.sortable {
+.applications-table th {
+  padding: 14px 12px;
+  text-align: left;
+  font-weight: 700;
+  color: #374151;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.applications-table th.sortable {
   cursor: pointer;
   user-select: none;
   transition: background 0.2s;
 }
 
-.applications-table thead th.sortable:hover {
+.applications-table th.sortable:hover {
   background: #f3f4f6;
 }
 
 .th-content {
   display: flex;
   align-items: center;
-  gap: 8px;
-  justify-content: space-between;
+  gap: 6px;
 }
 
 .sort-indicator {
-  font-size: 16px;
+  font-size: 12px;
   color: #42b883;
-  font-weight: bold;
 }
 
-.applications-table tbody td {
-  padding: 14px 10px;
-  border-bottom: 1px solid #f4f7fa;
-  vertical-align: middle;
+.applications-table tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background 0.15s;
 }
 
 .applications-table tbody tr:hover {
   background: #f9fafb;
 }
 
-.name { 
-  font-weight: 700;
+.applications-table td {
+  padding: 16px 12px;
   color: #1f2937;
 }
 
-.muted { 
-  color: #6b7280; 
-  font-size: 13px; 
-  margin-top: 4px; 
+.name {
+  font-weight: 600;
+  color: #1f2937;
 }
 
-.badge {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-weight: 700;
+.muted {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.muted-small {
   font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: #9ca3af;
+  font-style: italic;
 }
 
-.badge-pending { 
-  background: #fef3c7; 
-  color: #92400e; 
-  border: 1px solid #fde68a; 
+.timesheet-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.badge-confirmed { 
-  background: #dbeafe; 
-  color: #1e40af; 
-  border: 1px solid #bfdbfe; 
-}
-
-.badge-approved { 
-  background: #d1fae5; 
-  color: #065f46; 
-  border: 1px solid #a7f3d0; 
-}
-
-.badge-success { 
-  background: #d1fae5; 
-  color: #065f46; 
-  border: 1px solid #6ee7b7; 
-}
-
-.badge-failed { 
-  background: #fee2e2; 
-  color: #991b1b; 
-  border: 1px solid #fecaca; 
-}
-
-.badge-rejected { 
-  background: #fee2e2; 
-  color: #991b1b; 
-  border: 1px solid #fecaca; 
-}
-
-.badge.muted {
-  background: #f3f4f6;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
-}
-
-.timesheet-info {
+.warning-note {
+  font-size: 11px;
+  color: #f59e0b;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.actions-col {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  min-width: 200px;
+/* Badge styles */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-button.ghost {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #4b5563;
-  font-weight: 600;
-  transition: all 0.2s;
+.badge.badge-pending {
+  background: #fef3c7;
+  color: #92400e;
 }
 
-button.ghost:hover {
+.badge.badge-confirmed {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badge.badge-approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge.badge-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge.badge-failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge.badge-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge.muted {
   background: #f3f4f6;
-  border-color: #9ca3af;
+  color: #6b7280;
+}
+
+.badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge.approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Actions column */
+.actions-col {
+  min-width: 280px;
+}
+
+.actions-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.action-group.internship-actions {
+  border-left: 3px solid #3b82f6;
+}
+
+.action-group.timesheet-actions {
+  border-left: 3px solid #8b5cf6;
+}
+
+.action-group.disabled {
+  opacity: 0.5;
+  background: #f3f4f6;
+}
+
+.action-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 60px;
+}
+
+.status-confirmed {
+  font-size: 11px;
+  color: #059669;
+  font-weight: 600;
+  padding: 4px 8px;
+  background: #d1fae5;
+  border-radius: 4px;
+}
+
+.status-confirmed-small {
+  font-size: 10px;
+  color: #059669;
+  font-weight: 600;
+  padding: 3px 6px;
+  background: #d1fae5;
+  border-radius: 4px;
+}
+
+.disabled-note {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  padding: 4px 8px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  cursor: not-allowed;
+}
+
+/* Button styles */
+button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.ghost,
+button.ghost-small {
+  background: transparent;
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+}
+
+button.ghost:hover:not(:disabled),
+button.ghost-small:hover:not(:disabled) {
+  background: #eff6ff;
+}
+
+button.ghost-small {
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
 button.approve {
   background: #10b981;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 13px;
+  color: white;
 }
 
 button.approve:hover:not(:disabled) {
   background: #059669;
+  transform: translateY(-1px);
 }
 
 button.reject {
   background: #ef4444;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 13px;
+  color: white;
 }
 
 button.reject:hover:not(:disabled) {
   background: #dc2626;
+  transform: translateY(-1px);
 }
 
 button.approve-small {
   background: #10b981;
-  color: #fff;
-  border: none;
+  color: white;
   padding: 6px 10px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
   font-size: 12px;
 }
 
@@ -1263,13 +1397,8 @@ button.approve-small:hover:not(:disabled) {
 
 button.reject-small {
   background: #ef4444;
-  color: #fff;
-  border: none;
+  color: white;
   padding: 6px 10px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
   font-size: 12px;
 }
 
@@ -1277,19 +1406,20 @@ button.reject-small:hover:not(:disabled) {
   background: #dc2626;
 }
 
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
+/* Empty state */
 .empty {
-  padding: 60px 20px;
   text-align: center;
+  padding: 60px 20px;
   color: #6b7280;
 }
 
 .empty p {
+  font-size: 16px;
   margin: 8px 0;
+}
+
+.empty .muted {
+  font-size: 14px;
 }
 
 .clear-btn {
@@ -1297,43 +1427,45 @@ button:disabled {
   padding: 10px 20px;
   background: #42b883;
   color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
 }
 
 .clear-btn:hover {
   background: #369f73;
 }
 
+/* Loading */
 .loading {
-  padding: 60px 20px;
   text-align: center;
-  color: #6b7280;
+  padding: 60px 20px;
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
-  margin: 0 auto 16px;
+  width: 48px;
+  height: 48px;
   border: 4px solid #e5e7eb;
   border-top-color: #42b883;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+.loading p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Pagination */
 .panel-footer {
-  margin-top: 20px;
+  border-top: 1px solid #e5e7eb;
+  padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
+  background: #fafbfc;
 }
 
 .pagination {
@@ -1344,18 +1476,19 @@ button:disabled {
 
 .pagination button {
   padding: 8px 14px;
+  background: #fff;
+  border: 1px solid #d1d5db;
   border-radius: 6px;
-  border: none;
-  background: #2c3e50;
-  color: #fff;
-  cursor: pointer;
   font-size: 13px;
   font-weight: 600;
+  color: #374151;
+  cursor: pointer;
   transition: background 0.2s;
 }
 
 .pagination button:hover:not(:disabled) {
   background: #1a252f;
+  color: white;
 }
 
 .pagination button:disabled {
@@ -1578,47 +1711,535 @@ button.close:hover {
   background: #e5e7eb;
 }
 
+/* Tablet Responsiveness (768px - 1024px) */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .dashboard-container {
+    max-width: 100%;
+    padding: 0 16px;
+  }
+
+  .panel-header h1 {
+    font-size: 24px;
+  }
+
+  .search-input {
+    min-width: 220px;
+  }
+
+  .applications-table {
+    font-size: 13px;
+  }
+
+  .applications-table th,
+  .applications-table td {
+    padding: 12px 10px;
+  }
+
+  .actions-col {
+    min-width: 260px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+}
+
+/* Mobile Responsiveness (max-width: 768px) */
 @media (max-width: 768px) {
+  .dashboard-page {
+    padding: 8px;
+  }
+
+  .dashboard-container {
+    max-width: 100%;
+  }
+
+  .panel-card {
+    border-radius: 12px;
+  }
+
   .panel-header {
     flex-direction: column;
     align-items: stretch;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .panel-header h1 {
+    font-size: 20px;
+    text-align: center;
   }
 
   .actions {
     flex-direction: column;
     width: 100%;
+    gap: 8px;
   }
 
-  .search-input,
-  .actions button {
+  .search-input {
     width: 100%;
     min-width: auto;
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 12px 14px;
+  }
+
+  .refresh-btn,
+  .filter-btn {
+    width: 100%;
+    padding: 12px 18px;
+    font-size: 15px;
   }
 
   .advanced-filters {
     grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .filter-group select,
+  .filter-group input {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 10px 12px;
+  }
+
+  .clear-filters-btn {
+    max-width: none;
+    width: 100%;
   }
 
   .stats-bar {
     flex-wrap: wrap;
+    padding: 12px;
+    gap: 8px;
+    justify-content: center;
   }
 
+  .stat {
+    flex: 1;
+    min-width: calc(50% - 4px);
+    padding: 12px 8px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  /* Table optimizations for mobile */
+  .table-wrap {
+    padding: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+
+  .applications-table {
+    font-size: 11px;
+    min-width: 800px; /* Ensures table doesn't collapse */
+  }
+
+  .applications-table th,
+  .applications-table td {
+    padding: 8px 6px;
+  }
+
+  .applications-table th {
+    font-size: 10px;
+    position: sticky;
+    top: 0;
+    background: #f9fafb;
+    z-index: 1;
+  }
+
+  .name {
+    font-size: 12px;
+  }
+
+  .muted {
+    font-size: 10px;
+  }
+
+  /* Actions column for mobile */
   .actions-col {
     min-width: auto;
-    flex-wrap: wrap;
+    width: 240px;
+  }
+
+  .actions-wrapper {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .action-group {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .action-label {
+    width: 100%;
+    margin-bottom: 2px;
+    font-size: 10px;
+  }
+
+  .action-group button {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  button.ghost-small {
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+
+  button.approve-small,
+  button.reject-small {
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+
+  .status-confirmed {
+    font-size: 10px;
+    padding: 4px 6px;
+    text-align: center;
+  }
+
+  .status-confirmed-small {
+    font-size: 9px;
+    padding: 3px 5px;
+  }
+
+  .disabled-note {
+    font-size: 10px;
+    padding: 4px 6px;
+    text-align: center;
+  }
+
+  .badge {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+
+  .warning-note {
+    font-size: 10px;
+  }
+
+  /* Empty state */
+  .empty {
+    padding: 40px 16px;
+  }
+
+  .empty p {
+    font-size: 14px;
+  }
+
+  /* Loading */
+  .loading {
+    padding: 40px 16px;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border-width: 3px;
+  }
+
+  /* Modal optimizations for mobile */
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-start;
   }
 
   .modal-card {
-    max-width: 95%;
+    max-width: 100%;
+    min-height: 100vh;
+    border-radius: 0;
+    margin: 0;
   }
 
+  .modal-header {
+    padding: 14px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f9fafb;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .modal-header h2 {
+    font-size: 18px;
+  }
+
+  button.close {
+    width: 36px;
+    height: 36px;
+    font-size: 28px;
+  }
+
+  .modal-body {
+    padding: 16px;
+    max-height: none;
+    font-size: 13px;
+  }
+
+  .detail-section {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+  }
+
+  .detail-section h3 {
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+
+  .detail-section p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .detail-section strong {
+    display: inline-block;
+    min-width: 90px;
+  }
+
+  .status-history li {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+
+  .history-date {
+    font-size: 11px;
+  }
+
+  .history-notes {
+    font-size: 12px;
+  }
+
+  .documents-list li {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px;
+  }
+
+  .document-link {
+    font-size: 13px;
+    width: 100%;
+  }
+
+  .document-type {
+    font-size: 11px;
+  }
+
+  .verified-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background: #f9fafb;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .modal-footer button {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  /* Pagination for mobile */
   .panel-footer {
     flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
   }
 
   .pagination {
     flex-wrap: wrap;
     justify-content: center;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .pagination button {
+    padding: 10px 12px;
+    font-size: 12px;
+    flex: 0 0 auto;
+  }
+
+  .pagination button:first-child,
+  .pagination button:last-child {
+    display: none; /* Hide "First" and "Last" buttons on mobile */
+  }
+
+  .page-info {
+    font-size: 13px;
+    width: 100%;
+    text-align: center;
+    order: -1; /* Move to top */
+    margin-bottom: 8px;
+  }
+
+  .page-info .muted {
+    display: block;
+    margin-top: 4px;
+  }
+
+  .page-size-selector {
+    width: 100%;
+    justify-content: center;
+    font-size: 13px;
+  }
+
+  .page-size-selector select {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+}
+
+/* Small mobile devices (max-width: 480px) */
+@media (max-width: 480px) {
+  .panel-header h1 {
+    font-size: 18px;
+  }
+
+  .stat {
+    min-width: calc(50% - 4px);
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .applications-table {
+    min-width: 700px;
+    font-size: 10px;
+  }
+
+  .applications-table th,
+  .applications-table td {
+    padding: 6px 4px;
+  }
+
+  .actions-col {
+    width: 200px;
+  }
+
+  .action-group {
+    padding: 5px 6px;
+  }
+
+  .action-group button {
+    font-size: 11px;
+    padding: 7px 8px;
+  }
+
+  .badge {
+    font-size: 8px;
+    padding: 2px 5px;
+  }
+
+  .modal-body {
+    padding: 12px;
+  }
+
+  .detail-section h3 {
+    font-size: 14px;
+  }
+
+  .detail-section p {
+    font-size: 12px;
+  }
+
+  .detail-section strong {
+    min-width: 80px;
+    font-size: 11px;
+  }
+}
+
+/* Landscape mobile optimization */
+@media (max-width: 768px) and (orientation: landscape) {
+  .modal-card {
+    min-height: auto;
+  }
+
+  .modal-body {
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+  }
+
+  .modal-header,
+  .modal-footer {
+    position: relative;
+  }
+}
+
+/* Touch improvements for all mobile devices */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase tap targets */
+  button {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+
+  .action-group button {
+    min-height: 40px;
+  }
+
+  /* Remove hover effects */
+  .applications-table tbody tr:hover {
+    background: transparent;
+  }
+
+  .applications-table th.sortable:hover {
+    background: #f9fafb;
+  }
+
+  button:hover:not(:disabled) {
+    transform: none;
+  }
+
+  /* Better touch scrolling */
+  .table-wrap,
+  .modal-body {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Print styles */
+@media print {
+  .panel-header,
+  .advanced-filters,
+  .stats-bar,
+  .actions-col,
+  .panel-footer,
+  .modal-backdrop {
+    display: none !important;
+  }
+
+  .panel-card {
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+  }
+
+  .applications-table {
+    font-size: 10px;
   }
 }
 
