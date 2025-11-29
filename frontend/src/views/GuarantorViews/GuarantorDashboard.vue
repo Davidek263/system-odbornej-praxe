@@ -170,6 +170,14 @@
                     </span>
                   </div>
                 </th>
+                <th class="sortable" @click="toggleSort('timesheet')">
+                  <div class="th-content">
+                    <span>Stav výkazu</span>
+                    <span class="sort-indicator" v-if="sortColumn === 'timesheet'">
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    </span>
+                  </div>
+                </th>
                 <th class="actions-col">Akcie</th>
               </tr>
             </thead>
@@ -199,6 +207,14 @@
                   <span :class="statusBadge(internship.current_status?.internship_status_name)">
                     {{ internship.current_status?.internship_status_name || 'Neznámy' }}
                   </span>
+                </td>
+                <td>
+                  <div v-if="hasTimesheet(internship)" class="timesheet-info">
+                    <span :class="timesheetBadge(internship)">
+                      {{ getTimesheetStatus(internship) }}
+                    </span>
+                  </div>
+                  <div v-else class="muted">—</div>
                 </td>
                 <td class="actions-col">
                   <button class="ghost" @click="viewDetails(internship)">Detail</button>
@@ -261,7 +277,7 @@
       <div class="modal-card">
         <header class="modal-header">
           <h2>Detail odbornej praxe</h2>
-          <button class="close" @click="closeDetailModal">&times;</button>
+          <button class="close-btn" @click="closeDetailModal">✕</button>
         </header>
 
         <div class="modal-body">
@@ -339,7 +355,7 @@
       <div class="modal-card">
         <header class="modal-header">
           <h2>Upraviť odbornú prax</h2>
-          <button class="close" @click="closeEditModal">&times;</button>
+          <button class="close-btn" @click="closeEditModal">✕</button>
         </header>
 
         <div class="modal-body">
@@ -419,7 +435,7 @@
       <div class="modal-card modal-small">
         <header class="modal-header">
           <h2>Zmeniť stav praxe</h2>
-          <button class="close" @click="closeStatusModal">&times;</button>
+          <button class="close-btn" @click="closeStatusModal">✕</button>
         </header>
 
         <div class="modal-body">
@@ -591,6 +607,44 @@ function statusBadge(statusName) {
   return badges[statusName] || 'badge'
 }
 
+// Timesheet helpers
+function hasTimesheet(internship) {
+  if (!internship.documents || !Array.isArray(internship.documents)) return false
+  return internship.documents.some(doc => 
+    doc.document_type?.document_type_name === 'Výkaz hodín'
+  )
+}
+
+function getTimesheet(internship) {
+  if (!internship.documents || !Array.isArray(internship.documents)) return null
+  return internship.documents.find(doc => 
+    doc.document_type?.document_type_name === 'Výkaz hodín'
+  )
+}
+
+function getTimesheetStatus(internship) {
+  const timesheet = getTimesheet(internship)
+  if (!timesheet) return 'Bez výkazu'
+  
+  if (timesheet.timesheet_status_history && timesheet.timesheet_status_history.length > 0) {
+    const latestStatus = timesheet.timesheet_status_history[0]
+    return latestStatus.status?.timesheet_status_name || 'Nahraný'
+  }
+  
+  return timesheet.is_verified ? 'Potvrdený' : 'Nahraný'
+}
+
+function timesheetBadge(internship) {
+  const status = getTimesheetStatus(internship)
+  const badges = {
+    'Bez výkazu': 'badge badge-muted',
+    'Nahraný': 'badge badge-info',
+    'Potvrdený': 'badge badge-success',
+    'Zamietnutý': 'badge badge-rejected',
+  }
+  return badges[status] || 'badge'
+}
+
 function toggleAdvancedFilters() {
   showAdvancedFilters.value = !showAdvancedFilters.value
 }
@@ -716,6 +770,10 @@ const filteredInternships = computed(() => {
         case 'status':
           aVal = (a.current_status?.internship_status_name || '').toLowerCase()
           bVal = (b.current_status?.internship_status_name || '').toLowerCase()
+          break
+        case 'timesheet':
+          aVal = getTimesheetStatus(a).toLowerCase()
+          bVal = getTimesheetStatus(b).toLowerCase()
           break
         default:
           return 0
@@ -944,18 +1002,22 @@ html, body, .dashboard-page {
 }
 
 .panel-header {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: #fff;
+  padding: 20px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
   flex-wrap: wrap;
+  gap: 16px;
 }
 
 .panel-header h1 {
-  font-size: 22px;
   margin: 0;
-  color: #2c3e50;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #ffffff;
 }
 
 .actions {
@@ -1085,12 +1147,12 @@ html, body, .dashboard-page {
 
 .stats-bar {
   display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 10px;
+  justify-content: space-around;
+  padding: 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #e5e7eb;
   flex-wrap: wrap;
+  gap: 12px;
 }
 
 .stat {
@@ -1102,11 +1164,12 @@ html, body, .dashboard-page {
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 11px;
   color: #6b7280;
   font-weight: 600;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
 }
 
 .stat-value {
@@ -1153,23 +1216,28 @@ html, body, .dashboard-page {
   font-size: 14px;
 }
 
-.applications-table thead th {
-  text-align: left;
-  padding: 12px 10px;
-  color: #4b5563;
-  font-weight: 700;
-  border-bottom: 2px solid #eef2f6;
+.applications-table thead {
   background: #f9fafb;
-  white-space: nowrap;
+  border-bottom: 2px solid #e5e7eb;
 }
 
-.applications-table thead th.sortable {
+.applications-table th {
+  padding: 14px 12px;
+  text-align: left;
+  font-weight: 700;
+  color: #374151;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.applications-table th.sortable {
   cursor: pointer;
   user-select: none;
   transition: background 0.2s;
 }
 
-.applications-table thead th.sortable:hover {
+.applications-table th.sortable:hover {
   background: #f3f4f6;
 }
 
@@ -1279,19 +1347,21 @@ button.ghost:hover {
 }
 
 button.edit {
-  background: #3b82f6;
-  color: #fff;
+  background: #108e2d;
+  color: white;
   border: none;
   padding: 8px 12px;
   border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
   font-size: 13px;
+  margin-right: 6px;
 }
 
 button.edit:hover:not(:disabled) {
-  background: #2563eb;
+  background: #13ac37;
+  transform: translateY(-1px);
 }
 
 button.status {
@@ -1483,13 +1553,14 @@ button:disabled {
   align-items: center;
   padding: 20px 24px;
   border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
 }
 
 .modal-header h2 { 
   margin: 0; 
   font-size: 20px;
-  color: #1f2937;
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .modal-body {
@@ -1610,25 +1681,29 @@ button:disabled {
   background: #f9fafb;
 }
 
-button.close {
+button.close,
+button.close-btn {
   background: transparent;
   border: none;
-  font-size: 24px;
+  font-size: 28px;
   cursor: pointer;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.9);
   line-height: 1;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
-button.close:hover {
-  background: #e5e7eb;
+button.close:hover,
+button.close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  transform: rotate(90deg);
 }
 
 /* Edit form styles */

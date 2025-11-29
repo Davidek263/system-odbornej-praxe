@@ -842,4 +842,99 @@ class InternshipController extends Controller
             ], 500);
         }
     }
+    public function updateStudentInternship(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required|exists:company,id',
+            'academic_year' => [
+                'required',
+                'regex:/^\d{4}\/\d{4}$/', // Format: 2024/2025
+            ],
+            'semester' => 'required|integer|in:1,2', // 1 = Winter, 2 = Summer
+            'date_start' => 'required|date',
+            'date_end' => 'required|date|after:date_start',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $user = auth()->user();
+            
+            // Verify user is a student
+            if (!$user->hasRole('student')) {
+                return response()->json([
+                    'message' => 'Only students can edit internships.',
+                ], 403);
+            }
+
+            // Find internship
+            $internship = \App\Models\Internship::find($id);
+            
+            if (!$internship) {
+                return response()->json([
+                    'message' => 'Internship not found.',
+                ], 404);
+            }
+
+            // Verify ownership
+            if ($internship->users_id !== $user->id) {
+                return response()->json([
+                    'message' => 'You can only edit your own internships.',
+                ], 403);
+            }
+
+            // Students can only edit internships in "Vytvorená" status
+            if ($internship->currentStatus->internship_status_name !== 'Vytvorená') {
+                return response()->json([
+                    'message' => 'Môžete upravovať iba praxe v stave "Vytvorená".',
+                ], 403);
+            }
+
+            // Update internship
+            $internship->update([
+                'company_id' => $request->company_id,
+                'academic_year' => $request->academic_year,
+                'semester' => $request->semester,
+                'date_start' => $request->date_start,
+                'date_end' => $request->date_end,
+            ]);
+
+            // Log the change
+            DB::table('internship_status_change')->insert([
+                'internship_id' => $internship->id,
+                'internship_status_id' => $internship->current_status_id,
+                'changed_by_user_id' => $user->id,
+                'status_changed_at' => now(),
+                'notes' => 'Prax upravená študentom',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Prax bola úspešne upravená.',
+                'internship' => $internship->load([
+                    'company.address',
+                    'currentStatus',
+                    'student',
+                ]),
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'message' => 'Failed to update internship.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

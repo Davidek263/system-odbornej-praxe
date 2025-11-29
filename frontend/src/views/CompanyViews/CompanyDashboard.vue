@@ -145,7 +145,14 @@
                     </span>
                   </div>
                 </th>
-                <th>Stav výkazu</th>
+                <th class="sortable" @click="toggleSort('timesheet')">
+                  <div class="th-content">
+                    <span>Stav výkazu</span>
+                    <span class="sort-indicator" v-if="sortColumn === 'timesheet'">
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    </span>
+                  </div>
+                </th>
                 <th class="actions-col">Akcie</th>
               </tr>
             </thead>
@@ -307,7 +314,7 @@
       <div class="modal-card">
         <header class="modal-header">
           <h2>Detail odbornej praxe</h2>
-          <button class="close" @click="closeModal">&times;</button>
+          <button class="close-btn" @click="closeModal">✕</button>
         </header>
 
         <div class="modal-body">
@@ -655,6 +662,11 @@ const filteredInternships = computed(() => {
         case 'status':
           aVal = (a.current_status?.internship_status_name || '').toLowerCase()
           bVal = (b.current_status?.internship_status_name || '').toLowerCase()
+          break
+        case 'timesheet':
+          // Sort by timesheet status
+          aVal = getTimesheetStatus(a).toLowerCase()
+          bVal = getTimesheetStatus(b).toLowerCase()
           break
         default:
           return 0
@@ -1563,13 +1575,14 @@ button.reject-small:hover:not(:disabled) {
   align-items: center;
   padding: 20px 24px;
   border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
 }
 
 .modal-header h2 { 
   margin: 0; 
   font-size: 20px;
-  color: #1f2937;
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .modal-body {
@@ -1690,25 +1703,29 @@ button.reject-small:hover:not(:disabled) {
   background: #f9fafb;
 }
 
-button.close {
+button.close,
+button.close-btn {
   background: transparent;
   border: none;
-  font-size: 24px;
+  font-size: 28px;
   cursor: pointer;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.9);
   line-height: 1;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
-button.close:hover {
-  background: #e5e7eb;
+button.close:hover,
+button.close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  transform: rotate(90deg);
 }
 
 /* Tablet Responsiveness (768px - 1024px) */

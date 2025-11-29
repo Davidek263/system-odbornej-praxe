@@ -28,7 +28,7 @@
 
             <!-- Document Management Button -->
             <button @click="manageDocuments" class="documents-btn" title="Spravovať dokumenty">
-              📄 Dokumenty
+               Dokumenty
             </button>
 
             <!-- Create New Internship Button -->
@@ -144,15 +144,22 @@
                   </div>
                 </th>
                 <th class="sortable" @click="toggleSort('status')">
-                  <div class="th-content">
-                    <span>Stav</span>
-                    <span class="sort-indicator" v-if="sortColumn === 'status'">
-                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
-                    </span>
-                  </div>
-                </th>
-                <th>Výkaz</th>
-                <th class="actions-col">Akcie</th>
+                <div class="th-content">
+                  <span>Stav</span>
+                  <span class="sort-indicator" v-if="sortColumn === 'status'">
+                    {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                  </span>
+                </div>
+              </th>
+              <th class="sortable" @click="toggleSort('timesheet')">
+                <div class="th-content">
+                  <span>Stav výkazu</span>
+                  <span class="sort-indicator" v-if="sortColumn === 'timesheet'">
+                    {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                  </span>
+                </div>
+              </th>
+              <th class="actions-col">Akcie</th>
               </tr>
             </thead>
             <tbody>
@@ -175,7 +182,7 @@
                   </span>
                 </td>
                 <td>
-                  <div v-if="hasTimesheet(internship)" class="timesheet-info">
+                  <div v-if="hasTimesheet(internship)">
                     <span :class="timesheetBadge(internship)">
                       {{ getTimesheetStatus(internship) }}
                     </span>
@@ -184,9 +191,8 @@
                 </td>
                 <td class="actions-col">
                   <button class="ghost" @click="viewDetails(internship)">Detail</button>
-                  <button class="upload-btn" @click="uploadDocument(internship)">
-                    📤 Nahrať
-                  </button>
+                  <button class="edit-btn" @click="editInternship(internship)">Upraviť</button>
+                  <button class="upload-btn" @click="uploadDocument(internship)">Nahrať</button>
                 </td>
               </tr>
             </tbody>
@@ -238,7 +244,7 @@
       <div class="modal-card">
         <header class="modal-header">
           <h2>Detail odbornej praxe</h2>
-          <button class="close" @click="closeModal">&times;</button>
+          <button class="close-btn" @click="closeModal">✕</button>
         </header>
 
         <div class="modal-body">
@@ -317,7 +323,7 @@
         <footer class="modal-footer">
           <button class="ghost" @click="closeModal">Zavrieť</button>
           <button class="upload-btn" @click="uploadDocument(selected)">
-            📤 Nahrať dokument
+             Nahrať dokument
           </button>
         </footer>
       </div>
@@ -365,10 +371,6 @@
                 </div>
                 <div v-if="showCompanyDropdown && createForm.companySearch && !filteredCompanies.length" class="dropdown">
                   <div class="dropdown-empty">Žiadne firmy nenájdené</div>
-                </div>
-                <div v-if="createForm.selectedCompany" class="selected-badge">
-                  <span>✓ {{ createForm.selectedCompany.company_name }}</span>
-                  <button type="button" @click="clearCompany" class="clear-btn">✕</button>
                 </div>
               </div>
             </div>
@@ -430,6 +432,110 @@
         </footer>
       </div>
     </div>
+
+    <!-- Edit Internship Modal -->
+    <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
+      <div class="modal-content edit-modal">
+        <header class="modal-header">
+          <h2>Úprava odbornej praxe</h2>
+          <button class="close-btn" @click="closeEditModal">✕</button>
+        </header>
+
+        <Spinner v-if="editLoading" overlay />
+
+        <div class="modal-body">
+          <form @submit.prevent="submitEditForm">
+            <!-- Company Autocomplete -->
+            <div class="form-group">
+              <label for="edit_company">Firma *</label>
+              <div class="autocomplete-wrapper">
+                <input
+                  id="edit_company"
+                  v-model="editForm.companySearch"
+                  @input="filterEditCompanies"
+                  @focus="showEditCompanyDropdown = true"
+                  type="text"
+                  placeholder="Začnite písať názov firmy..."
+                  autocomplete="off"
+                  :required="!editForm.selectedCompany"
+                />
+                <div v-if="showEditCompanyDropdown && filteredEditCompanies.length" class="dropdown">
+                  <div
+                    v-for="company in filteredEditCompanies"
+                    :key="company.id"
+                    @click="selectEditCompany(company)"
+                    class="dropdown-item"
+                  >
+                    <div class="company-name">{{ company.company_name }}</div>
+                    <div class="company-info">
+                      {{ company.address?.city || '' }}
+                      <span v-if="company.contact_person_email"> • {{ company.contact_person_email }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="showEditCompanyDropdown && editForm.companySearch && !filteredEditCompanies.length" class="dropdown">
+                  <div class="dropdown-empty">Žiadne firmy nenájdené</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Academic Year -->
+            <div class="form-group">
+              <label for="edit_academic_year">Akademický rok *</label>
+              <input
+                id="edit_academic_year"
+                v-model="editForm.academic_year"
+                @input="filterEditYears"
+                @focus="showEditYearDropdown = true"
+                type="text"
+                placeholder="Zadajte akademický rok (napr. 2024/2025)..."
+                autocomplete="off"
+                required
+              />
+              <div v-if="showEditYearDropdown && filteredEditYears.length" class="dropdown">
+                <div
+                  v-for="year in filteredEditYears"
+                  :key="year"
+                  @click="selectEditYear(year)"
+                  class="dropdown-item"
+                >
+                  {{ year }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Semester -->
+            <div class="form-group">
+              <label for="edit_semester">Semester *</label>
+              <select id="edit_semester" v-model="editForm.semester" required>
+                <option value="">Vyberte semester</option>
+                <option value="1">Zimný semester</option>
+                <option value="2">Letný semester</option>
+              </select>
+            </div>
+
+            <!-- Date Start -->
+            <div class="form-group">
+              <label for="edit_date_start">Dátum začiatku *</label>
+              <input id="edit_date_start" v-model="editForm.date_start" type="date" required />
+            </div>
+
+            <!-- Date End -->
+            <div class="form-group">
+              <label for="edit_date_end">Dátum konca *</label>
+              <input id="edit_date_end" v-model="editForm.date_end" type="date" required />
+            </div>
+          </form>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="ghost" @click="closeEditModal">Zrušiť</button>
+          <button class="submit-btn" @click="submitEditForm" :disabled="editSubmitting">
+            {{ editSubmitting ? 'Ukladá sa...' : 'Uložiť zmeny' }}
+          </button>
+        </footer>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -464,6 +570,24 @@ const showCompanyDropdown = ref(false)
 const showYearDropdown = ref(false)
 
 const createForm = reactive({
+  companySearch: '',
+  selectedCompany: null,
+  company_id: null,
+  academic_year: '',
+  semester: '',
+  date_start: '',
+  date_end: ''
+})
+
+// Edit Modal State
+const showEditModal = ref(false)
+const editLoading = ref(false)
+const editSubmitting = ref(false)
+const showEditCompanyDropdown = ref(false)
+const showEditYearDropdown = ref(false)
+const editingInternship = ref(null)
+
+const editForm = reactive({
   companySearch: '',
   selectedCompany: null,
   company_id: null,
@@ -622,13 +746,15 @@ const academicYearsOptions = computed(() => {
   const currentYear = new Date().getFullYear()
   const years = []
   
-  for (let i = -1; i <= 5; i++) {
-    const year1 = currentYear + i
-    const year2 = year1 + 1
-    years.push(`${year1}/${year2}`)
+  // Min: 2020/2021, Max: current/current+1
+  const minYear = 2020
+  const maxYear = currentYear
+  
+  for (let year = minYear; year <= maxYear; year++) {
+    years.push(`${year}/${year + 1}`)
   }
   
-  return years
+  return years.reverse() // Newest first
 })
 
 const currentAcademicYear = computed(() => {
@@ -659,6 +785,28 @@ const filteredYears = computed(() => {
   if (!createForm.academic_year) return academicYearsOptions.value
   
   const search = createForm.academic_year.toLowerCase()
+  return academicYearsOptions.value.filter(year => 
+    year.toLowerCase().includes(search)
+  )
+})
+
+// Edit Modal Computed
+const filteredEditCompanies = computed(() => {
+  if (!editForm.companySearch) return companies.value
+  
+  const search = editForm.companySearch.toLowerCase()
+  return companies.value.filter(company => 
+    company.company_name.toLowerCase().includes(search) ||
+    company.address?.city?.toLowerCase().includes(search) ||
+    company.contact_person_name?.toLowerCase().includes(search) ||
+    company.contact_person_email?.toLowerCase().includes(search)
+  )
+})
+
+const filteredEditYears = computed(() => {
+  if (!editForm.academic_year) return academicYearsOptions.value
+  
+  const search = editForm.academic_year.toLowerCase()
   return academicYearsOptions.value.filter(year => 
     year.toLowerCase().includes(search)
   )
@@ -723,9 +871,15 @@ const filteredInternships = computed(() => {
           aVal = (a.current_status?.internship_status_name || '').toLowerCase()
           bVal = (b.current_status?.internship_status_name || '').toLowerCase()
           break
+        case 'timesheet':
+          // Sort by timesheet status
+          aVal = getTimesheetStatus(a).toLowerCase()
+          bVal = getTimesheetStatus(b).toLowerCase()
+          break
         default:
           return 0
       }
+      
 
       if (aVal < bVal) return sortDirection.value === 'asc' ? -1 : 1
       if (aVal > bVal) return sortDirection.value === 'asc' ? 1 : -1
@@ -867,6 +1021,114 @@ function handleClickOutside(event) {
   if (!target.closest('.autocomplete-wrapper')) {
     showCompanyDropdown.value = false
     showYearDropdown.value = false
+    showEditCompanyDropdown.value = false
+    showEditYearDropdown.value = false
+  }
+}
+
+// Edit Modal Functions
+function editInternship(internship) {
+  editingInternship.value = internship
+  
+  // Populate form with existing data
+  const company = internship.company
+  editForm.companySearch = company?.company_name || ''
+  editForm.selectedCompany = company
+  editForm.company_id = company?.id || null
+  editForm.academic_year = internship.academic_year || ''
+  editForm.semester = String(internship.semester) || ''
+  editForm.date_start = internship.date_start || ''
+  editForm.date_end = internship.date_end || ''
+  
+  showEditModal.value = true
+}
+
+function filterEditCompanies() {
+  showEditCompanyDropdown.value = true
+  if (editForm.selectedCompany && editForm.companySearch !== editForm.selectedCompany.company_name) {
+    editForm.selectedCompany = null
+    editForm.company_id = null
+  }
+}
+
+function selectEditCompany(company) {
+  editForm.selectedCompany = company
+  editForm.companySearch = company.company_name
+  editForm.company_id = company.id
+  showEditCompanyDropdown.value = false
+}
+
+function filterEditYears() {
+  showEditYearDropdown.value = true
+}
+
+function selectEditYear(year) {
+  editForm.academic_year = year
+  showEditYearDropdown.value = false
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  editingInternship.value = null
+  resetEditForm()
+  showEditCompanyDropdown.value = false
+  showEditYearDropdown.value = false
+}
+
+function resetEditForm() {
+  editForm.companySearch = ''
+  editForm.selectedCompany = null
+  editForm.company_id = null
+  editForm.academic_year = ''
+  editForm.semester = ''
+  editForm.date_start = ''
+  editForm.date_end = ''
+}
+
+async function submitEditForm() {
+  // Validate company
+  if (!editForm.selectedCompany) {
+    showAlert('Musíte vybrať firmu zo zoznamu.', 'error')
+    return
+  }
+
+  // Validate academic year format
+  if (!editForm.academic_year.match(/^\d{4}\/\d{4}$/)) {
+    showAlert('Akademický rok musí byť vo formáte YYYY/YYYY (napr. 2024/2025).', 'error')
+    return
+  }
+
+  // Validate dates
+  if (new Date(editForm.date_start) >= new Date(editForm.date_end)) {
+    showAlert('Dátum konca musí byť po dátume začiatku.', 'error')
+    return
+  }
+
+  editSubmitting.value = true
+
+  try {
+    const payload = {
+      company_id: editForm.company_id,
+      academic_year: editForm.academic_year,
+      semester: parseInt(editForm.semester),
+      date_start: editForm.date_start,
+      date_end: editForm.date_end
+    }
+
+    await api.put(`/internships/${editingInternship.value.id}`, payload)
+    
+    showAlert('Prax bola úspešne upravená!', 'success')
+    
+    closeEditModal()
+    
+    // Refresh internships list
+    await fetchInternships()
+
+  } catch (err) {
+    showAlert(err.response?.data?.message || 'Nepodarilo sa upraviť prax.', 'error')
+    console.error('Error editing internship:', err)
+  } finally {
+    editSubmitting.value = false
   }
 }
 
@@ -1281,11 +1543,6 @@ onBeforeUnmount(() => {
   margin-top: 2px;
 }
 
-.timesheet-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
 
 /* Badge styles */
 .badge {
@@ -1372,13 +1629,26 @@ button:disabled {
 
 button.ghost {
   background: transparent;
-  color: #3b82f6;
-  border: 1px solid #3b82f6;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
   margin-right: 6px;
 }
 
 button.ghost:hover:not(:disabled) {
-  background: #eff6ff;
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #9ca3af;
+}
+
+button.edit-btn {
+  background: #108e2d;
+  color: white;
+  margin-right: 6px;
+}
+
+button.edit-btn:hover:not(:disabled) {
+  background: #13ac37;
+  transform: translateY(-1px);
 }
 
 button.upload-btn {
@@ -1548,13 +1818,14 @@ button.upload-btn:hover:not(:disabled) {
   align-items: center;
   padding: 20px 24px;
   border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
 }
 
 .modal-header h2 { 
   margin: 0; 
   font-size: 20px;
-  color: #1f2937;
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .modal-body {
@@ -1675,25 +1946,29 @@ button.upload-btn:hover:not(:disabled) {
   background: #f9fafb;
 }
 
-button.close {
+button.close,
+button.close-btn {
   background: transparent;
   border: none;
-  font-size: 24px;
+  font-size: 28px;
   cursor: pointer;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.9);
   line-height: 1;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
-button.close:hover {
-  background: #e5e7eb;
+button.close:hover,
+button.close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  transform: rotate(90deg);
 }
 
 /* Mobile Responsiveness */
@@ -1990,42 +2265,6 @@ button.close:hover {
   text-align: center;
   color: #9ca3af;
   font-size: 14px;
-}
-
-.selected-badge {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 8px;
-  padding: 10px 12px;
-  background: #d1fae5;
-  border: 1px solid #10b981;
-  border-radius: 6px;
-  font-size: 14px;
-  color: #065f46;
-  font-weight: 600;
-}
-
-.selected-badge .clear-btn {
-  background: transparent;
-  border: none;
-  color: #065f46;
-  cursor: pointer;
-  font-size: 20px;
-  padding: 0 4px;
-  line-height: 1;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-}
-
-.selected-badge .clear-btn:hover {
-  background: rgba(16, 185, 129, 0.15);
-  color: #047857;
 }
 
 .modal-content .submit-btn {
