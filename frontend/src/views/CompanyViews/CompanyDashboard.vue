@@ -12,7 +12,7 @@
     <div class="dashboard-container">
       <div class="panel-card">
         <header class="panel-header">
-          <h1>Správa odborných praxí</h1>
+          <h1>Správa odborných praxí - Firma</h1>
 
           <div class="actions">
             <input

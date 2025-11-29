@@ -12,13 +12,13 @@
     <div class="dashboard-container">
       <div class="panel-card">
         <header class="panel-header">
-          <h1>Správa odborných praxí</h1>
+          <h1>Moje odborné praxe</h1>
 
           <div class="actions">
             <input
               v-model="filters.search"
               @input="applyFilters"
-              placeholder="Vyhľadávanie vo všetkých stĺpcoch..."
+              placeholder="Vyhľadávanie..."
               :disabled="loading"
               class="search-input"
             />
@@ -26,13 +26,18 @@
               {{ loading ? 'Načítavam...' : 'Aktualizovať' }}
             </button>
 
-            <!-- 🔹 NOVÝ BUTTON -->
-            <router-link
-              to="/create-internship"
+            <!-- Document Management Button -->
+            <button @click="manageDocuments" class="documents-btn" title="Spravovať dokumenty">
+              📄 Dokumenty
+            </button>
+
+            <!-- Create New Internship Button -->
+            <button
+              @click="showCreateModal = true"
               class="create-btn"
             >
               + Vytvoriť novú prax
-            </router-link>
+            </button>
 
             <button
               @click="toggleAdvancedFilters"
@@ -76,24 +81,6 @@
             </select>
           </div>
 
-          <div class="filter-group">
-            <label>Študijný odbor:</label>
-            <select v-model="filters.studyField" @change="applyFilters">
-              <option value="">Všetky odbory</option>
-              <option v-for="field in studyFields" :key="field" :value="field">{{ field }}</option>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label>Dátum začiatku:</label>
-            <input type="date" v-model="filters.dateFrom" @change="applyFilters" />
-          </div>
-
-          <div class="filter-group">
-            <label>Dátum konca:</label>
-            <input type="date" v-model="filters.dateTo" @change="applyFilters" />
-          </div>
-
           <button @click="clearFilters" class="clear-filters-btn">
             Vymazať filtre
           </button>
@@ -118,12 +105,12 @@
             <span class="stat-value rejected">{{ stats.rejected }}</span>
           </div>
           <div class="stat">
-            <span class="stat-label">Celkom</span>
-            <span class="stat-value total">{{ filteredInternships.length }}</span>
-          </div>
-          <div class="stat">
             <span class="stat-label">Obhájené</span>
             <span class="stat-value success">{{ stats.defended }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Celkom</span>
+            <span class="stat-value total">{{ filteredInternships.length }}</span>
           </div>
         </section>
 
@@ -132,18 +119,10 @@
           <table class="applications-table" v-if="!loading && internships.length">
             <thead>
               <tr>
-                <th class="sortable" @click="toggleSort('student')">
+                <th class="sortable" @click="toggleSort('company')">
                   <div class="th-content">
-                    <span>Študent</span>
-                    <span class="sort-indicator" v-if="sortColumn === 'student'">
-                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
-                    </span>
-                  </div>
-                </th>
-                <th class="sortable" @click="toggleSort('studyField')">
-                  <div class="th-content">
-                    <span>Študijný odbor</span>
-                    <span class="sort-indicator" v-if="sortColumn === 'studyField'">
+                    <span>Firma</span>
+                    <span class="sort-indicator" v-if="sortColumn === 'company'">
                       {{ sortDirection === 'asc' ? '↑' : '↓' }}
                     </span>
                   </div>
@@ -179,12 +158,8 @@
             <tbody>
               <tr v-for="internship in paginated" :key="internship.id">
                 <td>
-                  <div class="name">{{ internship.student.first_name }} {{ internship.student.last_name }}</div>
-                  <div class="muted">{{ internship.student.student_email || internship.student.email }}</div>
-                </td>
-                <td>
-                  <div>{{ internship.student.study_field?.study_field_name || '—' }}</div>
-                  <div class="muted">{{ internship.student.study_field?.abbreviation || '' }}</div>
+                  <div class="name">{{ internship.company?.company_name || '—' }}</div>
+                  <div class="muted">{{ internship.company?.contact_person_email || '' }}</div>
                 </td>
                 <td>
                   <div>{{ internship.academic_year }}</div>
@@ -209,45 +184,8 @@
                 </td>
                 <td class="actions-col">
                   <button class="ghost" @click="viewDetails(internship)">Detail</button>
-                  
-                  <!-- Internship approval/rejection -->
-                  <button
-                    v-if="canConfirm(internship)"
-                    class="approve"
-                    @click="confirmInternship(internship)"
-                    :disabled="processing[internship.id]"
-                    title="Potvrdiť prax"
-                  >
-                    Potvrdiť
-                  </button>
-                  <button
-                    v-if="canReject(internship)"
-                    class="reject"
-                    @click="rejectInternship(internship)"
-                    :disabled="processing[internship.id]"
-                    title="Zamietnuť prax"
-                  >
-                    Zamietnuť
-                  </button>
-                  
-                  <!-- Timesheet approval/rejection -->
-                  <button
-                    v-if="canApproveTimesheet(internship)"
-                    class="approve-small"
-                    @click="approveTimesheet(internship)"
-                    :disabled="processing[internship.id]"
-                    title="Schváliť výkaz"
-                  >
-                    ✓ Výkaz
-                  </button>
-                  <button
-                    v-if="canRejectTimesheet(internship)"
-                    class="reject-small"
-                    @click="rejectTimesheet(internship)"
-                    :disabled="processing[internship.id]"
-                    title="Zamietnuť výkaz"
-                  >
-                    ✗ Výkaz
+                  <button class="upload-btn" @click="uploadDocument(internship)">
+                    📤 Nahrať
                   </button>
                 </td>
               </tr>
@@ -255,8 +193,8 @@
           </table>
 
           <div v-if="!loading && !internships.length" class="empty">
-            <p>Žiadne odborné praxe nenájdené.</p>
-            <p class="muted">Praxe sa zobrazia po tom, čo ich študenti vytvoria a priradia k vašej firme.</p>
+            <p>Zatiaľ nemáte žiadne odborné praxe.</p>
+            <p class="muted">Vytvorte si novú prax kliknutím na tlačidlo "+ Vytvoriť novú prax"</p>
           </div>
 
           <div v-if="!loading && internships.length && !filteredInternships.length" class="empty">
@@ -289,7 +227,6 @@
               <option :value="10">10</option>
               <option :value="20">20</option>
               <option :value="50">50</option>
-              <option :value="100">100</option>
             </select>
           </div>
         </footer>
@@ -306,15 +243,21 @@
 
         <div class="modal-body">
           <div class="detail-section">
-            <h3>Študent</h3>
-            <p><strong>Meno:</strong> {{ selected.student.first_name }} {{ selected.student.last_name }}</p>
-            <p><strong>Email:</strong> {{ selected.student.student_email || selected.student.email }}</p>
-            <p v-if="selected.student.phone_number"><strong>Telefón:</strong> {{ selected.student.phone_number }}</p>
-            <p><strong>Študijný odbor:</strong> {{ selected.student.study_field?.study_field_name || '—' }}</p>
-            <p v-if="selected.student.address">
+            <h3>Firma</h3>
+            <p><strong>Názov:</strong> {{ selected.company?.company_name || '—' }}</p>
+            <p v-if="selected.company?.contact_person_name">
+              <strong>Kontaktná osoba:</strong> {{ selected.company.contact_person_name }}
+            </p>
+            <p v-if="selected.company?.contact_person_email">
+              <strong>Email:</strong> {{ selected.company.contact_person_email }}
+            </p>
+            <p v-if="selected.company?.contact_person_phone">
+              <strong>Telefón:</strong> {{ selected.company.contact_person_phone }}
+            </p>
+            <p v-if="selected.company?.address">
               <strong>Adresa:</strong> 
-              {{ selected.student.address.street }} {{ selected.student.address.street_number }}, 
-              {{ selected.student.address.postal_code }} {{ selected.student.address.city }}
+              {{ selected.company.address.street }} {{ selected.company.address.street_number }}, 
+              {{ selected.company.address.postal_code }} {{ selected.company.address.city }}
             </p>
           </div>
 
@@ -355,10 +298,13 @@
             <ul class="documents-list">
               <li v-for="doc in selected.documents" :key="doc.id">
                 <a :href="doc.file_path" target="_blank" rel="noopener" class="document-link">
-                  {{ doc.document_name }}
+                  {{ doc.document_name || doc.document_type?.document_type_name }}
                 </a>
                 <span class="document-type">({{ doc.document_type?.document_type_name }})</span>
                 <span v-if="doc.is_verified" class="verified-badge">Overené</span>
+                <span v-if="isTimesheet(doc)" :class="timesheetBadgeForDoc(doc)">
+                  {{ getTimesheetStatusForDoc(doc) }}
+                </span>
               </li>
             </ul>
           </div>
@@ -370,21 +316,116 @@
 
         <footer class="modal-footer">
           <button class="ghost" @click="closeModal">Zavrieť</button>
-          <button 
-            v-if="canConfirm(selected)" 
-            class="approve" 
-            @click="confirmInternship(selected)" 
-            :disabled="processing[selected.id]"
-          >
-            Potvrdiť prax
+          <button class="upload-btn" @click="uploadDocument(selected)">
+            📤 Nahrať dokument
           </button>
-          <button 
-            v-if="canReject(selected)" 
-            class="reject" 
-            @click="rejectInternship(selected)" 
-            :disabled="processing[selected.id]"
-          >
-            Zamietnuť prax
+        </footer>
+      </div>
+    </div>
+
+    <!-- Create Internship Modal -->
+    <div v-if="showCreateModal" class="modal-overlay" @click.self="closeCreateModal">
+      <div class="modal-content create-modal">
+        <header class="modal-header">
+          <h2>Vytvorenie novej odbornej praxe</h2>
+          <button class="close-btn" @click="closeCreateModal">✕</button>
+        </header>
+
+        <Spinner v-if="createLoading" overlay />
+
+        <div class="modal-body">
+          <form @submit.prevent="submitCreateForm">
+            <!-- Company Autocomplete -->
+            <div class="form-group">
+              <label for="company">Firma *</label>
+              <div class="autocomplete-wrapper">
+                <input
+                  id="company"
+                  v-model="createForm.companySearch"
+                  @input="filterCompanies"
+                  @focus="showCompanyDropdown = true"
+                  type="text"
+                  placeholder="Začnite písať názov firmy..."
+                  autocomplete="off"
+                  :required="!createForm.selectedCompany"
+                />
+                <div v-if="showCompanyDropdown && filteredCompanies.length" class="dropdown">
+                  <div
+                    v-for="company in filteredCompanies"
+                    :key="company.id"
+                    @click="selectCompany(company)"
+                    class="dropdown-item"
+                  >
+                    <div class="company-name">{{ company.company_name }}</div>
+                    <div class="company-info">
+                      {{ company.address?.city || '' }}
+                      <span v-if="company.contact_person_email"> • {{ company.contact_person_email }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="showCompanyDropdown && createForm.companySearch && !filteredCompanies.length" class="dropdown">
+                  <div class="dropdown-empty">Žiadne firmy nenájdené</div>
+                </div>
+                <div v-if="createForm.selectedCompany" class="selected-badge">
+                  <span>✓ {{ createForm.selectedCompany.company_name }}</span>
+                  <button type="button" @click="clearCompany" class="clear-btn">✕</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Academic Year -->
+            <div class="form-group">
+              <label for="academic_year">Akademický rok *</label>
+              <input
+                id="academic_year"
+                v-model="createForm.academic_year"
+                @input="filterYears"
+                @focus="showYearDropdown = true"
+                type="text"
+                placeholder="Zadajte akademický rok (napr. 2024/2025)..."
+                autocomplete="off"
+                required
+              />
+              <div v-if="showYearDropdown && filteredYears.length" class="dropdown">
+                <div
+                  v-for="year in filteredYears"
+                  :key="year"
+                  @click="selectYear(year)"
+                  class="dropdown-item"
+                >
+                  {{ year }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Semester -->
+            <div class="form-group">
+              <label for="semester">Semester *</label>
+              <select id="semester" v-model="createForm.semester" required>
+                <option value="">Vyberte semester</option>
+                <option value="1">Zimný semester</option>
+                <option value="2">Letný semester</option>
+              </select>
+            </div>
+
+            <!-- Date Start -->
+            <div class="form-group">
+              <label for="date_start">Dátum začiatku *</label>
+              <input id="date_start" v-model="createForm.date_start" type="date" required />
+            </div>
+
+            <!-- Date End -->
+            <div class="form-group">
+              <label for="date_end">Dátum konca *</label>
+              <input id="date_end" v-model="createForm.date_end" type="date" required />
+            </div>
+          </form>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="ghost" @click="closeCreateModal">Zrušiť</button>
+          <button class="submit-btn" @click="submitCreateForm" :disabled="createSubmitting">
+            {{ createSubmitting ? 'Vytvára sa...' : 'Vytvoriť prax' }}
           </button>
         </footer>
       </div>
@@ -393,13 +434,14 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import api from '@/api'
 import PageAlert from '@/components/PageAlert.vue'
+import Spinner from '@/components/Spinner.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const alert = reactive({ show: false, type: 'error', message: '' })
+const alert = reactive({ show: false, type: 'error', message: '', duration: 5000 })
 
 function showAlert(message, type = 'error') {
   alert.message = message
@@ -410,9 +452,26 @@ function showAlert(message, type = 'error') {
 // State
 const internships = ref([])
 const loading = ref(false)
-const processing = reactive({})
 const selected = ref(null)
 const showAdvancedFilters = ref(false)
+
+// Create Modal State
+const showCreateModal = ref(false)
+const createLoading = ref(false)
+const createSubmitting = ref(false)
+const companies = ref([])
+const showCompanyDropdown = ref(false)
+const showYearDropdown = ref(false)
+
+const createForm = reactive({
+  companySearch: '',
+  selectedCompany: null,
+  company_id: null,
+  academic_year: '',
+  semester: '',
+  date_start: '',
+  date_end: ''
+})
 
 // Filters & Sorting
 const filters = reactive({
@@ -420,9 +479,6 @@ const filters = reactive({
   status: '',
   academicYear: '',
   semester: '',
-  studyField: '',
-  dateFrom: '',
-  dateTo: '',
 })
 
 const sortColumn = ref('')
@@ -476,14 +532,6 @@ function statusBadge(statusName) {
   return badges[statusName] || 'badge'
 }
 
-function canConfirm(internship) {
-  return internship.current_status?.internship_status_name === 'Vytvorená'
-}
-
-function canReject(internship) {
-  return internship.current_status?.internship_status_name === 'Vytvorená'
-}
-
 // Timesheet helpers
 function hasTimesheet(internship) {
   if (!internship.documents || !Array.isArray(internship.documents)) return false
@@ -499,17 +547,31 @@ function getTimesheet(internship) {
   )
 }
 
+function isTimesheet(doc) {
+  return doc.document_type?.document_type_name === 'Výkaz hodín'
+}
+
 function getTimesheetStatus(internship) {
   const timesheet = getTimesheet(internship)
   if (!timesheet) return 'Bez výkazu'
   
-  // Check timesheet_status_history for latest status
   if (timesheet.timesheet_status_history && timesheet.timesheet_status_history.length > 0) {
-    const latestStatus = timesheet.timesheet_status_history[timesheet.timesheet_status_history.length - 1]
+    const latestStatus = timesheet.timesheet_status_history[0]
     return latestStatus.status?.timesheet_status_name || 'Nahraný'
   }
   
   return timesheet.is_verified ? 'Potvrdený' : 'Nahraný'
+}
+
+function getTimesheetStatusForDoc(doc) {
+  if (!isTimesheet(doc)) return ''
+  
+  if (doc.timesheet_status_history && doc.timesheet_status_history.length > 0) {
+    const latestStatus = doc.timesheet_status_history[0]
+    return latestStatus.status?.timesheet_status_name || 'Nahraný'
+  }
+  
+  return doc.is_verified ? 'Potvrdený' : 'Nahraný'
 }
 
 function timesheetBadge(internship) {
@@ -523,31 +585,18 @@ function timesheetBadge(internship) {
   return badgeMap[status] || 'badge'
 }
 
-function canApproveTimesheet(internship) {
-  const timesheet = getTimesheet(internship)
-  if (!timesheet) return false
-  
-  const status = getTimesheetStatus(internship)
-  return status === 'Nahraný' || status === 'Zamietnutý'
-}
-
-function canRejectTimesheet(internship) {
-  const timesheet = getTimesheet(internship)
-  if (!timesheet) return false
-  
-  const status = getTimesheetStatus(internship)
-  return status === 'Nahraný' || status === 'Potvrdený'
+function timesheetBadgeForDoc(doc) {
+  const status = getTimesheetStatusForDoc(doc)
+  const badgeMap = {
+    'Nahraný': 'badge pending',
+    'Potvrdený': 'badge approved',
+    'Zamietnutý': 'badge rejected'
+  }
+  return badgeMap[status] || 'badge'
 }
 
 function toggleAdvancedFilters() {
   showAdvancedFilters.value = !showAdvancedFilters.value
-}
-
-function clearFilters() {
-  Object.keys(filters).forEach(key => {
-    filters[key] = ''
-  })
-  currentPage.value = 1
 }
 
 function toggleSort(column) {
@@ -557,10 +606,65 @@ function toggleSort(column) {
     sortColumn.value = column
     sortDirection.value = 'asc'
   }
+}
+
+function clearFilters() {
+  filters.search = ''
+  filters.status = ''
+  filters.academicYear = ''
+  filters.semester = ''
   currentPage.value = 1
 }
 
 // Computed
+// Create Modal Computed
+const academicYearsOptions = computed(() => {
+  const currentYear = new Date().getFullYear()
+  const years = []
+  
+  for (let i = -1; i <= 5; i++) {
+    const year1 = currentYear + i
+    const year2 = year1 + 1
+    years.push(`${year1}/${year2}`)
+  }
+  
+  return years
+})
+
+const currentAcademicYear = computed(() => {
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth() + 1
+  
+  if (currentMonth >= 9) {
+    return `${currentYear}/${currentYear + 1}`
+  } else {
+    return `${currentYear - 1}/${currentYear}`
+  }
+})
+
+const filteredCompanies = computed(() => {
+  if (!createForm.companySearch) return companies.value
+  
+  const search = createForm.companySearch.toLowerCase()
+  return companies.value.filter(company => 
+    company.company_name.toLowerCase().includes(search) ||
+    company.address?.city?.toLowerCase().includes(search) ||
+    company.contact_person_name?.toLowerCase().includes(search) ||
+    company.contact_person_email?.toLowerCase().includes(search)
+  )
+})
+
+const filteredYears = computed(() => {
+  if (!createForm.academic_year) return academicYearsOptions.value
+  
+  const search = createForm.academic_year.toLowerCase()
+  return academicYearsOptions.value.filter(year => 
+    year.toLowerCase().includes(search)
+  )
+})
+
+// Dashboard Computed
 const academicYears = computed(() => {
   const years = new Set()
   internships.value.forEach(i => {
@@ -569,47 +673,22 @@ const academicYears = computed(() => {
   return Array.from(years).sort().reverse()
 })
 
-const studyFields = computed(() => {
-  const fields = new Set()
-  internships.value.forEach(i => {
-    const fieldName = i.student?.study_field?.study_field_name
-    if (fieldName) fields.add(fieldName)
-  })
-  return Array.from(fields).sort()
-})
-
 const filteredInternships = computed(() => {
   let result = internships.value
 
-  // Fulltext search
   if (filters.search) {
     const searchLower = filters.search.toLowerCase()
     result = result.filter(i => {
-      const studentName = `${i.student.first_name} ${i.student.last_name}`.toLowerCase()
-      const studentEmail = (i.student.student_email || i.student.email || '').toLowerCase()
-      const studyField = (i.student.study_field?.study_field_name || '').toLowerCase()
-      const studyFieldAbbr = (i.student.study_field?.abbreviation || '').toLowerCase()
+      const companyName = (i.company?.company_name || '').toLowerCase()
       const academicYear = (i.academic_year || '').toLowerCase()
-      const semester = getSemesterText(i.semester).toLowerCase()
-      const dateStart = formatDate(i.date_start).toLowerCase()
-      const dateEnd = formatDate(i.date_end).toLowerCase()
       const status = (i.current_status?.internship_status_name || '').toLowerCase()
-      const phone = (i.student.phone_number || '').toLowerCase()
       
-      return studentName.includes(searchLower) ||
-             studentEmail.includes(searchLower) ||
-             studyField.includes(searchLower) ||
-             studyFieldAbbr.includes(searchLower) ||
+      return companyName.includes(searchLower) ||
              academicYear.includes(searchLower) ||
-             semester.includes(searchLower) ||
-             dateStart.includes(searchLower) ||
-             dateEnd.includes(searchLower) ||
-             status.includes(searchLower) ||
-             phone.includes(searchLower)
+             status.includes(searchLower)
     })
   }
 
-  // Apply other filters
   if (filters.status) {
     result = result.filter(i => i.current_status?.internship_status_name === filters.status)
   }
@@ -622,33 +701,15 @@ const filteredInternships = computed(() => {
     result = result.filter(i => i.semester === parseInt(filters.semester))
   }
 
-  if (filters.studyField) {
-    result = result.filter(i => i.student.study_field?.study_field_name === filters.studyField)
-  }
-
-  if (filters.dateFrom) {
-    const fromDate = new Date(filters.dateFrom)
-    result = result.filter(i => new Date(i.date_start) >= fromDate)
-  }
-
-  if (filters.dateTo) {
-    const toDate = new Date(filters.dateTo)
-    result = result.filter(i => new Date(i.date_end) <= toDate)
-  }
-
   // Sorting
   if (sortColumn.value) {
     result = [...result].sort((a, b) => {
       let aVal, bVal
 
       switch (sortColumn.value) {
-        case 'student':
-          aVal = `${a.student.first_name} ${a.student.last_name}`.toLowerCase()
-          bVal = `${b.student.first_name} ${b.student.last_name}`.toLowerCase()
-          break
-        case 'studyField':
-          aVal = (a.student.study_field?.study_field_name || '').toLowerCase()
-          bVal = (b.student.study_field?.study_field_name || '').toLowerCase()
+        case 'company':
+          aVal = (a.company?.company_name || '').toLowerCase()
+          bVal = (b.company?.company_name || '').toLowerCase()
           break
         case 'academicYear':
           aVal = a.academic_year
@@ -691,12 +752,125 @@ const paginated = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   return filteredInternships.value.slice(start, start + pageSize.value)
 })
-//------------------------------------------------vymazat
-const userStr = localStorage.getItem('user')
-const user = userStr ? JSON.parse(userStr) : null
-console.log('Current user:', user)
-//------------------------------------------------
-// API calls
+
+// Create Modal Functions
+async function fetchCompanies() {
+  createLoading.value = true
+  try {
+    const response = await api.get('/student/companies')
+    companies.value = response.data.companies || []
+  } catch (err) {
+    showAlert('Nepodarilo sa načítať zoznam firiem.', 'error')
+    console.error('Error fetching companies:', err)
+  } finally {
+    createLoading.value = false
+  }
+}
+
+function filterCompanies() {
+  showCompanyDropdown.value = true
+  if (createForm.selectedCompany && createForm.companySearch !== createForm.selectedCompany.company_name) {
+    createForm.selectedCompany = null
+    createForm.company_id = null
+  }
+}
+
+function selectCompany(company) {
+  createForm.selectedCompany = company
+  createForm.companySearch = company.company_name
+  createForm.company_id = company.id
+  showCompanyDropdown.value = false
+}
+
+function clearCompany() {
+  createForm.selectedCompany = null
+  createForm.companySearch = ''
+  createForm.company_id = null
+  showCompanyDropdown.value = false
+}
+
+function filterYears() {
+  showYearDropdown.value = true
+}
+
+function selectYear(year) {
+  createForm.academic_year = year
+  showYearDropdown.value = false
+}
+
+function closeCreateModal() {
+  showCreateModal.value = false
+  resetCreateForm()
+  showCompanyDropdown.value = false
+  showYearDropdown.value = false
+}
+
+function resetCreateForm() {
+  createForm.companySearch = ''
+  createForm.selectedCompany = null
+  createForm.company_id = null
+  createForm.academic_year = currentAcademicYear.value
+  createForm.semester = ''
+  createForm.date_start = ''
+  createForm.date_end = ''
+}
+
+async function submitCreateForm() {
+  // Validate company
+  if (!createForm.selectedCompany) {
+    showAlert('Musíte vybrať firmu zo zoznamu.', 'error')
+    return
+  }
+
+  // Validate academic year format
+  if (!createForm.academic_year.match(/^\d{4}\/\d{4}$/)) {
+    showAlert('Akademický rok musí byť vo formáte YYYY/YYYY (napr. 2024/2025).', 'error')
+    return
+  }
+
+  // Validate dates
+  if (new Date(createForm.date_start) >= new Date(createForm.date_end)) {
+    showAlert('Dátum konca musí byť po dátume začiatku.', 'error')
+    return
+  }
+
+  createSubmitting.value = true
+
+  try {
+    const payload = {
+      company_id: createForm.company_id,
+      academic_year: createForm.academic_year,
+      semester: parseInt(createForm.semester),
+      date_start: createForm.date_start,
+      date_end: createForm.date_end
+    }
+
+    await api.post('/internships', payload)
+    
+    showAlert('Prax bola úspešne vytvorená!', 'success')
+    
+    closeCreateModal()
+    
+    // Refresh internships list
+    await fetchInternships()
+
+  } catch (err) {
+    showAlert(err.response?.data?.message || 'Nepodarilo sa vytvoriť prax.', 'error')
+    console.error('Error creating internship:', err)
+  } finally {
+    createSubmitting.value = false
+  }
+}
+
+function handleClickOutside(event) {
+  const target = event.target
+  if (!target.closest('.autocomplete-wrapper')) {
+    showCompanyDropdown.value = false
+    showYearDropdown.value = false
+  }
+}
+
+// API calls - FIXED: No parameter needed, backend gets student from auth
 async function fetchInternships() {
   loading.value = true
   try {
@@ -704,22 +878,18 @@ async function fetchInternships() {
     const user = userStr ? JSON.parse(userStr) : null
     
     if (!user) {
-      error('auth.unauthorized')
+      showAlert('Neautorizovaný prístup.', 'error')
       setTimeout(() => router.push('/login'), 1500)
       return
     }
     
-    if (!user.student) {
-      error('error.internship.missing.student')
-      return
-    }
-    
-    const response = await api.get(`/student-internships/${user.student.id}`)
+    // Backend gets student from auth()->user(), so we can pass user.id or nothing
+    const response = await api.get(`/student-internships/${user.id}`)
     internships.value = response.data.internships || []
     currentPage.value = 1
     
   } catch (err) {
-      showAlert(err.response?.data?.message || 'Nepodarilo sa načítať praxe.', 'error')
+    showAlert(err.response?.data?.message || 'Nepodarilo sa načítať praxe.', 'error')
     
     if (err.response?.status === 401) {
       setTimeout(() => {
@@ -745,120 +915,14 @@ function closeModal() {
   selected.value = null
 }
 
-// Actions
-async function confirmInternship(internship) {
-  if (!confirm(`Potvrdiť odbornú prax pre študenta ${internship.student.first_name} ${internship.student.last_name}?`)) {
-    return
-  }
-
-  processing[internship.id] = true
-  
-  try {
-    await api.post(`/internships/${internship.id}/confirm`, {
-      notes: 'Potvrdené firmou'
-    })
-
-    showAlert('Prax bola úspešne potvrdená.', 'success')
-    await fetchInternships()
-    
-    if (selected.value && selected.value.id === internship.id) {
-      closeModal()
-    }
-  } catch (err) {
-    showAlert(err.response?.data?.message || 'Nepodarilo sa potvrdiť prax.', 'error')
-  } finally {
-    processing[internship.id] = false
-  }
+// Document management (placeholder for now)
+function manageDocuments() {
+  showAlert('Správa dokumentov bude dostupná v budúcej verzii.', 'info')
 }
 
-async function rejectInternship(internship) {
-  const reason = prompt('Zadajte dôvod zamietnutia (voliteľné):')
-  
-  if (reason === null) return
-  
-  if (!confirm(`Zamietnuť odbornú prax pre študenta ${internship.student.first_name} ${internship.student.last_name}?`)) {
-    return
-  }
-
-  processing[internship.id] = true
-  
-  try {
-    await api.post(`/internships/${internship.id}/reject`, {
-      notes: reason || 'Zamietnuté firmou'
-    })
-
-    showAlert('Prax bola úspešne zamietnutá.', 'success')
-    await fetchInternships()
-    
-    if (selected.value && selected.value.id === internship.id) {
-      closeModal()
-    }
-  } catch (err) {
-    showAlert(err.response?.data?.message || 'Nepodarilo sa zamietnuť prax.', 'error')
-  } finally {
-    processing[internship.id] = false
-  }
-}
-
-// Timesheet approval/rejection
-async function approveTimesheet(internship) {
-  const timesheet = getTimesheet(internship)
-  if (!timesheet) return
-  
-  if (!confirm(`Schváliť výkaz hodín pre študenta ${internship.student.first_name} ${internship.student.last_name}?`)) {
-    return
-  }
-
-  processing[internship.id] = true
-  
-  try {
-    await api.post(`/documents/${timesheet.id}/approve-timesheet`, {
-      notes: 'Schválené firmou'
-    })
-
-    showAlert('Výkaz hodín bol úspešne schválený.', 'success')
-    await fetchInternships()
-    
-    if (selected.value && selected.value.id === internship.id) {
-      closeModal()
-    }
-  } catch (err) {
-    showAlert(err.response?.data?.message || 'Nepodarilo sa schváliť výkaz hodín.', 'error')
-  } finally {
-    processing[internship.id] = false
-  }
-}
-
-async function rejectTimesheet(internship) {
-  const timesheet = getTimesheet(internship)
-  if (!timesheet) return
-  
-  const reason = prompt('Zadajte dôvod zamietnutia výkazu (voliteľné):')
-  
-  if (reason === null) return
-  
-  if (!confirm(`Zamietnuť výkaz hodín pre študenta ${internship.student.first_name} ${internship.student.last_name}?`)) {
-    return
-  }
-
-  processing[internship.id] = true
-  
-  try {
-    await api.post(`/documents/${timesheet.id}/reject-timesheet`, {
-      notes: reason || 'Zamietnuté firmou'
-    })
-
-    showAlert('Výkaz hodín bol zamietnutý.', 'success')
-    await fetchInternships()
-    
-    if (selected.value && selected.value.id === internship.id) {
-      closeModal()
-    }
-  } catch (err) {
-    showAlert(err.response?.data?.message || 'Nepodarilo sa zamietnuť výkaz hodín.', 'error')
-  } finally {
-    processing[internship.id] = false
-  }
+// Upload document (placeholder)
+function uploadDocument(internship) {
+  showAlert('Nahrávanie dokumentov bude dostupné v budúcej verzii.', 'info')
 }
 
 // Pagination
@@ -871,128 +935,176 @@ function changePage(n) {
 // Mount
 onMounted(() => {
   fetchInternships()
+  fetchCompanies()
+  
+  // Set current academic year as default
+  createForm.academic_year = currentAcademicYear.value
+  
+  // Add click outside listener for dropdowns
+  document.addEventListener('click', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
 <style scoped>
-/* Same styles as before - keeping all the CSS unchanged */
-html, body, .dashboard-page {
-  height: 100%;
-  margin: 0;
-  background: linear-gradient(135deg, #b9f6ca 0%, #69f0ae 100%);
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-  color: #2c3e50;
+* {
+  box-sizing: border-box;
+}
+
+.dashboard-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #38a169 0%, #2d5f4e 100%);
+  padding: 24px;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 12px;
+  }
 }
 
 .dashboard-container {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: calc(100vh - 80px);
-  padding: 28px 20px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .panel-card {
-  width: 100%;
-  max-width: 1400px;
   background: #fff;
-  padding: 24px;
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(12, 38, 52, 0.12);
-  animation: fadeIn 0.45s ease;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: fadeIn 0.6s ease;
 }
 
 .panel-header {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: #fff;
+  padding: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
   flex-wrap: wrap;
+  gap: 16px;
 }
 
 .panel-header h1 {
-  font-size: 22px;
   margin: 0;
-  color: #2c3e50;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #ffffff;
 }
 
 .actions {
   display: flex;
   gap: 10px;
-  align-items: center;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .search-input {
-  padding: 10px 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
-  border: 2px solid #e6e9ee;
   font-size: 14px;
-  min-width: 300px;
+  min-width: 280px;
+  background: rgba(255, 255, 255, 0.95);
   transition: all 0.2s;
 }
 
 .search-input:focus {
   outline: none;
+  background: #fff;
   border-color: #42b883;
-  box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1);
+  box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.2);
 }
 
 .refresh-btn,
-.filter-btn {
-  padding: 10px 16px;
-  border-radius: 8px;
+.filter-btn,
+.documents-btn,
+.create-btn {
+  padding: 10px 18px;
   border: none;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .refresh-btn {
-  background: #42b883;
-  color: #fff;
+  background: #38a169;
+  color: white;
 }
 
 .refresh-btn:hover:not(:disabled) {
-  background: #369f73;
+  background: #2f855a;
+  transform: translateY(-1px);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.documents-btn {
+  background: #4299e1;
+  color: white;
+}
+
+.documents-btn:hover {
+  background: #3182ce;
+  transform: translateY(-1px);
+}
+
+.create-btn {
+  background: #f59e0b;
+  color: white;
+}
+
+.create-btn:hover {
+  background: #d97706;
   transform: translateY(-1px);
 }
 
 .filter-btn {
-  background: #607d9b;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.filter-btn.active {
-  background: #4a6280;
-}
-
+.filter-btn.active,
 .filter-btn:hover {
-  background: #4a6280;
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.3);
 }
 
+/* Advanced Filters */
 .advanced-filters {
   background: #f8f9fa;
-  border-radius: 10px;
   padding: 20px;
-  margin-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
+  gap: 16px;
   animation: slideDown 0.3s ease;
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    max-height: 0;
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    max-height: 500px;
   }
 }
 
@@ -1003,72 +1115,76 @@ html, body, .dashboard-page {
 }
 
 .filter-group label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #4b5563;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .filter-group select,
-.filter-group input[type="date"] {
+.filter-group input {
   padding: 8px 12px;
-  border-radius: 6px;
   border: 1px solid #d1d5db;
+  border-radius: 6px;
   font-size: 14px;
-  transition: border-color 0.2s;
+  background: white;
+  cursor: pointer;
+  transition: border 0.2s;
 }
 
 .filter-group select:focus,
-.filter-group input[type="date"]:focus {
+.filter-group input:focus {
   outline: none;
-  border-color: #42b883;
+  border-color: #38a169;
+  box-shadow: 0 0 0 2px rgba(56, 161, 105, 0.2);
 }
 
 .clear-filters-btn {
-  padding: 8px 16px;
-  background: #ef4444;
+  grid-column: 1 / -1;
+  padding: 10px 16px;
+  background: #e74c3c;
   color: white;
   border: none;
   border-radius: 6px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
-  align-self: end;
+  max-width: 200px;
 }
 
 .clear-filters-btn:hover {
-  background: #dc2626;
+  background: #c0392b;
 }
 
+/* Statistics Bar */
 .stats-bar {
   display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 10px;
+  justify-content: space-around;
+  padding: 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #e5e7eb;
   flex-wrap: wrap;
+  gap: 12px;
 }
 
 .stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
+  gap: 6px;
   min-width: 100px;
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7280;
   font-weight: 600;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
 }
 
@@ -1080,6 +1196,10 @@ html, body, .dashboard-page {
   color: #10b981;
 }
 
+.stat-value.success {
+  color: #10b981;
+}
+
 .stat-value.rejected {
   color: #ef4444;
 }
@@ -1088,9 +1208,10 @@ html, body, .dashboard-page {
   color: #3b82f6;
 }
 
+/* Table */
 .table-wrap {
-  margin-top: 8px;
   overflow-x: auto;
+  padding: 20px;
 }
 
 .applications-table {
@@ -1099,204 +1220,149 @@ html, body, .dashboard-page {
   font-size: 14px;
 }
 
-.applications-table thead th {
-  text-align: left;
-  padding: 12px 10px;
-  color: #4b5563;
-  font-weight: 700;
-  border-bottom: 2px solid #eef2f6;
+.applications-table thead {
   background: #f9fafb;
-  white-space: nowrap;
+  border-bottom: 2px solid #e5e7eb;
 }
 
-.applications-table thead th.sortable {
+.applications-table th {
+  padding: 14px 12px;
+  text-align: left;
+  font-weight: 700;
+  color: #374151;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.applications-table th.sortable {
   cursor: pointer;
   user-select: none;
   transition: background 0.2s;
 }
 
-.applications-table thead th.sortable:hover {
+.applications-table th.sortable:hover {
   background: #f3f4f6;
 }
 
 .th-content {
   display: flex;
   align-items: center;
-  gap: 8px;
-  justify-content: space-between;
+  gap: 6px;
 }
 
 .sort-indicator {
-  font-size: 16px;
-  color: #42b883;
-  font-weight: bold;
+  font-size: 12px;
+  color: #38a169;
 }
 
-.applications-table tbody td {
-  padding: 14px 10px;
-  border-bottom: 1px solid #f4f7fa;
-  vertical-align: middle;
+.applications-table tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background 0.15s;
 }
 
 .applications-table tbody tr:hover {
   background: #f9fafb;
 }
 
-.name { 
-  font-weight: 700;
+.applications-table td {
+  padding: 16px 12px;
   color: #1f2937;
 }
 
-.muted { 
-  color: #6b7280; 
-  font-size: 13px; 
-  margin-top: 4px; 
+.name {
+  font-weight: 600;
+  color: #1f2937;
 }
 
+.muted {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.timesheet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Badge styles */
 .badge {
   display: inline-block;
-  padding: 6px 12px;
-  border-radius: 999px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
   font-weight: 700;
-  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.badge-pending { 
-  background: #fef3c7; 
-  color: #92400e; 
-  border: 1px solid #fde68a; 
+.badge.badge-pending {
+  background: #fef3c7;
+  color: #92400e;
 }
 
-.badge-confirmed { 
-  background: #dbeafe; 
-  color: #1e40af; 
-  border: 1px solid #bfdbfe; 
+.badge.badge-confirmed {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
-.badge-approved { 
-  background: #d1fae5; 
-  color: #065f46; 
-  border: 1px solid #a7f3d0; 
+.badge.badge-approved {
+  background: #d1fae5;
+  color: #065f46;
 }
 
-.badge-success { 
-  background: #d1fae5; 
-  color: #065f46; 
-  border: 1px solid #6ee7b7; 
+.badge.badge-success {
+  background: #d1fae5;
+  color: #065f46;
 }
 
-.badge-failed { 
-  background: #fee2e2; 
-  color: #991b1b; 
-  border: 1px solid #fecaca; 
+.badge.badge-failed {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
-.badge-rejected { 
-  background: #fee2e2; 
-  color: #991b1b; 
-  border: 1px solid #fecaca; 
+.badge.badge-rejected {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .badge.muted {
   background: #f3f4f6;
   color: #6b7280;
-  border: 1px solid #e5e7eb;
 }
 
-.timesheet-info {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.badge.pending {
+  background: #fef3c7;
+  color: #92400e;
 }
 
+.badge.approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Actions column */
 .actions-col {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
   min-width: 200px;
 }
 
-button.ghost {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  padding: 8px 12px;
+/* Button styles */
+button {
+  padding: 8px 14px;
+  border: none;
   border-radius: 6px;
-  cursor: pointer;
   font-size: 13px;
-  color: #4b5563;
   font-weight: 600;
+  cursor: pointer;
   transition: all 0.2s;
-}
-
-button.ghost:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
-}
-
-button.approve {
-  background: #10b981;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 13px;
-}
-
-button.approve:hover:not(:disabled) {
-  background: #059669;
-}
-
-button.reject {
-  background: #ef4444;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 13px;
-}
-
-button.reject:hover:not(:disabled) {
-  background: #dc2626;
-}
-
-button.approve-small {
-  background: #10b981;
-  color: #fff;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 12px;
-}
-
-button.approve-small:hover:not(:disabled) {
-  background: #059669;
-}
-
-button.reject-small {
-  background: #ef4444;
-  color: #fff;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 12px;
-}
-
-button.reject-small:hover:not(:disabled) {
-  background: #dc2626;
+  white-space: nowrap;
 }
 
 button:disabled {
@@ -1304,58 +1370,87 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button.ghost {
+  background: transparent;
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+  margin-right: 6px;
+}
+
+button.ghost:hover:not(:disabled) {
+  background: #eff6ff;
+}
+
+button.upload-btn {
+  background: #8b5cf6;
+  color: white;
+}
+
+button.upload-btn:hover:not(:disabled) {
+  background: #7c3aed;
+  transform: translateY(-1px);
+}
+
+/* Empty state */
 .empty {
-  padding: 60px 20px;
   text-align: center;
+  padding: 60px 20px;
   color: #6b7280;
 }
 
 .empty p {
+  font-size: 16px;
   margin: 8px 0;
+}
+
+.empty .muted {
+  font-size: 14px;
 }
 
 .clear-btn {
   margin-top: 16px;
   padding: 10px 20px;
-  background: #42b883;
+  background: #38a169;
   color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
 }
 
 .clear-btn:hover {
-  background: #369f73;
+  background: #2f855a;
 }
 
+/* Loading */
 .loading {
-  padding: 60px 20px;
   text-align: center;
-  color: #6b7280;
+  padding: 60px 20px;
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
-  margin: 0 auto 16px;
+  width: 48px;
+  height: 48px;
   border: 4px solid #e5e7eb;
-  border-top-color: #42b883;
+  border-top-color: #38a169;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+.loading p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Pagination */
 .panel-footer {
-  margin-top: 20px;
+  border-top: 1px solid #e5e7eb;
+  padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
+  background: #fafbfc;
 }
 
 .pagination {
@@ -1366,18 +1461,19 @@ button:disabled {
 
 .pagination button {
   padding: 8px 14px;
+  background: #fff;
+  border: 1px solid #d1d5db;
   border-radius: 6px;
-  border: none;
-  background: #2c3e50;
-  color: #fff;
-  cursor: pointer;
   font-size: 13px;
   font-weight: 600;
+  color: #374151;
+  cursor: pointer;
   transition: background 0.2s;
 }
 
 .pagination button:hover:not(:disabled) {
   background: #1a252f;
+  color: white;
 }
 
 .pagination button:disabled {
@@ -1600,10 +1696,16 @@ button.close:hover {
   background: #e5e7eb;
 }
 
+/* Mobile Responsiveness */
 @media (max-width: 768px) {
   .panel-header {
     flex-direction: column;
     align-items: stretch;
+    padding: 16px;
+  }
+
+  .panel-header h1 {
+    font-size: 22px;
   }
 
   .actions {
@@ -1612,61 +1714,456 @@ button.close:hover {
   }
 
   .search-input,
-  .actions button {
+  .actions button,
+  .create-btn,
+  .documents-btn {
     width: 100%;
     min-width: auto;
   }
 
   .advanced-filters {
     grid-template-columns: 1fr;
+    padding: 16px;
   }
 
   .stats-bar {
-    flex-wrap: wrap;
+    padding: 16px;
+    gap: 12px;
   }
 
-  .actions-col {
-    min-width: auto;
-    flex-wrap: wrap;
+  .stat {
+    flex: 1;
+    min-width: 45%;
+  }
+
+  .table-wrap {
+    padding: 12px;
+  }
+
+  .applications-table {
+    font-size: 12px;
+  }
+
+  .applications-table th,
+  .applications-table td {
+    padding: 10px 8px;
+  }
+
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-start;
   }
 
   .modal-card {
-    max-width: 95%;
+    max-width: 100%;
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .modal-header {
+    padding: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .modal-body {
+    padding: 16px;
+    max-height: none;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    flex-direction: column;
+  }
+
+  .modal-footer button {
+    width: 100%;
   }
 
   .panel-footer {
     flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
   }
 
   .pagination {
     flex-wrap: wrap;
     justify-content: center;
   }
+
+  .page-info {
+    width: 100%;
+    text-align: center;
+  }
+
+  .page-size-selector {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
-@keyframes fadeIn {
-  from { 
-    opacity: 0; 
-    transform: translateY(10px); 
+/* Create Modal Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  z-index: 2000;
+  overflow-y: auto;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 600px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-content.create-modal {
+  max-width: 600px;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
-.create-btn {
-  background: #2563eb;
+
+.modal-content .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  flex-shrink: 0;
+}
+
+.modal-content .modal-header h2 { 
+  margin: 0; 
+  font-size: 20px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.modal-content .close-btn {
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.modal-content .close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+.modal-content .modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-content .modal-footer {
+  border-top: 1px solid #e5e7eb;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  transition: all 0.2s;
+  background: white;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #38a169;
+  box-shadow: 0 0 0 3px rgba(56, 161, 105, 0.1);
+}
+
+.autocomplete-wrapper {
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  margin-top: 4px;
+  max-height: 250px;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  z-index: 2100;
+  animation: slideDown 0.2s ease;
+}
+
+.dropdown-item {
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: #f9fafb;
+}
+
+.dropdown-item:active {
+  background: #f3f4f6;
+}
+
+.company-name {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 2px;
+}
+
+.company-info {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.dropdown-empty {
+  padding: 16px 14px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.selected-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #d1fae5;
+  border: 1px solid #10b981;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #065f46;
+  font-weight: 600;
+}
+
+.selected-badge .clear-btn {
+  background: transparent;
+  border: none;
+  color: #065f46;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 0 4px;
+  line-height: 1;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+.selected-badge .clear-btn:hover {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+.modal-content .submit-btn {
+  background: #38a169;
   color: #fff;
-  padding: 10px 16px;
+  border: none;
+  padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
-  text-decoration: none;
   font-size: 14px;
-  transition: background 0.2s, transform 0.2s;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 140px;
 }
 
-.create-btn:hover {
-  background: #1e40af;
+.modal-content .submit-btn:hover:not(:disabled) {
+  background: #2f855a;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(56, 161, 105, 0.3);
+}
+
+.modal-content .submit-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.modal-content .ghost {
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+  padding: 12px 24px;
+  min-width: 100px;
+}
+
+.modal-content .ghost:hover:not(:disabled) {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #9ca3af;
+}
+
+/* Mobile Create Modal */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    min-height: 100vh;
+  }
+
+  .modal-content .modal-header {
+    padding: 16px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .modal-content .modal-header h2 {
+    font-size: 18px;
+  }
+
+  .modal-content .close-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 24px;
+  }
+
+  .modal-content .modal-body {
+    padding: 20px 16px;
+    max-height: none;
+  }
+
+  .form-group {
+    margin-bottom: 18px;
+  }
+
+  .form-group input,
+  .form-group select {
+    font-size: 16px; /* Prevent iOS zoom */
+    padding: 14px 12px;
+  }
+
+  .dropdown {
+    max-height: 200px;
+  }
+
+  .modal-content .modal-footer {
+    padding: 16px 20px;
+    flex-direction: column-reverse;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  .modal-content .submit-btn,
+  .modal-content .ghost {
+    width: 100%;
+    min-width: auto;
+    padding: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-content .modal-header {
+    padding: 14px 16px;
+  }
+
+  .modal-content .modal-header h2 {
+    font-size: 17px;
+  }
+
+  .modal-content .modal-body {
+    padding: 16px 12px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-group label {
+    font-size: 13px;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

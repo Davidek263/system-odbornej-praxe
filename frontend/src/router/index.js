@@ -11,7 +11,6 @@ import StudentInfoView from '../views/PublicViews/StudentInfo.vue'
 import CompanyInfoView from '../views/PublicViews/CompanyInfo.vue'
 import InternshipInfoView from '../views/PublicViews/InternshipInfo.vue'
 import GuarantorInfoView from '../views/PublicViews/GuarantorInfo.vue'
-import CreateInternship from '../views//StudentViews/CreateInternship.vue'
 import GuarantorDashboard from '../views/GuarantorViews/GuarantorDashboard.vue'
 
 const routes = [
@@ -29,8 +28,6 @@ const routes = [
   { path: '/internship-info', name: 'internshipinfo', component: InternshipInfoView },
   { path: '/guarantor-info', name: 'guarantorinfo', component: GuarantorInfoView },
   { path: '/company-info', name: 'companyinfo', component: CompanyInfoView },
-  { path: '/create-internship', name: 'createinternship', component: CreateInternship, meta: { requiresAuth: true, roles: ['student'] }
-},
   //example { path: '/company-info', name: 'companyinfo', component: CompanyInfoView, meta: { requiresAuth: true , roles: ['admin', 'company']} },
 ]
 

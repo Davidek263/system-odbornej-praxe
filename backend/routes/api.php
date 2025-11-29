@@ -117,6 +117,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // Get all internships for student
         Route::get('/{studentId}', [InternshipController::class, 'getStudentInternships']);
     });
+    Route::prefix('student')->middleware('auth:sanctum')->group(function () {
+    Route::get('/companies', [InternshipController::class, 'getCompaniesForStudent']);
+    });
     /*
     |--------------------------------------------------------------------------
     | Guarantor Routes
@@ -147,3 +150,11 @@ Route::prefix('guarantor')->middleware('auth:sanctum')->group(function () {
     Route::get('/students', [InternshipController::class, 'getAllStudents']);
     Route::get('/companies', [InternshipController::class, 'getAllCompanies']);
 });
+/*
+|--------------------------------------------------------------------------
+| Create Internship Routes
+|--------------------------------------------------------------------------
+*/
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/internships', [InternshipController::class, 'store']);
+    });
