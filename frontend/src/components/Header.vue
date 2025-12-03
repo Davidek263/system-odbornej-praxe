@@ -30,7 +30,7 @@
           <RouterLink to="/student-dashboard" class="nav-item" active-class="active-link">
             Praxe
           </RouterLink>
-          <RouterLink to="/profil" class="nav-item" active-class="active-link">
+          <RouterLink to="/profile" class="nav-item" active-class="active-link">
             Profil
           </RouterLink>
           <button @click="handleLogout" class="nav-item logout-btn">
@@ -43,7 +43,7 @@
           <RouterLink to="/company-dashboard" class="nav-item" active-class="active-link">
             Praxe
           </RouterLink>
-          <RouterLink to="/profil" class="nav-item" active-class="active-link">
+          <RouterLink to="/profile" class="nav-item" active-class="active-link">
             Profil
           </RouterLink>
           <button @click="handleLogout" class="nav-item logout-btn">
@@ -56,7 +56,7 @@
           <RouterLink to="/guarantor-dashboard" class="nav-item" active-class="active-link">
             Praxe
           </RouterLink>
-          <RouterLink to="/profil" class="nav-item" active-class="active-link">
+          <RouterLink to="/profile" class="nav-item" active-class="active-link">
             Profil
           </RouterLink>
           <button @click="handleLogout" class="nav-item logout-btn">
