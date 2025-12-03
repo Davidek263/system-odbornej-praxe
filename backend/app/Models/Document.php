@@ -67,4 +67,21 @@ class Document extends Model
         return $this->hasMany(TimesheetStatusHistory::class, 'documents_id', 'id')
             ->orderBy('status_changed_at', 'desc');
     }
+
+    // Helper method to check if document is a timesheet
+    public function isTimesheet()
+    {
+        return $this->documentType && $this->documentType->document_type_name === 'Výkaz hodín';
+    }
+
+    // Get the latest timesheet status
+    public function getLatestTimesheetStatus()
+    {
+        if (!$this->isTimesheet()) {
+            return null;
+        }
+
+        $latestHistory = $this->timesheetStatusHistory()->first();
+        return $latestHistory ? $latestHistory->status : null;
+    }
 }
