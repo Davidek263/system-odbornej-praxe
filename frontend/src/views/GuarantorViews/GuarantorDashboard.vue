@@ -351,8 +351,8 @@
     </div>
 
     <!-- Edit Modal -->
-    <div v-if="editMode" class="modal-backdrop" @click.self="closeEditModal">
-      <div class="modal-card">
+    <div v-if="editMode" class="modal-overlay" @click.self="closeEditModal">
+      <div class="modal-content edit-modal">
         <header class="modal-header">
           <h2>Upraviť odbornú prax</h2>
           <button class="close-btn" @click="closeEditModal">✕</button>
@@ -360,68 +360,152 @@
 
         <div class="modal-body">
           <form @submit.prevent="saveInternship" class="edit-form">
+            <!-- Student Autocomplete -->
             <div class="form-group">
-              <label>Študent *</label>
-              <select v-model="editForm.student_id" required>
-                <option value="">Vyberte študenta</option>
-                <option v-for="student in allStudents" :key="student.id" :value="student.id">
-                  {{ student.first_name }} {{ student.last_name }} 
-                  ({{ student.student_email || student.email }})
-                  <template v-if="student.study_field">
-                    - {{ student.study_field.abbreviation }}
-                  </template>
-                </option>
-              </select>
+              <label for="edit_student">Študent *</label>
+              <div class="autocomplete-wrapper">
+                <input
+                  id="edit_student"
+                  v-model="editForm.studentSearch"
+                  @input="filterEditStudents"
+                  @focus="showEditStudentDropdown = true"
+                  type="text"
+                  placeholder="Začnite písať meno študenta..."
+                  autocomplete="off"
+                  :required="!editForm.selectedStudent"
+                />
+                <div v-if="showEditStudentDropdown && filteredEditStudents.length" class="dropdown">
+                  <div
+                    v-for="student in filteredEditStudents"
+                    :key="student.id"
+                    @click="selectEditStudent(student)"
+                    class="dropdown-item"
+                  >
+                    <div class="student-name">{{ student.first_name }} {{ student.last_name }}</div>
+                    <div class="student-info">
+                      {{ student.student_email || student.email }}
+                      <span v-if="student.study_field"> • {{ student.study_field.abbreviation }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="showEditStudentDropdown && editForm.studentSearch && !filteredEditStudents.length" class="dropdown">
+                  <div class="dropdown-empty">Žiadni študenti nenájdení</div>
+                </div>
+              </div>
             </div>
 
+            <!-- Company Autocomplete -->
             <div class="form-group">
-              <label>Firma *</label>
-              <select v-model="editForm.company_id" required>
-                <option value="">Vyberte firmu</option>
-                <option v-for="company in allCompanies" :key="company.id" :value="company.id">
-                  {{ company.company_name }}
-                  <template v-if="company.address">
-                    ({{ company.address.city }})
-                  </template>
-                </option>
-              </select>
+              <label for="edit_company">Firma *</label>
+              <div class="autocomplete-wrapper">
+                <input
+                  id="edit_company"
+                  v-model="editForm.companySearch"
+                  @input="filterEditCompanies"
+                  @focus="showEditCompanyDropdown = true"
+                  type="text"
+                  placeholder="Začnite písať názov firmy..."
+                  autocomplete="off"
+                  :required="!editForm.selectedCompany"
+                />
+                <div v-if="showEditCompanyDropdown && filteredEditCompanies.length" class="dropdown">
+                  <div
+                    v-for="company in filteredEditCompanies"
+                    :key="company.id"
+                    @click="selectEditCompany(company)"
+                    class="dropdown-item"
+                  >
+                    <div class="company-name">{{ company.company_name }}</div>
+                    <div class="company-info">
+                      {{ company.address?.city || '' }}
+                      <span v-if="company.contact_person_email"> • {{ company.contact_person_email }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="showEditCompanyDropdown && editForm.companySearch && !filteredEditCompanies.length" class="dropdown">
+                  <div class="dropdown-empty">Žiadne firmy nenájdené</div>
+                </div>
+              </div>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label>Akademický rok *</label>
-                <input type="text" v-model="editForm.academic_year" required placeholder="2024/2025" />
-              </div>
-
-              <div class="form-group">
-                <label>Semester *</label>
-                <select v-model="editForm.semester" required>
-                  <option value="">Vyberte semester</option>
-                  <option :value="1">Zimný semester</option>
-                  <option :value="2">Letný semester</option>
-                </select>
+            <!-- Academic Year -->
+            <div class="form-group">
+              <label for="edit_academic_year">Akademický rok *</label>
+              <div class="autocomplete-wrapper">
+                <input
+                  id="edit_academic_year"
+                  v-model="editForm.academic_year"
+                  @input="filterEditYears"
+                  @focus="showEditYearDropdown = true"
+                  type="text"
+                  placeholder="Zadajte akademický rok (napr. 2024/2025)..."
+                  autocomplete="off"
+                  required
+                />
+                <div v-if="showEditYearDropdown && filteredEditYears.length" class="dropdown">
+                  <div
+                    v-for="year in filteredEditYears"
+                    :key="year"
+                    @click="selectEditYear(year)"
+                    class="dropdown-item"
+                  >
+                    {{ year }}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label>Dátum začiatku *</label>
-                <input type="date" v-model="editForm.date_start" required />
+            <!-- Semester -->
+            <div class="form-group">
+              <label for="edit_semester">Semester *</label>
+              <div class="autocomplete-wrapper">
+                <input
+                  id="edit_semester"
+                  v-model="editForm.semesterDisplay"
+                  @focus="showEditSemesterDropdown = true"
+                  type="text"
+                  placeholder="Vyberte semester..."
+                  autocomplete="off"
+                  readonly
+                  required
+                  :class="{ 'readonly-input': true }"
+                />
+                <div v-if="showEditSemesterDropdown" class="dropdown">
+                  <div
+                    @click="selectEditSemester('1')"
+                    class="dropdown-item"
+                  >
+                    Zimný semester
+                  </div>
+                  <div
+                    @click="selectEditSemester('2')"
+                    class="dropdown-item"
+                  >
+                    Letný semester
+                  </div>
+                </div>
               </div>
+            </div>
 
-              <div class="form-group">
-                <label>Dátum konca *</label>
-                <input type="date" v-model="editForm.date_end" required />
-              </div>
+            <!-- Date Start -->
+            <div class="form-group">
+              <label for="edit_date_start">Dátum začiatku *</label>
+              <input id="edit_date_start" v-model="editForm.date_start" type="date" required />
+            </div>
+
+            <!-- Date End -->
+            <div class="form-group">
+              <label for="edit_date_end">Dátum konca *</label>
+              <input id="edit_date_end" v-model="editForm.date_end" type="date" required />
             </div>
           </form>
         </div>
 
         <footer class="modal-footer">
           <button class="ghost" @click="closeEditModal">Zrušiť</button>
-          <button 
-            class="approve" 
-            @click="saveInternship" 
+          <button
+            class="submit-btn"
+            @click="saveInternship"
             :disabled="processing.edit"
           >
             {{ processing.edit ? 'Ukladám...' : 'Uložiť zmeny' }}
@@ -493,7 +577,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import api from '@/api'
 import PageAlert from '@/components/PageAlert.vue'
 import { useRouter } from 'vue-router'
@@ -519,13 +603,24 @@ const editMode = ref(false)
 const statusMode = ref(false)
 const showAdvancedFilters = ref(false)
 
+// Edit Modal State
+const showEditStudentDropdown = ref(false)
+const showEditCompanyDropdown = ref(false)
+const showEditYearDropdown = ref(false)
+const showEditSemesterDropdown = ref(false)
+
 // Forms
 const editForm = reactive({
   id: null,
+  studentSearch: '',
+  selectedStudent: null,
   student_id: '',
+  companySearch: '',
+  selectedCompany: null,
   company_id: '',
   academic_year: '',
   semester: '',
+  semesterDisplay: '',
   date_start: '',
   date_end: ''
 })
@@ -691,6 +786,57 @@ const studyFields = computed(() => {
     if (fieldName) fields.add(fieldName)
   })
   return Array.from(fields).sort()
+})
+
+// Edit Modal Computed
+const academicYearsOptions = computed(() => {
+  const currentYear = new Date().getFullYear()
+  const years = []
+
+  const minYear = 2020
+  const maxYear = currentYear
+
+  for (let year = minYear; year <= maxYear; year++) {
+    years.push(`${year}/${year + 1}`)
+  }
+
+  return years.reverse()
+})
+
+const filteredEditStudents = computed(() => {
+  if (!editForm.studentSearch) return allStudents.value
+
+  const search = editForm.studentSearch.toLowerCase()
+  return allStudents.value.filter(student => {
+    const fullName = `${student.first_name} ${student.last_name}`.toLowerCase()
+    const email = (student.student_email || student.email || '').toLowerCase()
+    const studyField = student.study_field?.abbreviation?.toLowerCase() || ''
+
+    return fullName.includes(search) ||
+           email.includes(search) ||
+           studyField.includes(search)
+  })
+})
+
+const filteredEditCompanies = computed(() => {
+  if (!editForm.companySearch) return allCompanies.value
+
+  const search = editForm.companySearch.toLowerCase()
+  return allCompanies.value.filter(company =>
+    company.company_name.toLowerCase().includes(search) ||
+    company.address?.city?.toLowerCase().includes(search) ||
+    company.contact_person_name?.toLowerCase().includes(search) ||
+    company.contact_person_email?.toLowerCase().includes(search)
+  )
+})
+
+const filteredEditYears = computed(() => {
+  if (!editForm.academic_year) return academicYearsOptions.value
+
+  const search = editForm.academic_year.toLowerCase()
+  return academicYearsOptions.value.filter(year =>
+    year.toLowerCase().includes(search)
+  )
 })
 
 const filteredInternships = computed(() => {
@@ -863,35 +1009,126 @@ function closeDetailModal() {
 // Edit internship
 function editInternship(internship) {
   editForm.id = internship.id
-  editForm.student_id = internship.student.id || internship.users_id
-  editForm.company_id = internship.company?.id || ''
+
+  // Populate student
+  const student = internship.student
+  editForm.studentSearch = student ? `${student.first_name} ${student.last_name}` : ''
+  editForm.selectedStudent = student
+  editForm.student_id = student?.id || internship.users_id || ''
+
+  // Populate company
+  const company = internship.company
+  editForm.companySearch = company?.company_name || ''
+  editForm.selectedCompany = company
+  editForm.company_id = company?.id || ''
+
   editForm.academic_year = internship.academic_year || ''
-  editForm.semester = internship.semester || ''
-  
+  editForm.semester = String(internship.semester) || ''
+  editForm.semesterDisplay = internship.semester === 1 ? 'Zimný semester' : internship.semester === 2 ? 'Letný semester' : ''
+
   // Správne formátovanie dátumov pre HTML input type="date"
   editForm.date_start = internship.date_start ? new Date(internship.date_start).toISOString().split('T')[0] : ''
   editForm.date_end = internship.date_end ? new Date(internship.date_end).toISOString().split('T')[0] : ''
-  
+
   editMode.value = true
   selected.value = null
 }
 
+// Edit Modal Filter Functions
+function filterEditStudents() {
+  showEditStudentDropdown.value = true
+  if (editForm.selectedStudent && editForm.studentSearch !== `${editForm.selectedStudent.first_name} ${editForm.selectedStudent.last_name}`) {
+    editForm.selectedStudent = null
+    editForm.student_id = ''
+  }
+}
+
+function selectEditStudent(student) {
+  editForm.selectedStudent = student
+  editForm.studentSearch = `${student.first_name} ${student.last_name}`
+  editForm.student_id = student.id
+  showEditStudentDropdown.value = false
+}
+
+function filterEditCompanies() {
+  showEditCompanyDropdown.value = true
+  if (editForm.selectedCompany && editForm.companySearch !== editForm.selectedCompany.company_name) {
+    editForm.selectedCompany = null
+    editForm.company_id = null
+  }
+}
+
+function selectEditCompany(company) {
+  editForm.selectedCompany = company
+  editForm.companySearch = company.company_name
+  editForm.company_id = company.id
+  showEditCompanyDropdown.value = false
+}
+
+function filterEditYears() {
+  showEditYearDropdown.value = true
+}
+
+function selectEditYear(year) {
+  editForm.academic_year = year
+  showEditYearDropdown.value = false
+}
+
+function selectEditSemester(semester) {
+  editForm.semester = semester
+  editForm.semesterDisplay = semester === '1' ? 'Zimný semester' : 'Letný semester'
+  showEditSemesterDropdown.value = false
+}
+
 function closeEditModal() {
   editMode.value = false
-  Object.keys(editForm).forEach(key => {
-    editForm[key] = key === 'id' ? null : ''
-  })
+  showEditStudentDropdown.value = false
+  showEditCompanyDropdown.value = false
+  showEditYearDropdown.value = false
+  showEditSemesterDropdown.value = false
+
+  // Reset form
+  editForm.id = null
+  editForm.studentSearch = ''
+  editForm.selectedStudent = null
+  editForm.student_id = ''
+  editForm.companySearch = ''
+  editForm.selectedCompany = null
+  editForm.company_id = ''
+  editForm.academic_year = ''
+  editForm.semester = ''
+  editForm.semesterDisplay = ''
+  editForm.date_start = ''
+  editForm.date_end = ''
 }
 
 async function saveInternship() {
-  if (!editForm.student_id || !editForm.company_id || !editForm.academic_year || 
-      !editForm.semester || !editForm.date_start || !editForm.date_end) {
-    showAlert('Prosím vyplňte všetky povinné polia.', 'error')
+  // Validate student
+  if (!editForm.selectedStudent) {
+    showAlert('Musíte vybrať študenta zo zoznamu.', 'error')
+    return
+  }
+
+  // Validate company
+  if (!editForm.selectedCompany) {
+    showAlert('Musíte vybrať firmu zo zoznamu.', 'error')
+    return
+  }
+
+  // Validate academic year format
+  if (!editForm.academic_year.match(/^\d{4}\/\d{4}$/)) {
+    showAlert('Akademický rok musí byť vo formáte YYYY/YYYY (napr. 2024/2025).', 'error')
+    return
+  }
+
+  // Validate dates
+  if (new Date(editForm.date_start) >= new Date(editForm.date_end)) {
+    showAlert('Dátum konca musí byť po dátume začiatku.', 'error')
     return
   }
 
   processing.edit = true
-  
+
   try {
     await api.put(`/guarantor/internships/${editForm.id}`, {
       users_id: editForm.student_id,
@@ -909,6 +1146,45 @@ async function saveInternship() {
     showAlert(err.response?.data?.message || 'Nepodarilo sa uložiť zmeny.', 'error')
   } finally {
     processing.edit = false
+  }
+}
+
+// Click outside handler for dropdowns
+function handleClickOutside(event) {
+  const target = event.target
+  const clickedWrapper = target.closest('.autocomplete-wrapper')
+
+  // If clicking outside all autocomplete wrappers, close all dropdowns
+  if (!clickedWrapper) {
+    showEditStudentDropdown.value = false
+    showEditCompanyDropdown.value = false
+    showEditYearDropdown.value = false
+    showEditSemesterDropdown.value = false
+    return
+  }
+
+  // If clicking inside a specific wrapper, close other dropdowns
+  const studentInput = document.getElementById('edit_student')
+  const companyInput = document.getElementById('edit_company')
+  const yearInput = document.getElementById('edit_academic_year')
+  const semesterInput = document.getElementById('edit_semester')
+
+  if (clickedWrapper.contains(studentInput)) {
+    showEditCompanyDropdown.value = false
+    showEditYearDropdown.value = false
+    showEditSemesterDropdown.value = false
+  } else if (clickedWrapper.contains(companyInput)) {
+    showEditStudentDropdown.value = false
+    showEditYearDropdown.value = false
+    showEditSemesterDropdown.value = false
+  } else if (clickedWrapper.contains(yearInput)) {
+    showEditStudentDropdown.value = false
+    showEditCompanyDropdown.value = false
+    showEditSemesterDropdown.value = false
+  } else if (clickedWrapper.contains(semesterInput)) {
+    showEditStudentDropdown.value = false
+    showEditCompanyDropdown.value = false
+    showEditYearDropdown.value = false
   }
 }
 
@@ -971,40 +1247,51 @@ onMounted(() => {
   fetchInternships()
   fetchStudents()
   fetchCompanies()
+
+  // Add click outside listener for dropdowns
+  document.addEventListener('click', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
 <style scoped>
-html, body, .dashboard-page {
-  height: 100%;
-  margin: 0;
+* {
+  box-sizing: border-box;
+}
+
+.dashboard-page {
+  min-height: 100vh;
   background: linear-gradient(135deg, #ffb74d 0%, #ff8a65 100%);
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-  color: #2c3e50;
+  padding: 24px;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 12px;
+  }
 }
 
 .dashboard-container {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: calc(100vh - 80px);
-  padding: 28px 20px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .panel-card {
-  width: 100%;
-  max-width: 1400px;
   background: #fff;
-  padding: 24px;
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(12, 38, 52, 0.12);
-  animation: fadeIn 0.45s ease;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: fadeIn 0.6s ease;
 }
 
 .panel-header {
   background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
   color: #fff;
-  padding: 20px 24px;
+  padding: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1014,48 +1301,49 @@ html, body, .dashboard-page {
 
 .panel-header h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.5px;
-  color: #ffffff;
 }
 
 .actions {
   display: flex;
   gap: 10px;
-  align-items: center;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .search-input {
-  padding: 10px 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
-  border: 2px solid #e6e9ee;
   font-size: 14px;
-  min-width: 300px;
+  min-width: 280px;
+  background: rgba(255, 255, 255, 0.95);
   transition: all 0.2s;
 }
 
 .search-input:focus {
   outline: none;
+  background: #fff;
   border-color: #42b883;
-  box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1);
+  box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.2);
 }
 
 .refresh-btn,
 .filter-btn {
-  padding: 10px 16px;
-  border-radius: 8px;
+  padding: 10px 18px;
   border: none;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .refresh-btn {
   background: #42b883;
-  color: #fff;
+  color: white;
 }
 
 .refresh-btn:hover:not(:disabled) {
@@ -1064,38 +1352,41 @@ html, body, .dashboard-page {
 }
 
 .filter-btn {
-  background: #607d9b;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.filter-btn.active {
-  background: #4a6280;
-}
-
+.filter-btn.active,
 .filter-btn:hover {
-  background: #4a6280;
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.3);
 }
 
+.refresh-btn:disabled,
+.filter-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Advanced Filters */
 .advanced-filters {
   background: #f8f9fa;
-  border-radius: 10px;
   padding: 20px;
-  margin-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
+  gap: 16px;
   animation: slideDown 0.3s ease;
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    max-height: 0;
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    max-height: 500px;
   }
 }
 
@@ -1106,108 +1397,109 @@ html, body, .dashboard-page {
 }
 
 .filter-group label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #4b5563;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .filter-group select,
 .filter-group input[type="text"],
 .filter-group input[type="date"] {
   padding: 8px 12px;
-  border-radius: 6px;
   border: 1px solid #d1d5db;
+  border-radius: 6px;
   font-size: 14px;
-  transition: border-color 0.2s;
+  background: white;
+  cursor: pointer;
+  transition: border 0.2s;
 }
 
 .filter-group select:focus,
 .filter-group input:focus {
   outline: none;
   border-color: #42b883;
+  box-shadow: 0 0 0 2px rgba(66, 184, 131, 0.2);
 }
 
 .clear-filters-btn {
-  padding: 8px 16px;
-  background: #ef4444;
+  grid-column: 1 / -1;
+  padding: 10px 16px;
+  background: #e74c3c;
   color: white;
   border: none;
   border-radius: 6px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
-  align-self: end;
+  max-width: 200px;
 }
 
 .clear-filters-btn:hover {
-  background: #dc2626;
+  background: #c0392b;
 }
 
+/* Statistics Bar */
 .stats-bar {
   display: flex;
   justify-content: space-around;
   padding: 20px;
   background: #fafbfc;
   border-bottom: 1px solid #e5e7eb;
-  flex-wrap: wrap;
-  gap: 12px;
 }
 
 .stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
-  min-width: 100px;
+  gap: 6px;
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: 13px;
   color: #6b7280;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 4px;
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
 }
 
 .stat-value.pending {
-  color: #a17516;
+  color: #f59e0b;
 }
 
 .stat-value.confirmed {
-  color: #2563eb; 
+  color: #3b82f6;
 }
 
 .stat-value.approved {
-  color: #047857;
+  color: #10b981;
 }
 
 .stat-value.success {
-  color: #16a34a; 
+  color: #10b981;
 }
 
 .stat-value.failed {
-  color: #dc2626; 
+  color: #ef4444;
 }
 
 .stat-value.denied {
-  color: #dc2626;
+  color: #ef4444;
 }
 
 .stat-value.total {
   color: #3b82f6;
 }
 
+/* Table */
 .table-wrap {
-  margin-top: 8px;
   overflow-x: auto;
+  padding: 20px;
 }
 
 .applications-table {
@@ -1244,156 +1536,114 @@ html, body, .dashboard-page {
 .th-content {
   display: flex;
   align-items: center;
-  gap: 8px;
-  justify-content: space-between;
+  gap: 6px;
 }
 
 .sort-indicator {
-  font-size: 16px;
+  font-size: 12px;
   color: #42b883;
-  font-weight: bold;
 }
 
-.applications-table tbody td {
-  padding: 14px 10px;
-  border-bottom: 1px solid #f4f7fa;
-  vertical-align: middle;
+.applications-table tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background 0.15s;
 }
 
 .applications-table tbody tr:hover {
   background: #f9fafb;
 }
 
-.name { 
-  font-weight: 700;
+.applications-table td {
+  padding: 16px 12px;
   color: #1f2937;
 }
 
-.muted { 
-  color: #6b7280; 
-  font-size: 13px; 
-  margin-top: 4px; 
+.name {
+  font-weight: 600;
+  color: #1f2937;
 }
 
+.muted {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.timesheet-info {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+}
+
+/* Badge styles */
 .badge {
   display: inline-block;
-  padding: 6px 12px;
-  border-radius: 999px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
   font-weight: 700;
-  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.badge-pending { 
-  background: #fef3c7; 
-  color: #78350f; 
-  border: 1px solid #fde047; 
+.badge.badge-pending {
+  background: #fef3c7;
+  color: #92400e;
 }
 
-.badge-confirmed { 
-  background: #dbeafe; 
-  color: #1e3a8a; 
-  border: 1px solid #93c5fd; 
+.badge.badge-confirmed {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
-.badge-approved { 
-  background: #ccfbf1; 
-  color: #134e4a; 
-  border: 1px solid #5eead4; 
+.badge.badge-approved {
+  background: #d1fae5;
+  color: #065f46;
 }
 
-.badge-success { 
-  background: #dcfce7; 
-  color: #14532d; 
-  border: 1px solid #86efac; 
+.badge.badge-success {
+  background: #d1fae5;
+  color: #065f46;
 }
 
-.badge-failed { 
-  background: #fee2e2; 
-  color: #7f1d1d; 
-  border: 1px solid #fca5a5; 
+.badge.badge-failed {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
-.badge-rejected { 
-  background: #fecaca; 
-  color: #7f1d1d; 
-  border: 1px solid #ef4444; 
+.badge.badge-rejected {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
+.badge.badge-muted {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.badge.badge-info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* Actions column */
 .actions-col {
   display: flex;
   gap: 8px;
-  justify-content: flex-end;
-  min-width: 280px;
+  align-items: center;
   flex-wrap: wrap;
 }
 
-button.ghost {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #4b5563;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-button.ghost:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
-}
-
-button.edit {
-  background: #108e2d;
-  color: white;
+/* Button styles */
+button {
+  padding: 8px 14px;
   border: none;
-  padding: 8px 12px;
   border-radius: 6px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 13px;
-  margin-right: 6px;
-}
-
-button.edit:hover:not(:disabled) {
-  background: #13ac37;
-  transform: translateY(-1px);
-}
-
-button.status {
-  background: #8b5cf6;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 13px;
-}
-
-button.status:hover:not(:disabled) {
-  background: #7c3aed;
-}
-
-button.approve {
-  background: #10b981;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 14px;
-}
-
-button.approve:hover:not(:disabled) {
-  background: #059669;
+  white-space: nowrap;
 }
 
 button:disabled {
@@ -1401,13 +1651,56 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button.ghost {
+  background: transparent;
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+}
+
+button.ghost:hover:not(:disabled) {
+  background: #eff6ff;
+}
+
+button.edit {
+  background: #10b981;
+  color: white;
+}
+
+button.edit:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+button.status {
+  background: #8b5cf6;
+  color: white;
+}
+
+button.status:hover:not(:disabled) {
+  background: #7c3aed;
+  transform: translateY(-1px);
+}
+
+button.approve {
+  background: #10b981;
+  color: white;
+  padding: 10px 20px;
+  font-size: 14px;
+}
+
+button.approve:hover:not(:disabled) {
+  background: #059669;
+}
+
+/* Empty state */
 .empty {
-  padding: 60px 20px;
   text-align: center;
+  padding: 60px 20px;
   color: #6b7280;
 }
 
 .empty p {
+  font-size: 16px;
   margin: 8px 0;
 }
 
@@ -1426,33 +1719,39 @@ button:disabled {
   background: #369f73;
 }
 
+/* Loading */
 .loading {
-  padding: 60px 20px;
   text-align: center;
-  color: #6b7280;
+  padding: 60px 20px;
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
-  margin: 0 auto 16px;
+  width: 48px;
+  height: 48px;
   border: 4px solid #e5e7eb;
   border-top-color: #42b883;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+.loading p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Pagination */
 .panel-footer {
-  margin-top: 20px;
+  border-top: 1px solid #e5e7eb;
+  padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
+  background: #fafbfc;
 }
 
 .pagination {
@@ -1463,18 +1762,19 @@ button:disabled {
 
 .pagination button {
   padding: 8px 14px;
+  background: #fff;
+  border: 1px solid #d1d5db;
   border-radius: 6px;
-  border: none;
-  background: #2c3e50;
-  color: #fff;
-  cursor: pointer;
   font-size: 13px;
   font-weight: 600;
+  color: #374151;
+  cursor: pointer;
   transition: background 0.2s;
 }
 
 .pagination button:hover:not(:disabled) {
   background: #1a252f;
+  color: white;
 }
 
 .pagination button:disabled {
@@ -1764,47 +2064,298 @@ button.close-btn:hover {
   line-height: 1.5;
 }
 
+/* Tablet Responsiveness (768px - 1024px) */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .dashboard-container {
+    max-width: 100%;
+    padding: 0 16px;
+  }
+
+  .panel-header h1 {
+    font-size: 24px;
+  }
+
+  .search-input {
+    min-width: 220px;
+  }
+
+  .applications-table {
+    font-size: 13px;
+  }
+
+  .applications-table th,
+  .applications-table td {
+    padding: 12px 10px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+}
+
+/* Mobile Responsiveness (max-width: 768px) */
 @media (max-width: 768px) {
+  .dashboard-page {
+    padding: 8px;
+  }
+
+  .dashboard-container {
+    max-width: 100%;
+  }
+
+  .panel-card {
+    border-radius: 12px;
+  }
+
   .panel-header {
     flex-direction: column;
     align-items: stretch;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .panel-header h1 {
+    font-size: 20px;
+    text-align: center;
   }
 
   .actions {
     flex-direction: column;
     width: 100%;
+    gap: 8px;
   }
 
-  .search-input,
-  .actions button {
+  .search-input {
     width: 100%;
     min-width: auto;
+    font-size: 16px;
+    padding: 12px 14px;
+  }
+
+  .refresh-btn,
+  .filter-btn {
+    width: 100%;
+    padding: 12px 18px;
+    font-size: 15px;
   }
 
   .advanced-filters {
     grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .filter-group select,
+  .filter-group input {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+
+  .clear-filters-btn {
+    max-width: none;
+    width: 100%;
   }
 
   .stats-bar {
     flex-wrap: wrap;
+    padding: 12px;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .stat {
+    flex: 1;
+    min-width: calc(50% - 4px);
+    padding: 12px 8px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  .table-wrap {
+    padding: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .applications-table {
+    font-size: 11px;
+    min-width: 800px;
+  }
+
+  .applications-table th,
+  .applications-table td {
+    padding: 8px 6px;
+  }
+
+  .applications-table th {
+    font-size: 10px;
+    position: sticky;
+    top: 0;
+    background: #f9fafb;
+    z-index: 1;
+  }
+
+  .name {
+    font-size: 12px;
+  }
+
+  .muted {
+    font-size: 10px;
   }
 
   .actions-col {
     min-width: auto;
-    flex-wrap: wrap;
+  }
+
+  .actions-col button {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  .badge {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+
+  .empty {
+    padding: 40px 16px;
+  }
+
+  .empty p {
+    font-size: 14px;
+  }
+
+  .loading {
+    padding: 40px 16px;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border-width: 3px;
+  }
+
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-start;
   }
 
   .modal-card {
-    max-width: 95%;
+    max-width: 100%;
+    min-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  .modal-header {
+    padding: 14px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .modal-header h2 {
+    font-size: 18px;
+  }
+
+  button.close,
+  button.close-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 28px;
+  }
+
+  .modal-body {
+    padding: 16px;
+    max-height: none;
+    font-size: 13px;
+  }
+
+  .detail-section {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+  }
+
+  .detail-section h3 {
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+
+  .detail-section p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .modal-footer button {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 15px;
+    font-weight: 700;
   }
 
   .panel-footer {
     flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
   }
 
   .pagination {
     flex-wrap: wrap;
     justify-content: center;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .pagination button {
+    padding: 10px 12px;
+    font-size: 12px;
+    flex: 0 0 auto;
+  }
+
+  .pagination button:first-child,
+  .pagination button:last-child {
+    display: none;
+  }
+
+  .page-info {
+    font-size: 13px;
+    width: 100%;
+    text-align: center;
+    order: -1;
+    margin-bottom: 8px;
+  }
+
+  .page-info .muted {
+    display: block;
+    margin-top: 4px;
+  }
+
+  .page-size-selector {
+    width: 100%;
+    justify-content: center;
+    font-size: 13px;
+  }
+
+  .page-size-selector select {
+    font-size: 14px;
+    padding: 8px 12px;
   }
 
   .form-row {
@@ -1812,14 +2363,413 @@ button.close-btn:hover {
   }
 }
 
-@keyframes fadeIn {
-  from { 
-    opacity: 0; 
-    transform: translateY(10px); 
+/* Small mobile devices (max-width: 480px) */
+@media (max-width: 480px) {
+  .panel-header h1 {
+    font-size: 18px;
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
+
+  .stat {
+    min-width: calc(50% - 4px);
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .applications-table {
+    min-width: 700px;
+    font-size: 10px;
+  }
+
+  .applications-table th,
+  .applications-table td {
+    padding: 6px 4px;
+  }
+
+  .actions-col button {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+
+  .badge {
+    font-size: 8px;
+    padding: 2px 5px;
+  }
+
+  .modal-body {
+    padding: 12px;
+  }
+
+  .detail-section h3 {
+    font-size: 14px;
+  }
+
+  .detail-section p {
+    font-size: 12px;
+  }
+}
+
+/* Landscape mobile optimization */
+@media (max-width: 768px) and (orientation: landscape) {
+  .modal-card {
+    min-height: auto;
+  }
+
+  .modal-body {
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+  }
+
+  .modal-header,
+  .modal-footer {
+    position: relative;
+  }
+}
+
+/* Touch improvements for all mobile devices */
+@media (hover: none) and (pointer: coarse) {
+  button {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+
+  .applications-table tbody tr:hover {
+    background: transparent;
+  }
+
+  .applications-table th.sortable:hover {
+    background: #f9fafb;
+  }
+
+  button:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .table-wrap,
+  .modal-body {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Print styles */
+@media print {
+  .panel-header,
+  .advanced-filters,
+  .stats-bar,
+  .actions-col,
+  .panel-footer,
+  .modal-backdrop {
+    display: none !important;
+  }
+
+  .panel-card {
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+  }
+
+  .applications-table {
+    font-size: 10px;
+  }
+}
+
+/* Modal Overlay Styles (for Edit Modal) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  z-index: 2000;
+  overflow-y: auto;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 600px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-content.edit-modal {
+  max-width: 600px;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-content .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  flex-shrink: 0;
+}
+
+.modal-content .modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.modal-content .close-btn {
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.modal-content .close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+.modal-content .modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-content .modal-footer {
+  border-top: 1px solid #e5e7eb;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+.autocomplete-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.autocomplete-wrapper input.readonly-input {
+  cursor: pointer;
+  background: white;
+}
+
+.autocomplete-wrapper input.readonly-input:focus {
+  cursor: pointer;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  margin-top: 4px;
+  max-height: 250px;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  z-index: 2100;
+  animation: slideDown 0.2s ease;
+}
+
+.dropdown-item {
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: #f9fafb;
+}
+
+.dropdown-item:active {
+  background: #f3f4f6;
+}
+
+.student-name,
+.company-name {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 2px;
+}
+
+.student-info,
+.company-info {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.dropdown-empty {
+  padding: 16px 14px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.modal-content .submit-btn {
+  background: #10b981;
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 140px;
+}
+
+.modal-content .submit-btn:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.modal-content .submit-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.modal-content .ghost {
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+  padding: 12px 24px;
+  min-width: 100px;
+}
+
+.modal-content .ghost:hover:not(:disabled) {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #9ca3af;
+}
+
+/* Mobile Edit Modal */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    min-height: 100vh;
+  }
+
+  .modal-content .modal-header {
+    padding: 16px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .modal-content .modal-header h2 {
+    font-size: 18px;
+  }
+
+  .modal-content .close-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 24px;
+  }
+
+  .modal-content .modal-body {
+    padding: 20px 16px;
+    max-height: none;
+  }
+
+  .form-group input,
+  .form-group select {
+    font-size: 16px;
+    padding: 14px 12px;
+  }
+
+  .dropdown {
+    max-height: 200px;
+  }
+
+  .modal-content .modal-footer {
+    padding: 16px 20px;
+    flex-direction: column-reverse;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  .modal-content .submit-btn,
+  .modal-content .ghost {
+    width: 100%;
+    min-width: auto;
+    padding: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-content .modal-header {
+    padding: 14px 16px;
+  }
+
+  .modal-content .modal-header h2 {
+    font-size: 17px;
+  }
+
+  .modal-content .modal-body {
+    padding: 16px 12px;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>

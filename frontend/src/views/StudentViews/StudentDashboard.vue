@@ -378,24 +378,26 @@
             <!-- Academic Year -->
             <div class="form-group">
               <label for="academic_year">Akademický rok *</label>
-              <input
-                id="academic_year"
-                v-model="createForm.academic_year"
-                @input="filterYears"
-                @focus="showYearDropdown = true"
-                type="text"
-                placeholder="Zadajte akademický rok (napr. 2024/2025)..."
-                autocomplete="off"
-                required
-              />
-              <div v-if="showYearDropdown && filteredYears.length" class="dropdown">
-                <div
-                  v-for="year in filteredYears"
-                  :key="year"
-                  @click="selectYear(year)"
-                  class="dropdown-item"
-                >
-                  {{ year }}
+              <div class="autocomplete-wrapper">
+                <input
+                  id="academic_year"
+                  v-model="createForm.academic_year"
+                  @input="filterYears"
+                  @focus="showYearDropdown = true"
+                  type="text"
+                  placeholder="Zadajte akademický rok (napr. 2024/2025)..."
+                  autocomplete="off"
+                  required
+                />
+                <div v-if="showYearDropdown && filteredYears.length" class="dropdown">
+                  <div
+                    v-for="year in filteredYears"
+                    :key="year"
+                    @click="selectYear(year)"
+                    class="dropdown-item"
+                  >
+                    {{ year }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -403,11 +405,33 @@
             <!-- Semester -->
             <div class="form-group">
               <label for="semester">Semester *</label>
-              <select id="semester" v-model="createForm.semester" required>
-                <option value="">Vyberte semester</option>
-                <option value="1">Zimný semester</option>
-                <option value="2">Letný semester</option>
-              </select>
+              <div class="autocomplete-wrapper">
+                <input
+                  id="semester"
+                  v-model="createForm.semesterDisplay"
+                  @focus="showSemesterDropdown = true"
+                  type="text"
+                  placeholder="Vyberte semester..."
+                  autocomplete="off"
+                  readonly
+                  required
+                  :class="{ 'readonly-input': true }"
+                />
+                <div v-if="showSemesterDropdown" class="dropdown">
+                  <div
+                    @click="selectSemester('1')"
+                    class="dropdown-item"
+                  >
+                    Zimný semester
+                  </div>
+                  <div
+                    @click="selectSemester('2')"
+                    class="dropdown-item"
+                  >
+                    Letný semester
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Date Start -->
@@ -482,24 +506,26 @@
             <!-- Academic Year -->
             <div class="form-group">
               <label for="edit_academic_year">Akademický rok *</label>
-              <input
-                id="edit_academic_year"
-                v-model="editForm.academic_year"
-                @input="filterEditYears"
-                @focus="showEditYearDropdown = true"
-                type="text"
-                placeholder="Zadajte akademický rok (napr. 2024/2025)..."
-                autocomplete="off"
-                required
-              />
-              <div v-if="showEditYearDropdown && filteredEditYears.length" class="dropdown">
-                <div
-                  v-for="year in filteredEditYears"
-                  :key="year"
-                  @click="selectEditYear(year)"
-                  class="dropdown-item"
-                >
-                  {{ year }}
+              <div class="autocomplete-wrapper">
+                <input
+                  id="edit_academic_year"
+                  v-model="editForm.academic_year"
+                  @input="filterEditYears"
+                  @focus="showEditYearDropdown = true"
+                  type="text"
+                  placeholder="Zadajte akademický rok (napr. 2024/2025)..."
+                  autocomplete="off"
+                  required
+                />
+                <div v-if="showEditYearDropdown && filteredEditYears.length" class="dropdown">
+                  <div
+                    v-for="year in filteredEditYears"
+                    :key="year"
+                    @click="selectEditYear(year)"
+                    class="dropdown-item"
+                  >
+                    {{ year }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -507,11 +533,33 @@
             <!-- Semester -->
             <div class="form-group">
               <label for="edit_semester">Semester *</label>
-              <select id="edit_semester" v-model="editForm.semester" required>
-                <option value="">Vyberte semester</option>
-                <option value="1">Zimný semester</option>
-                <option value="2">Letný semester</option>
-              </select>
+              <div class="autocomplete-wrapper">
+                <input
+                  id="edit_semester"
+                  v-model="editForm.semesterDisplay"
+                  @focus="showEditSemesterDropdown = true"
+                  type="text"
+                  placeholder="Vyberte semester..."
+                  autocomplete="off"
+                  readonly
+                  required
+                  :class="{ 'readonly-input': true }"
+                />
+                <div v-if="showEditSemesterDropdown" class="dropdown">
+                  <div
+                    @click="selectEditSemester('1')"
+                    class="dropdown-item"
+                  >
+                    Zimný semester
+                  </div>
+                  <div
+                    @click="selectEditSemester('2')"
+                    class="dropdown-item"
+                  >
+                    Letný semester
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Date Start -->
@@ -568,6 +616,7 @@ const createSubmitting = ref(false)
 const companies = ref([])
 const showCompanyDropdown = ref(false)
 const showYearDropdown = ref(false)
+const showSemesterDropdown = ref(false)
 
 const createForm = reactive({
   companySearch: '',
@@ -575,6 +624,7 @@ const createForm = reactive({
   company_id: null,
   academic_year: '',
   semester: '',
+  semesterDisplay: '',
   date_start: '',
   date_end: ''
 })
@@ -585,6 +635,7 @@ const editLoading = ref(false)
 const editSubmitting = ref(false)
 const showEditCompanyDropdown = ref(false)
 const showEditYearDropdown = ref(false)
+const showEditSemesterDropdown = ref(false)
 const editingInternship = ref(null)
 
 const editForm = reactive({
@@ -593,6 +644,7 @@ const editForm = reactive({
   company_id: null,
   academic_year: '',
   semester: '',
+  semesterDisplay: '',
   date_start: '',
   date_end: ''
 })
@@ -952,11 +1004,18 @@ function selectYear(year) {
   showYearDropdown.value = false
 }
 
+function selectSemester(semester) {
+  createForm.semester = semester
+  createForm.semesterDisplay = semester === '1' ? 'Zimný semester' : 'Letný semester'
+  showSemesterDropdown.value = false
+}
+
 function closeCreateModal() {
   showCreateModal.value = false
   resetCreateForm()
   showCompanyDropdown.value = false
   showYearDropdown.value = false
+  showSemesterDropdown.value = false
 }
 
 function resetCreateForm() {
@@ -965,6 +1024,7 @@ function resetCreateForm() {
   createForm.company_id = null
   createForm.academic_year = currentAcademicYear.value
   createForm.semester = ''
+  createForm.semesterDisplay = ''
   createForm.date_start = ''
   createForm.date_end = ''
 }
@@ -1018,9 +1078,61 @@ async function submitCreateForm() {
 
 function handleClickOutside(event) {
   const target = event.target
-  if (!target.closest('.autocomplete-wrapper')) {
+  const clickedWrapper = target.closest('.autocomplete-wrapper')
+
+  // If clicking outside all autocomplete wrappers, close all dropdowns
+  if (!clickedWrapper) {
     showCompanyDropdown.value = false
     showYearDropdown.value = false
+    showSemesterDropdown.value = false
+    showEditCompanyDropdown.value = false
+    showEditYearDropdown.value = false
+    showEditSemesterDropdown.value = false
+    return
+  }
+
+  // If clicking inside a specific wrapper, close other dropdowns
+  const createCompanyInput = document.getElementById('company')
+  const createYearInput = document.getElementById('academic_year')
+  const createSemesterInput = document.getElementById('semester')
+  const editCompanyInput = document.getElementById('edit_company')
+  const editYearInput = document.getElementById('edit_academic_year')
+  const editSemesterInput = document.getElementById('edit_semester')
+
+  if (clickedWrapper.contains(createCompanyInput)) {
+    showYearDropdown.value = false
+    showSemesterDropdown.value = false
+    showEditCompanyDropdown.value = false
+    showEditYearDropdown.value = false
+    showEditSemesterDropdown.value = false
+  } else if (clickedWrapper.contains(createYearInput)) {
+    showCompanyDropdown.value = false
+    showSemesterDropdown.value = false
+    showEditCompanyDropdown.value = false
+    showEditYearDropdown.value = false
+    showEditSemesterDropdown.value = false
+  } else if (clickedWrapper.contains(createSemesterInput)) {
+    showCompanyDropdown.value = false
+    showYearDropdown.value = false
+    showEditCompanyDropdown.value = false
+    showEditYearDropdown.value = false
+    showEditSemesterDropdown.value = false
+  } else if (clickedWrapper.contains(editCompanyInput)) {
+    showCompanyDropdown.value = false
+    showYearDropdown.value = false
+    showSemesterDropdown.value = false
+    showEditYearDropdown.value = false
+    showEditSemesterDropdown.value = false
+  } else if (clickedWrapper.contains(editYearInput)) {
+    showCompanyDropdown.value = false
+    showYearDropdown.value = false
+    showSemesterDropdown.value = false
+    showEditCompanyDropdown.value = false
+    showEditSemesterDropdown.value = false
+  } else if (clickedWrapper.contains(editSemesterInput)) {
+    showCompanyDropdown.value = false
+    showYearDropdown.value = false
+    showSemesterDropdown.value = false
     showEditCompanyDropdown.value = false
     showEditYearDropdown.value = false
   }
@@ -1037,6 +1149,7 @@ function editInternship(internship) {
   editForm.company_id = company?.id || null
   editForm.academic_year = internship.academic_year || ''
   editForm.semester = String(internship.semester) || ''
+  editForm.semesterDisplay = internship.semester === 1 ? 'Zimný semester' : internship.semester === 2 ? 'Letný semester' : ''
   editForm.date_start = internship.date_start || ''
   editForm.date_end = internship.date_end || ''
   
@@ -1067,12 +1180,19 @@ function selectEditYear(year) {
   showEditYearDropdown.value = false
 }
 
+function selectEditSemester(semester) {
+  editForm.semester = semester
+  editForm.semesterDisplay = semester === '1' ? 'Zimný semester' : 'Letný semester'
+  showEditSemesterDropdown.value = false
+}
+
 function closeEditModal() {
   showEditModal.value = false
   editingInternship.value = null
   resetEditForm()
   showEditCompanyDropdown.value = false
   showEditYearDropdown.value = false
+  showEditSemesterDropdown.value = false
 }
 
 function resetEditForm() {
@@ -1081,6 +1201,7 @@ function resetEditForm() {
   editForm.company_id = null
   editForm.academic_year = ''
   editForm.semester = ''
+  editForm.semesterDisplay = ''
   editForm.date_start = ''
   editForm.date_end = ''
 }
@@ -1641,7 +1762,7 @@ button.ghost:hover:not(:disabled) {
 }
 
 button.edit-btn {
-  background: #108e2d;
+  background: #10b981;
   color: white;
   margin-right: 6px;
 }
@@ -2212,6 +2333,15 @@ button.close-btn:hover {
 
 .autocomplete-wrapper {
   position: relative;
+}
+
+.autocomplete-wrapper input.readonly-input {
+  cursor: pointer;
+  background: white;
+}
+
+.autocomplete-wrapper input.readonly-input:focus {
+  cursor: pointer;
 }
 
 .dropdown {
