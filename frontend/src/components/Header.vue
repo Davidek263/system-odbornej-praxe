@@ -79,7 +79,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -134,16 +134,17 @@ router.afterEach(() => {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background-color: #ffffff;
-  border-bottom: 1px solid #dcdcdc;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   font-family: 'Inter', sans-serif;
 }
 
 .header-container {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 12px 24px;
+  padding: 14px 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -162,17 +163,22 @@ router.afterEach(() => {
 .logo-link {
   display: flex;
   align-items: center;
+  transition: opacity 0.2s ease;
+}
+
+.logo-link:hover {
+  opacity: 0.85;
 }
 
 .logo {
-  width: 300px;
+  width: 280px;
   height: auto;
   object-fit: contain;
-  transition: transform 0.2s ease;
+  transition: transform 0.3s ease;
 }
 
 .logo:hover {
-  transform: scale(1.05);
+  transform: scale(1.02);
 }
 
 .title-link {
@@ -186,15 +192,15 @@ router.afterEach(() => {
 }
 
 .title {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.35rem;
+  font-weight: 700;
   color: #2c3e50;
   margin: 0;
-  transition: color 0.2s ease;
+  transition: color 0.3s ease;
 }
 
 .title-link:hover .title {
-  color: #1976d2;
+  color: #42b883;
 }
 
 /* ============================= */
@@ -204,43 +210,61 @@ router.afterEach(() => {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 8px;
 }
 
 .nav-item {
   font-size: 0.95rem;
   text-decoration: none;
   color: #555;
-  transition: color 0.2s ease, border-color 0.2s ease;
+  transition: all 0.3s ease;
   border-bottom: 2px solid transparent;
-  padding-bottom: 2px;
+  padding: 8px 16px;
   background: none;
   border: none;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  border-radius: 8px;
+  position: relative;
 }
 
 .nav-item:hover {
-  color: #1976d2;
+  color: #42b883;
+  background: rgba(66, 184, 131, 0.08);
 }
 
 .active-link {
-  color: #1976d2;
-  border-bottom: 2px solid #1976d2;
+  color: #42b883;
+  background: rgba(66, 184, 131, 0.12);
+}
+
+.active-link::after {
+  content: '';
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: #42b883;
+  border-radius: 2px;
 }
 
 .logout-btn {
-  border-bottom: none !important;
-  padding: 6px 14px;
-  background-color: #f5f5f5;
-  border-radius: 6px;
-  font-weight: 500;
-  transition: all 0.2s ease;
+  padding: 8px 18px !important;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  color: #555;
 }
 
 .logout-btn:hover {
-  background-color: #e74c3c;
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
   color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.25);
 }
 
 /* ============================= */
@@ -252,16 +276,22 @@ router.afterEach(() => {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px;
+  padding: 8px;
+  transition: transform 0.2s ease;
+}
+
+.menu-btn:hover {
+  transform: scale(1.1);
 }
 
 .menu-icon {
   position: relative;
-  width: 22px;
+  width: 24px;
   height: 2px;
-  background-color: #333;
+  background-color: #2c3e50;
   display: block;
-  transition: background 0.2s ease;
+  transition: background 0.3s ease;
+  border-radius: 2px;
 }
 
 .menu-icon::before,
@@ -269,18 +299,19 @@ router.afterEach(() => {
   content: '';
   position: absolute;
   left: 0;
-  width: 22px;
+  width: 24px;
   height: 2px;
-  background-color: #333;
-  transition: transform 0.25s ease, top 0.25s ease;
+  background-color: #2c3e50;
+  transition: transform 0.3s ease, top 0.3s ease;
+  border-radius: 2px;
 }
 
 .menu-icon::before {
-  top: -7px;
+  top: -8px;
 }
 
 .menu-icon::after {
-  top: 7px;
+  top: 8px;
 }
 
 .menu-icon.open {
@@ -304,7 +335,7 @@ router.afterEach(() => {
 @media (max-width: 768px) {
   .header-container {
     flex-wrap: wrap;
-    padding: 10px 16px;
+    padding: 12px 20px;
   }
 
   .logo {
@@ -320,55 +351,94 @@ router.afterEach(() => {
     display: none;
     flex-direction: column;
     width: 100%;
-    margin-top: 10px;
-    border-top: 1px solid #eee;
-    padding-top: 10px;
-    gap: 10px;
+    margin-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding-top: 12px;
+    gap: 6px;
+    background: rgba(248, 249, 250, 0.5);
+    border-radius: 12px;
+    padding: 12px;
   }
 
   .nav-links.open {
     display: flex;
+    animation: slideDown 0.3s ease;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .nav-item {
     width: 100%;
     text-align: center;
-    padding: 8px 0;
+    padding: 12px 16px;
     border-bottom: none;
   }
 
   .nav-item:hover {
-    color: #1976d2;
-    background-color: #f2f6ff;
-    border-radius: 4px;
+    color: #42b883;
+    background: rgba(66, 184, 131, 0.12);
+    border-radius: 8px;
+  }
+
+  .active-link::after {
+    display: none;
   }
 
   .logout-btn {
-    padding: 10px 0;
-    background-color: transparent;
+    padding: 12px 16px !important;
+    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+    margin-top: 4px;
   }
 
   .logout-btn:hover {
-    background-color: #ffe5e5;
+    background: linear-gradient(135deg, #ffe5e5 0%, #ffcccc 100%);
     color: #e74c3c;
+    transform: none;
+    box-shadow: none;
   }
 }
 
 @media (max-width: 480px) {
   .header-container {
-    padding: 8px 12px;
+    padding: 10px 16px;
   }
 
   .logo {
     width: 160px;
     height: auto;
   }
+
+  .nav-item {
+    font-size: 0.9rem;
+  }
 }
 
 @media (max-width: 360px) {
+  .header-container {
+    padding: 8px 12px;
+  }
+
   .logo {
     width: 140px;
     height: auto;
+  }
+
+  .menu-icon {
+    width: 20px;
+  }
+
+  .menu-icon::before,
+  .menu-icon::after {
+    width: 20px;
   }
 }
 </style>
