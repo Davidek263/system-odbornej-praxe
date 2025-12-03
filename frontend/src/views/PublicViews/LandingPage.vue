@@ -7,30 +7,103 @@
         <p>Spravujte evidenciu dokumentov a procesov rýchlo, bezpečne a prehľadne.</p>
         <div class="cta">
           <router-link class="btn primary" to="/register">Začať</router-link>
-          <a class="btn secondary" href="#info">Zistiť viac</a>
+        </div>
+      </div>
+
+      <!-- Quick navigation pills -->
+      <div class="quick-nav">
+        <button @click="scrollToSection('student')" class="nav-pill">
+          <i class="fas fa-user-graduate"></i>
+          <span>Študent</span>
+        </button>
+        <button @click="scrollToSection('company')" class="nav-pill">
+          <i class="fas fa-building"></i>
+          <span>Firma</span>
+        </button>
+        <button @click="scrollToSection('internship')" class="nav-pill">
+          <i class="fas fa-briefcase"></i>
+          <span>Praxe</span>
+        </button>
+        <button @click="scrollToSection('guarantor')" class="nav-pill">
+          <i class="fas fa-chalkboard-teacher"></i>
+          <span>Garant</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- STUDENT INFO -->
+    <section id="student" class="info-section student-section">
+      <div class="section-header">
+        <div class="icon-wrapper">
+          <i class="fas fa-user-graduate"></i>
+        </div>
+        <h2>Informácie pre študentov</h2>
+        <p class="subtitle">Prečítajte si svoje právomoci, možnosti a povinnosti pri evidencii odbornej praxe.</p>
+      </div>
+      <div class="info-grid">
+        <div class="info-card" v-for="(section, idx) in studentSections" :key="idx">
+          <h3>{{ section.title }}</h3>
+          <ul>
+            <li v-for="(item, iIdx) in section.items" :key="iIdx" v-html="item" />
+          </ul>
         </div>
       </div>
     </section>
 
-    <!-- FEATURES (benefits) -->
-    <section id="features" class="features">
-      <div class="feature" v-for="(feature, index) in features" :key="index">
-        <div class="icon">
-          <i :class="feature.icon"></i>
+    <!-- COMPANY INFO -->
+    <section id="company" class="info-section company-section">
+      <div class="section-header">
+        <div class="icon-wrapper">
+          <i class="fas fa-building"></i>
         </div>
-        <h3>{{ feature.title }}</h3>
-        <p>{{ feature.desc }}</p>
+        <h2>Informácie pre firmy</h2>
+        <p class="subtitle">Zistite, aké máte právomoci, možnosti a povinnosti pri spolupráci na odbornej praxi.</p>
+      </div>
+      <div class="info-grid">
+        <div class="info-card" v-for="(section, idx) in companySections" :key="idx">
+          <h3>{{ section.title }}</h3>
+          <ul>
+            <li v-for="(item, iIdx) in section.items" :key="iIdx" v-html="item" />
+          </ul>
+        </div>
       </div>
     </section>
 
-    <!-- INFO CARDS -->
-    <section id="info" class="info-cards">
-      <div class="card" v-for="card in cards" :key="card.title">
-        <router-link :to="card.to" class="card-link">
-          <div class="icon"><i :class="card.icon"></i></div>
-          <h3>{{ card.title }}</h3>
-          <p>{{ card.desc }}</p>
-        </router-link>
+    <!-- INTERNSHIP INFO -->
+    <section id="internship" class="info-section internship-section">
+      <div class="section-header">
+        <div class="icon-wrapper">
+          <i class="fas fa-briefcase"></i>
+        </div>
+        <h2>Informácie o praxiach</h2>
+        <p class="subtitle">Prehľad funkcií a povinností spojených so správou odbornej praxe v systéme.</p>
+      </div>
+      <div class="info-grid">
+        <div class="info-card" v-for="(section, idx) in internshipSections" :key="idx">
+          <h3>{{ section.title }}</h3>
+          <ul>
+            <li v-for="(item, iIdx) in section.items" :key="iIdx" v-html="item" />
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- GUARANTOR INFO -->
+    <section id="guarantor" class="info-section guarantor-section">
+      <div class="section-header">
+        <div class="icon-wrapper">
+          <i class="fas fa-chalkboard-teacher"></i>
+        </div>
+        <h2>Informácie pre garantov praxe</h2>
+        <p class="subtitle">Prehľad právomocí, možností a povinností akademického garanta v systéme.</p>
+      </div>
+      <div class="info-grid">
+        <div class="info-card" v-for="(section, idx) in guarantorSections" :key="idx">
+          <h3>{{ section.title }}</h3>
+          <ul>
+            <li v-for="(item, iIdx) in section.items" :key="iIdx" v-html="item" />
+          </ul>
+        </div>
       </div>
     </section>
   </div>
@@ -41,49 +114,138 @@ export default {
   name: 'LandingPage',
   data() {
     return {
-      features: [
+      studentSections: [
         {
-          icon: 'fas fa-eye',
-          title: 'Prehľadnosť',
-          desc: 'Všetky praxe a dokumenty na jednom mieste.'
+          title: 'Právomoci',
+          items: [
+            'Prezerať zoznam vlastných odborných praxí.',
+            'Zakladať novú prax výberom firmy, dátumov, roku a semestra.',
+            'Stiahnuť vygenerované PDF „Dohoda o odbornej praxi".',
+            'Uploadovať podpísané dokumenty (zmluva, výkaz).',
+            'Prijímať emailové notifikácie o zmenách stavu praxe.'
+          ]
         },
         {
-          icon: 'fas fa-magic',
-          title: 'Automatizácia',
-          desc: 'Automatické generovanie PDF dokumentov a notifikácií.'
+          title: 'Možnosti',
+          items: [
+            'Full-text vyhľadávanie firiem pri zakladaní praxe.',
+            'Úprava osobných údajov po prihlásení.',
+            'Obnovenie zabudnutého hesla cez email.',
+            'Voliteľné nahranie výkazu s priebehom praxe.'
+          ]
         },
         {
-          icon: 'fas fa-lock',
-          title: 'Bezpečnosť',
-          desc: 'Moderné štandardy ochrany dát a prístupových práv.'
+          title: 'Povinnosti',
+          items: [
+            'Po prvom prihlásení si zmeniť dočasné heslo.',
+            'Nahrať podpísanú zmluvu pri stave praxe <em>Schválená</em>.',
+            'Vyplniť pravdivé údaje pri zakladaní novej praxe.',
+            'Dodržať termíny odovzdania povinných dokumentov.'
+          ]
         }
       ],
-      cards: [
+      companySections: [
         {
-          icon: 'fas fa-user-graduate',
-          title: 'Študent',
-          desc: 'Nájdite ideálnu prax a sledujte svoj pokrok.',
-          to: '/student-info'
+          title: 'Právomoci',
+          items: [
+            'Prezrieť zoznam praxí v stave Vytvorená a detail jednotlivých žiadostí.',
+            'Potvrdiť alebo zamietnuť prax (zmena stavu na Potvrdená / Zamietnutá), pričom systém automaticky odošle notifikácie študentovi a garantovi.',
+            'Nahrať výkaz pracovných hodín a potvrdiť alebo zamietnuť výkaz od študenta.',
+            'Aktualizovať profil firmy – kontaktná osoba, adresa, popis.',
+            'Zobraziť históriu a archív dokončených praxí.'
+          ]
         },
         {
-          icon: 'fas fa-building',
-          title: 'Firma',
-          desc: 'Zverejnite ponuku a spravujte študentov na praxi.',
-          to: '/company-info'
+          title: 'Možnosti',
+          items: [
+            'Registrácia prostredníctvom formulára: názov, adresa, kontaktná osoba.',
+            'Aktivácia účtu cez potvrdzovací email (stav Neaktívny → Aktívny).',
+            'Obnova alebo zmena hesla cez funkciu „Zabudli ste heslo?".',
+            'Prijímanie emailových notifikácií pri zmenách stavu praxe a dokumentov.',
+            'Možnosť filtrovať vlastné praxe podľa roku alebo stavu.'
+          ]
         },
         {
-          icon: 'fas fa-briefcase',
-          title: 'Praxe',
-          desc: 'Prehľad všetkých dostupných praxí a dokumentov.',
-          to: '/internship-info'
+          title: 'Povinnosti',
+          items: [
+            'Po prvom prihlásení zmeniť dočasné heslo.',
+            'Reagovať na nové žiadosti o prax – potvrdiť alebo zamietnuť do stanoveného termínu.',
+            'Poskytnúť študentovi podpísaný výkaz alebo potvrdiť jeho elektronickú verziu.',
+            'Zabezpečiť, aby kontaktné údaje boli aktuálne a pravdivé.',
+            'Dodržiavať podmienky dohody o odbornej praxi, vrátane bezpečnosti práce.'
+          ]
+        }
+      ],
+      internshipSections: [
+        {
+          title: 'Právomoci',
+          items: [
+            'Prehľad praxí s detailným zobrazením stavu, dátumov a zmluvných strán.',
+            'Filtrovanie praxí podľa roku, stavu, firmy alebo študenta.',
+            'Stiahnutie PDF dohody a výkazu praxe.',
+            'Export vyfiltrovaného zoznamu do CSV pre reporty a štatistiky.'
+          ]
         },
         {
-          icon: 'fas fa-chalkboard-teacher',
-          title: 'Garant',
-          desc: 'Schvaľujte a kontrolujte priebeh praxe.',
-          to: '/guarantor-info'
+          title: 'Možnosti',
+          items: [
+            'Založiť novú prax (študent) vyplnením firmy a termínov.',
+            'Potvrdiť alebo zamietnuť prax (firma) v stave Vytvorená.',
+            'Schváliť, označiť za obhájenú alebo neobhájenú (garant).',
+            'Vyžiadať alebo nahrať ďalšie dokumenty praxe podľa potreby.'
+          ]
+        },
+        {
+          title: 'Povinnosti',
+          items: [
+            'Nahrať povinné dokumenty (zmluva pri stave Schválená).',
+            'Dodržiavať termíny potvrdenia, schválenia a obhajoby praxe.',
+            'Udržiavať aktuálne informácie o praxi a jej účastníkoch.'
+          ]
+        }
+      ],
+      guarantorSections: [
+        {
+          title: 'Právomoci',
+          items: [
+            'Prístup k zoznamu všetkých praxí naprieč firmami a odbormi.',
+            'Úprava atribútov praxe – firma, študent, dátumy, stav.',
+            'Zmena stavu praxe (Schválená, Obhájená/Neobhájená) s automatickými notifikáciami.',
+            'Export vyfiltrovaných dát praxe do CSV pre reporty a štatistiky.'
+          ]
+        },
+        {
+          title: 'Možnosti',
+          items: [
+            'Filtrovanie praxí podľa roku, firmy, študijného odboru alebo študenta.',
+            'Automatické emailové notifikácie pri každej zmene stavu praxe.',
+            'Stiahnuť PDF dohody alebo výkaz študenta na kontrolu.'
+          ]
+        },
+        {
+          title: 'Povinnosti',
+          items: [
+            'Spracovať nové žiadosti v primeranom čase (schválenie/zamietnutie).',
+            'Dbať na správnosť údajov praxe a zúčastnených strán.',
+            'Zabezpečiť archiváciu a dostupnosť dokumentácie k praxiam po skončení semestra.'
+          ]
         }
       ]
+    }
+  },
+  methods: {
+    scrollToSection(sectionId) {
+      const element = document.getElementById(sectionId)
+      if (element) {
+        const headerOffset = 80
+        const elementPosition = element.getBoundingClientRect().top
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        })
+      }
     }
   }
 }
@@ -95,45 +257,73 @@ export default {
 .landing-page {
   font-family: 'Inter', sans-serif;
   color: #1f2937;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
 }
 
-/* HERO */
+/* ============================= */
+/* HERO SECTION */
+/* ============================= */
 .hero {
   background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
   color: #fff;
-  min-height: 60vh;
+  min-height: 70vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 100px 20px 60px;
+  padding: 100px 20px 40px;
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.hero-content {
+  max-width: 800px;
+  margin-bottom: 40px;
 }
 
 .hero-content h1 {
-  font-size: clamp(2rem, 4.5vw + 1rem, 3rem);
-  margin-bottom: 1rem;
+  font-size: clamp(2rem, 4.5vw + 1rem, 3.5rem);
+  margin-bottom: 1.25rem;
   line-height: 1.2;
+  font-weight: 800;
+}
+
+.hero-content h1 span {
+  display: inline-block;
+  background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.85) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .hero-content p {
-  font-size: 1.125rem;
-  margin-bottom: 1.75rem;
-  opacity: 0.9;
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  opacity: 0.95;
+  line-height: 1.6;
 }
 
 .cta {
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
 .btn {
-  padding: 12px 24px;
-  border-radius: 8px;
+  padding: 14px 32px;
+  border-radius: 12px;
   font-weight: 600;
   text-decoration: none;
-  transition: background 0.25s, transform 0.2s;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .btn.primary {
@@ -141,99 +331,302 @@ export default {
   color: #2c3e50;
 }
 
-.btn.secondary {
-  background: transparent;
-  border: 2px solid #fff;
+.btn.primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
+}
+
+/* Quick Navigation Pills */
+.quick-nav {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 900px;
+  margin-top: 20px;
+}
+
+.nav-pill {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Inter', sans-serif;
+}
+
+.nav-pill:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.nav-pill i {
+  font-size: 1.1rem;
+}
+
+/* ============================= */
+/* INFO SECTIONS */
+/* ============================= */
+.info-section {
+  padding: 80px 40px;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.info-section:nth-child(odd) {
+  background: #ffffff;
+}
+
+.info-section:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.icon-wrapper {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #42b883 0%, #35a373 100%);
+  box-shadow: 0 8px 24px rgba(66, 184, 131, 0.3);
+}
+
+.student-section .icon-wrapper {
+  background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
+  box-shadow: 0 8px 24px rgba(66, 184, 131, 0.3);
+}
+
+.company-section .icon-wrapper {
+  background: linear-gradient(135deg, #2c3e50 0%, #42b883 100%);
+  box-shadow: 0 8px 24px rgba(44, 62, 80, 0.3);
+}
+
+.internship-section .icon-wrapper {
+  background: linear-gradient(135deg, #2c3e50 0%, #16a085 100%);
+  box-shadow: 0 8px 24px rgba(22, 160, 133, 0.3);
+}
+
+.guarantor-section .icon-wrapper {
+  background: linear-gradient(135deg, #16a085 0%, #2c3e50 100%);
+  box-shadow: 0 8px 24px rgba(22, 160, 133, 0.3);
+}
+
+.icon-wrapper i {
+  font-size: 2.5rem;
   color: #fff;
 }
 
-.btn:hover {
-  transform: translateY(-2px);
-  opacity: 0.9;
+.section-header h2 {
+  font-size: 2.25rem;
+  margin-bottom: 12px;
+  color: #2c3e50;
+  font-weight: 800;
 }
 
-/* FEATURES */
-.features {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 32px;
-  padding: 60px 24px;
-  background: #f9fafb;
-}
-
-.feature {
-  text-align: center;
-  padding: 16px;
-}
-
-.feature .icon {
-  font-size: 2.2rem;
-  margin-bottom: 14px;
-  color: #42b883;
-}
-
-.feature h3 {
-  font-size: 1.125rem;
-  margin-bottom: 10px;
-}
-
-.feature p {
+.section-header .subtitle {
+  font-size: 1.1rem;
   color: #6b7280;
-  font-size: 0.95rem;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.6;
 }
 
-/* INFO CARDS */
-.info-cards {
+/* Info Grid */
+.info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 32px;
-  padding: 60px 24px 80px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.card {
+.info-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  padding: 32px 28px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.info-section:nth-child(even) .info-card {
   background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s, box-shadow 0.2s;
-  text-align: center;
 }
 
-.card-link {
-  display: block;
-  padding: 32px 24px;
-  text-decoration: none;
-  color: inherit;
+.info-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
 }
 
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+.info-card h3 {
+  font-size: 1.35rem;
+  margin-bottom: 18px;
+  color: #2c3e50;
+  font-weight: 700;
 }
 
-.card .icon {
-  font-size: 2rem;
-  margin-bottom: 14px;
+.info-card ul {
+  list-style: none;
+  padding: 0;
+  color: #374151;
+}
+
+.info-card ul li {
+  margin-bottom: 12px;
+  line-height: 1.6;
+  font-size: 0.98rem;
+  padding-left: 24px;
+  position: relative;
+}
+
+.info-card ul li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
   color: #42b883;
+  font-weight: bold;
+  font-size: 1.1rem;
 }
 
-.card h3 {
-  font-size: 1.125rem;
-  margin-bottom: 10px;
-  font-weight: 600;
-}
-
-.card p {
-  color: #6b7280;
-  font-size: 0.95rem;
-}
-
-/* MOBILE ADJUSTMENTS */
-@media (max-width: 640px) {
+/* ============================= */
+/* MOBILE RESPONSIVENESS */
+/* ============================= */
+@media (max-width: 768px) {
   .hero {
-    padding: 80px 16px 40px;
+    padding: 80px 20px 40px;
+    min-height: 60vh;
   }
-  .info-cards {
-    padding: 40px 16px 60px;
+
+  .hero-content {
+    margin-bottom: 30px;
+  }
+
+  .hero-content h1 {
+    font-size: 2rem;
+  }
+
+  .hero-content p {
+    font-size: 1rem;
+  }
+
+  .quick-nav {
+    gap: 12px;
+  }
+
+  .nav-pill {
+    padding: 10px 18px;
+    font-size: 0.9rem;
+  }
+
+  .info-section {
+    padding: 60px 24px;
+  }
+
+  .section-header {
+    margin-bottom: 40px;
+  }
+
+  .section-header h2 {
+    font-size: 1.75rem;
+  }
+
+  .section-header .subtitle {
+    font-size: 1rem;
+  }
+
+  .info-grid {
+    gap: 24px;
+  }
+
+  .info-card {
+    padding: 24px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    padding: 60px 16px 30px;
+  }
+
+  .hero-content {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .hero-content h1 {
+    font-size: 1.75rem;
+  }
+
+  .quick-nav {
+    gap: 8px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .nav-pill {
+    padding: 10px 16px;
+    font-size: 0.8rem;
+    min-width: 45%;
+    justify-content: center;
+  }
+
+  .nav-pill i {
+    font-size: 1rem;
+  }
+
+  .info-section {
+    padding: 40px 12px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .section-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .icon-wrapper {
+    width: 60px;
+    height: 60px;
+  }
+
+  .icon-wrapper i {
+    font-size: 2rem;
+  }
+
+  .info-card {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .info-card h3 {
+    font-size: 1.2rem;
+  }
+
+  .info-card ul li {
+    font-size: 0.92rem;
   }
 }
 </style>
