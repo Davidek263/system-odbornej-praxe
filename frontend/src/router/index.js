@@ -12,6 +12,8 @@ import CompanyInfoView from '../views/PublicViews/CompanyInfo.vue'
 import InternshipInfoView from '../views/PublicViews/InternshipInfo.vue'
 import GuarantorInfoView from '../views/PublicViews/GuarantorInfo.vue'
 import GuarantorDashboard from '../views/GuarantorViews/GuarantorDashboard.vue'
+import ProfileView from '../views/PublicViews/ProfileView.vue'
+
 
 const routes = [
   { path: '/', redirect: '/home' },
@@ -28,6 +30,7 @@ const routes = [
   { path: '/internship-info', name: 'internshipinfo', component: InternshipInfoView },
   { path: '/guarantor-info', name: 'guarantorinfo', component: GuarantorInfoView },
   { path: '/company-info', name: 'companyinfo', component: CompanyInfoView },
+  { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true }},
   //example { path: '/company-info', name: 'companyinfo', component: CompanyInfoView, meta: { requiresAuth: true , roles: ['admin', 'company']} },
 ]
 
