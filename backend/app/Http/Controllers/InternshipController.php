@@ -11,9 +11,67 @@ use App\Models\TimesheetStatusHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class InternshipController extends Controller
 {
+    /**
+     * Generate Dohoda PDF for an internship
+     * GET /internships/{id}/generate-dohoda
+     */
+    public function generateDohoda($id)
+    {
+        try {
+            $internship = Internship::with([
+                'student.studyField',
+                'student.address',
+                'company.address',
+            ])->findOrFail($id);
+
+            // Check if user has permission
+            $user = auth()->user();
+            
+            if ($user->hasRole('student') && $internship->users_id !== $user->id) {
+                return response()->json([
+                    'message' => 'Unauthorized to generate Dohoda for this internship.',
+                ], 403);
+            }
+
+            // Prepare data for the PDF
+            $data = [
+                'internship' => $internship,
+                'student' => $internship->student,
+                'company' => $internship->company,
+            ];
+
+            // Generate PDF
+            $pdf = Pdf::loadView('pdfs.dohoda-template', $data);
+            
+            // Set paper size and orientation
+            $pdf->setPaper('A4', 'portrait');
+            
+            // Generate filename
+            $filename = 'Dohoda_' 
+                . str_replace(' ', '_', $internship->student->last_name) 
+                . '_' 
+                . str_replace(' ', '_', $internship->company->company_name) 
+                . '_' 
+                . $internship->academic_year 
+                . '.pdf';
+            
+            $filename = preg_replace('/[^A-Za-z0-9_\-\.]/', '', $filename);
+
+            // Return PDF as download
+            return $pdf->download($filename);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to generate Dohoda PDF.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     /**
      * Get all internships for a specific company
      * Used by company dashboard
