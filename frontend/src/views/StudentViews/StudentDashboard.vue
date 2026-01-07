@@ -123,7 +123,7 @@
                   <div class="th-content">
                     <span>Firma</span>
                     <span class="sort-indicator" v-if="sortColumn === 'company'">
-                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                      {{ sortDirection === 'asc' ? 'â†‘' : 'â†“' }}
                     </span>
                   </div>
                 </th>
@@ -131,7 +131,7 @@
                   <div class="th-content">
                     <span>Akademický rok</span>
                     <span class="sort-indicator" v-if="sortColumn === 'academicYear'">
-                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                      {{ sortDirection === 'asc' ? 'â†‘' : 'â†“' }}
                     </span>
                   </div>
                 </th>
@@ -139,7 +139,7 @@
                   <div class="th-content">
                     <span>Termín praxe</span>
                     <span class="sort-indicator" v-if="sortColumn === 'dateStart'">
-                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                      {{ sortDirection === 'asc' ? 'â†‘' : 'â†“' }}
                     </span>
                   </div>
                 </th>
@@ -147,7 +147,7 @@
                 <div class="th-content">
                   <span>Stav</span>
                   <span class="sort-indicator" v-if="sortColumn === 'status'">
-                    {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    {{ sortDirection === 'asc' ? 'â†‘' : 'â†“' }}
                   </span>
                 </div>
               </th>
@@ -155,7 +155,7 @@
                 <div class="th-content">
                   <span>Stav výkazu</span>
                   <span class="sort-indicator" v-if="sortColumn === 'timesheet'">
-                    {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    {{ sortDirection === 'asc' ? 'â†‘' : 'â†“' }}
                   </span>
                 </div>
               </th>
@@ -165,7 +165,7 @@
             <tbody>
               <tr v-for="internship in paginated" :key="internship.id">
                 <td>
-                  <div class="name">{{ internship.company?.company_name || '—' }}</div>
+                  <div class="name">{{ internship.company?.company_name || '"”' }}</div>
                   <div class="muted">{{ internship.company?.contact_person_email || '' }}</div>
                 </td>
                 <td>
@@ -187,7 +187,7 @@
                       {{ getTimesheetStatus(internship) }}
                     </span>
                   </div>
-                  <div v-else class="muted">—</div>
+                  <div v-else class="muted">"”</div>
                 </td>
                 <td class="actions-col">
                   <button class="ghost" @click="viewDetails(internship)">Detail</button>
@@ -250,7 +250,7 @@
         <div class="modal-body">
           <div class="detail-section">
             <h3>Firma</h3>
-            <p><strong>Názov:</strong> {{ selected.company?.company_name || '—' }}</p>
+            <p><strong>Názov:</strong> {{ selected.company?.company_name || '"”' }}</p>
             <p v-if="selected.company?.contact_person_name">
               <strong>Kontaktná osoba:</strong> {{ selected.company.contact_person_name }}
             </p>
@@ -322,8 +322,11 @@
 
         <footer class="modal-footer">
           <button class="ghost" @click="closeModal">Zavrieť</button>
+          <button class="dohoda-btn" @click="downloadDohoda(selected)" title="Stiahnuť dohodu">
+            📄 Stiahnuť dohodu
+          </button>
           <button class="upload-btn" @click="uploadDocument(selected)">
-             Nahrať dokument
+            Nahrať dokument
           </button>
         </footer>
       </div>
@@ -365,7 +368,7 @@
                     <div class="company-name">{{ company.company_name }}</div>
                     <div class="company-info">
                       {{ company.address?.city || '' }}
-                      <span v-if="company.contact_person_email"> • {{ company.contact_person_email }}</span>
+                      <span v-if="company.contact_person_email"> "¢ {{ company.contact_person_email }}</span>
                     </div>
                   </div>
                 </div>
@@ -461,7 +464,7 @@
     <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
       <div class="modal-content edit-modal">
         <header class="modal-header">
-          <h2>Úprava odbornej praxe</h2>
+          <h2>Úpráva odbornej praxe</h2>
           <button class="close-btn" @click="closeEditModal">✕</button>
         </header>
 
@@ -493,7 +496,7 @@
                     <div class="company-name">{{ company.company_name }}</div>
                     <div class="company-info">
                       {{ company.address?.city || '' }}
-                      <span v-if="company.contact_person_email"> • {{ company.contact_person_email }}</span>
+                      <span v-if="company.contact_person_email"> "¢ {{ company.contact_person_email }}</span>
                     </div>
                   </div>
                 </div>
@@ -664,14 +667,14 @@ const currentPage = ref(1)
 
 // Helper functions
 function formatDate(d) {
-  if (!d) return '—'
+  if (!d) return '"”'
   const dt = new Date(d)
   if (isNaN(dt)) return d
   return dt.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function formatDateTime(d) {
-  if (!d) return '—'
+  if (!d) return '"”'
   const dt = new Date(d)
   if (isNaN(dt)) return d
   return dt.toLocaleString('sk-SK', { 
@@ -688,7 +691,7 @@ function getSemesterText(semester) {
 }
 
 function calculateDuration(start, end) {
-  if (!start || !end) return '—'
+  if (!start || !end) return '"”'
   const startDate = new Date(start)
   const endDate = new Date(end)
   const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))
@@ -1308,6 +1311,35 @@ function uploadDocument(internship) {
   showAlert('Nahrávanie dokumentov bude dostupné v budúcej verzii.', 'info')
 }
 
+// Download Dohoda PDF
+async function downloadDohoda(internship) {
+  try {
+    const response = await api.get(`/internships/${internship.id}/generate-dohoda`, {
+      responseType: 'blob'
+    })
+    
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    
+    // Generate filename
+    const filename = `Dohoda_${internship.company?.company_name || 'Prax'}_${internship.academic_year}.pdf`
+      .replace(/[^A-Za-z0-9_\-\.]/g, '_')
+    
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+    
+    showAlert('Dohoda bola úspešne stiahnutá.', 'success')
+  } catch (err) {
+    showAlert(err.response?.data?.message || 'Nepodarilo sa stiahnuť dohodu.', 'error')
+    console.error('Error downloading Dohoda:', err)
+  }
+}
+
 // Pagination
 function changePage(n) {
   if (n < 1 || n > totalPages.value) return
@@ -1779,6 +1811,16 @@ button.upload-btn {
 
 button.upload-btn:hover:not(:disabled) {
   background: #7c3aed;
+  transform: translateY(-1px);
+}
+
+button.dohoda-btn {
+  background: #3b82f6;
+  color: white;
+}
+
+button.dohoda-btn:hover:not(:disabled) {
+  background: #2563eb;
   transform: translateY(-1px);
 }
 

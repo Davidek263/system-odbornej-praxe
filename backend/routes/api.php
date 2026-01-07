@@ -90,6 +90,10 @@ Route::middleware('auth:sanctum')->group(function () {
         // Get all internships for student
         Route::get('/{studentId}', [InternshipController::class, 'getStudentInternships']);
     });
+    
+    Route::get('/internships/{id}/generate-dohoda', [InternshipController::class, 'generateDohoda'])
+        ->middleware('auth:sanctum')
+        ->name('internships.generate-dohoda');
 
     /*
     |--------------------------------------------------------------------------
