@@ -995,4 +995,88 @@ class InternshipController extends Controller
             ], 500);
         }
     }
+
+    public function markDefendedExternal(Request $request, $id)
+    {
+        // bezpečnostná poistka – musí to byť token, nie user session
+        if (!$request->user()->currentAccessToken()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized token.',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'defense_date' => 'required|date',
+            'defense_result' => 'required|string|max:500',
+            'defense_grade' => 'nullable|string|max:10',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $internship = Internship::with('currentStatus')->findOrFail($id);
+
+            // kontrola stavu
+            if ($internship->currentStatus->internship_status_name !== 'Schválená') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Internship must be in "Schválená" status.',
+                    'current_status' => $internship->currentStatus->internship_status_name,
+                ], 400);
+            }
+
+            $defendedStatus = InternshipStatus::where(
+                'internship_status_name',
+                'Obhájená'
+            )->first();
+
+            if (!$defendedStatus) {
+                throw new \Exception('Status "Obhájená" not found.');
+            }
+
+            // update stavu
+            $internship->current_status_id = $defendedStatus->id;
+            $internship->save();
+
+            // história
+            InternshipStatusChange::create([
+                'internship_id' => $internship->id,
+                'internship_status_id' => $defendedStatus->id,
+                'changed_by_user_id' => null, // externý systém
+                'status_changed_at' => now(),
+                'notes' =>
+                    "Obhájená externým systémom\n" .
+                    "Dátum: {$request->defense_date}\n" .
+                    "Výsledok: {$request->defense_result}\n" .
+                    "Známka: {$request->defense_grade}",
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Internship marked as defended.',
+                'data' => [
+                    'internship_id' => $internship->id,
+                    'new_status' => 'Obhájená',
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to mark as defended.',
+            ], 500);
+        }
+    }
 }

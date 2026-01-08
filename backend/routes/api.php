@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InternshipController;
+use App\Http\Controllers\ExternalSystemTokenController;
 
 /*
 |--------------------------------------------------------------------------
@@ -156,10 +157,24 @@ Route::middleware('auth:sanctum')->group(function () {
         // Get students and companies for dropdowns
         Route::get('/students', [InternshipController::class, 'getAllStudents']);
         Route::get('/companies', [InternshipController::class, 'getAllCompanies']);
+
+        Route::get('/external-system-tokens', [ExternalSystemTokenController::class, 'index']);
+        Route::post('/external-system-tokens', [ExternalSystemTokenController::class, 'store']);
+        Route::delete('/external-system-tokens/{id}', [ExternalSystemTokenController::class, 'destroy']);
     });
     
     // Legacy route (kept for backwards compatibility)
     Route::prefix('guarantor-internships')->group(function () {
         Route::get('/', [InternshipController::class, 'getGuarantorInternships']);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | External System API (OAuth2 – Sanctum)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware(['auth:sanctum', 'abilities:internship:defend'])->group(function () {
+        Route::post('/external/mark-defended/{id}', [InternshipController::class, 'markDefendedExternal']);
     });
 });

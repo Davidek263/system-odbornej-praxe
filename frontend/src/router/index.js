@@ -8,8 +8,8 @@ import CompanyDashboard from '../views/CompanyViews/CompanyDashboard.vue'
 import StudentDashboard from '../views/StudentViews/StudentDashboard.vue'
 import SetPasswordView from '../views/SetPassword.vue'
 import GuarantorDashboard from '../views/GuarantorViews/GuarantorDashboard.vue'
+import GuarantorTokens from '@/views/GuarantorViews/GuarantorTokens.vue'
 import ProfileView from '../views/ProfileView.vue'
-
 
 const routes = [
   { path: '/', redirect: '/home' },
@@ -18,9 +18,10 @@ const routes = [
   { path: '/login', name: 'login', component: LoginView },
   { path: '/register', name: 'register', component: RegisterView },
   { path: '/forgot-password', name: 'forgot', component: ForgotPasswordView },
-  { path: '/company-dashboard', name: 'companydashboard', component: CompanyDashboard, meta: { requiresAuth: true , roles: ['company']} },
-  { path: '/student-dashboard', name: 'studentdashboard', component: StudentDashboard, meta: { requiresAuth: true , roles: ['student']} },
-  { path: '/guarantor-dashboard', name: 'guarantordashboard', component: GuarantorDashboard, meta: { requiresAuth: true , roles: ['guarantor']} },
+  { path: '/company-dashboard', name: 'companydashboard', component: CompanyDashboard, meta: { requiresAuth: true, roles: ['company']} },
+  { path: '/student-dashboard', name: 'studentdashboard', component: StudentDashboard, meta: { requiresAuth: true, roles: ['student']} },
+  { path: '/guarantor-dashboard', name: 'guarantordashboard', component: GuarantorDashboard, meta: { requiresAuth: true, roles: ['guarantor']} },
+  { path: '/guarantor-dashboard/tokens', name: 'guarantortokens', component: GuarantorTokens, meta: { requiresAuth: true, roles: ['guarantor']} },
   { path: '/set-password', name: 'setpassword', component: SetPasswordView },
   { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true }},
 ]
