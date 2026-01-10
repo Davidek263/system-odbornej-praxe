@@ -129,6 +129,14 @@
                     </span>
                   </div>
                 </th>
+                <th class="sortable" @click="toggleSort('internshipType')">
+                  <div class="th-content">
+                    <span>Typ</span>
+                    <span class="sort-indicator" v-if="sortColumn === 'internshipType'">
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    </span>
+                  </div>
+                </th>
                 <th class="sortable" @click="toggleSort('dateStart')">
                   <div class="th-content">
                     <span>Termín</span>
@@ -169,6 +177,11 @@
                 <td>
                   <div>{{ internship.academic_year }}</div>
                   <div class="muted">{{ getSemesterText(internship.semester) }}</div>
+                </td>
+                <td>
+                  <span :class="internship.internship_type === 'prax' ? 'badge badge-success' : 'badge badge-info'">
+                    {{ internship.internship_type === 'prax' ? 'Prax' : 'Brigáda' }}
+                  </span>
                 </td>
                 <td>
                   <div>{{ formatDate(internship.date_start) }}</div>
@@ -363,21 +376,37 @@
             </div>
           </div>
 
-          <div class="detail-section" v-if="selected.documents && selected.documents.length">
-            <h3>Dokumenty</h3>
-            <ul class="documents-list">
-              <li v-for="doc in selected.documents" :key="doc.id">
-                <a :href="doc.file_path" target="_blank" rel="noopener" class="document-link">
-                  {{ doc.document_name }}
-                </a>
-                <span class="document-type">({{ doc.document_type?.document_type_name }})</span>
-                <span v-if="doc.is_verified" class="verified-badge">Overené</span>
-              </li>
-            </ul>
-          </div>
-          <div class="detail-section" v-else>
-            <h3>Dokumenty</h3>
-            <p class="muted">Žiadne dokumenty neboli nahrané.</p>
+          <div class="detail-section">
+            <h3>Dokumenty ({{ selected.documents?.length || 0 }})</h3>
+
+            <div v-if="!selected.documents || selected.documents.length === 0" class="empty-documents">
+              <p>Zatiaľ neboli nahrané žiadne dokumenty.</p>
+            </div>
+
+            <div v-else class="documents-grid-detail">
+              <div v-for="doc in selected.documents" :key="doc.id" class="document-card-detail">
+                <div class="document-icon">
+                  <span v-if="doc.file_mime_type?.includes('pdf')">📄</span>
+                  <span v-else-if="doc.file_mime_type?.includes('image')">🖼️</span>
+                  <span v-else>📎</span>
+                </div>
+                <div class="document-info">
+                  <h4>{{ doc.document_name }}</h4>
+                  <p class="document-type-name">{{ doc.document_type?.document_type_name }}</p>
+                  <p v-if="doc.description" class="document-description">{{ doc.description }}</p>
+                  <div class="document-meta">
+                    <span class="upload-date">Nahrané: {{ formatDate(doc.uploaded_at) }}</span>
+                    <span class="file-size-badge">{{ formatFileSize(doc.file_size) }}</span>
+                    <span v-if="doc.is_verified" class="verified-badge">✓ Overené</span>
+                  </div>
+                </div>
+                <div class="document-actions-detail">
+                  <a :href="doc.file_path" target="_blank" class="download-btn-detail" title="Stiahnuť">
+                    ⬇ Stiahnuť
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -453,13 +482,21 @@ function formatDateTime(d) {
   if (!d) return '—'
   const dt = new Date(d)
   if (isNaN(dt)) return d
-  return dt.toLocaleString('sk-SK', { 
-    day: '2-digit', 
-    month: '2-digit', 
+  return dt.toLocaleString('sk-SK', {
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
 }
 
 function getSemesterText(semester) {
@@ -654,6 +691,10 @@ const filteredInternships = computed(() => {
         case 'academicYear':
           aVal = a.academic_year
           bVal = b.academic_year
+          break
+        case 'internshipType':
+          aVal = (a.internship_type || 'prax').toLowerCase()
+          bVal = (b.internship_type || 'prax').toLowerCase()
           break
         case 'dateStart':
           aVal = new Date(a.date_start)
@@ -1155,7 +1196,7 @@ onMounted(() => {
 .th-content {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: px;
 }
 
 .sort-indicator {
@@ -1238,6 +1279,11 @@ onMounted(() => {
 .badge.badge-success {
   background: #d1fae5;
   color: #065f46;
+}
+
+.badge.badge-info {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 .badge.badge-failed {
@@ -1692,6 +1738,123 @@ button.reject-small:hover:not(:disabled) {
   border-radius: 4px;
   font-size: 11px;
   font-weight: 700;
+}
+
+/* Detail View Document Cards */
+.empty-documents {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.documents-grid-detail {
+  display: grid;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.document-card-detail {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.document-card-detail:hover {
+  border-color: #42b883;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.document-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  border-radius: 8px;
+  font-size: 24px;
+}
+
+.document-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.document-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+  word-break: break-word;
+}
+
+.document-type-name {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.document-description {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.document-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.upload-date {
+  color: #6b7280;
+}
+
+.file-size-badge {
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.document-actions-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.download-btn-detail {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.download-btn-detail:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
 }
 
 .modal-footer {

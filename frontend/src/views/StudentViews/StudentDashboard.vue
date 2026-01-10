@@ -26,11 +26,6 @@
               {{ loading ? 'Načítavam...' : 'Aktualizovať' }}
             </button>
 
-            <!-- Document Management Button -->
-            <button @click="manageDocuments" class="documents-btn" title="Spravovať dokumenty">
-               Dokumenty
-            </button>
-
             <!-- Create New Internship Button -->
             <button
               @click="showCreateModal = true"
@@ -123,7 +118,7 @@
                   <div class="th-content">
                     <span>Firma</span>
                     <span class="sort-indicator" v-if="sortColumn === 'company'">
-                      {{ sortDirection === 'asc' ? 'â†‘' : 'â†“' }}
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
                     </span>
                   </div>
                 </th>
@@ -131,7 +126,15 @@
                   <div class="th-content">
                     <span>Akademický rok</span>
                     <span class="sort-indicator" v-if="sortColumn === 'academicYear'">
-                      {{ sortDirection === 'asc' ? 'â†‘' : 'â†“' }}
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    </span>
+                  </div>
+                </th>
+                <th class="sortable" @click="toggleSort('internshipType')">
+                  <div class="th-content">
+                    <span>Typ</span>
+                    <span class="sort-indicator" v-if="sortColumn === 'internshipType'">
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
                     </span>
                   </div>
                 </th>
@@ -139,7 +142,7 @@
                   <div class="th-content">
                     <span>Termín praxe</span>
                     <span class="sort-indicator" v-if="sortColumn === 'dateStart'">
-                      {{ sortDirection === 'asc' ? 'â†‘' : 'â†“' }}
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
                     </span>
                   </div>
                 </th>
@@ -147,7 +150,7 @@
                 <div class="th-content">
                   <span>Stav</span>
                   <span class="sort-indicator" v-if="sortColumn === 'status'">
-                    {{ sortDirection === 'asc' ? 'â†‘' : 'â†“' }}
+                    {{ sortDirection === 'asc' ? '↑' : '↓' }}
                   </span>
                 </div>
               </th>
@@ -155,7 +158,7 @@
                 <div class="th-content">
                   <span>Stav výkazu</span>
                   <span class="sort-indicator" v-if="sortColumn === 'timesheet'">
-                    {{ sortDirection === 'asc' ? 'â†‘' : 'â†“' }}
+                    {{ sortDirection === 'asc' ? '↑' : '↓' }}
                   </span>
                 </div>
               </th>
@@ -173,6 +176,11 @@
                   <div class="muted">{{ getSemesterText(internship.semester) }}</div>
                 </td>
                 <td>
+                  <span :class="internship.internship_type === 'prax' ? 'badge badge-success' : 'badge badge-info'">
+                    {{ internship.internship_type === 'prax' ? 'Prax' : 'Brigáda' }}
+                  </span>
+                </td>
+                <td>
                   <div>{{ formatDate(internship.date_start) }}</div>
                   <div class="muted">{{ formatDate(internship.date_end) }}</div>
                 </td>
@@ -187,12 +195,12 @@
                       {{ getTimesheetStatus(internship) }}
                     </span>
                   </div>
-                  <div v-else class="muted">"”</div>
+                  <div v-else class="muted">Bez výkazu</div>
                 </td>
                 <td class="actions-col">
                   <button class="ghost" @click="viewDetails(internship)">Detail</button>
                   <button class="edit-btn" @click="editInternship(internship)">Upraviť</button>
-                  <button class="upload-btn" @click="uploadDocument(internship)">Nahrať</button>
+                  <button class="upload-btn" @click="uploadDocument(internship)">Dokumenty</button>
                 </td>
               </tr>
             </tbody>
@@ -299,31 +307,47 @@
             </div>
           </div>
 
-          <div class="detail-section" v-if="selected.documents && selected.documents.length">
-            <h3>Dokumenty</h3>
-            <ul class="documents-list">
-              <li v-for="doc in selected.documents" :key="doc.id">
-                <a :href="doc.file_path" target="_blank" rel="noopener" class="document-link">
-                  {{ doc.document_name || doc.document_type?.document_type_name }}
-                </a>
-                <span class="document-type">({{ doc.document_type?.document_type_name }})</span>
-                <span v-if="doc.is_verified" class="verified-badge">Overené</span>
-                <span v-if="isTimesheet(doc)" :class="timesheetBadgeForDoc(doc)">
-                  {{ getTimesheetStatusForDoc(doc) }}
-                </span>
-              </li>
-            </ul>
-          </div>
-          <div class="detail-section" v-else>
-            <h3>Dokumenty</h3>
-            <p class="muted">Žiadne dokumenty neboli nahrané.</p>
+          <div class="detail-section">
+            <h3>Dokumenty ({{ selected.documents?.length || 0 }})</h3>
+
+            <div v-if="!selected.documents || selected.documents.length === 0" class="empty-documents">
+              <p>Zatiaľ neboli nahrané žiadne dokumenty.</p>
+            </div>
+
+            <div v-else class="documents-grid-detail">
+              <div v-for="doc in selected.documents" :key="doc.id" class="document-card-detail">
+                <div class="document-icon">
+                  <span v-if="doc.file_mime_type?.includes('pdf')">📄</span>
+                  <span v-else-if="doc.file_mime_type?.includes('image')">🖼️</span>
+                  <span v-else>📎</span>
+                </div>
+                <div class="document-info">
+                  <h4>{{ doc.document_name }}</h4>
+                  <p class="document-type-name">{{ doc.document_type?.document_type_name }}</p>
+                  <p v-if="doc.description" class="document-description">{{ doc.description }}</p>
+                  <div class="document-meta">
+                    <span class="upload-date">{{ formatDate(doc.uploaded_at) }}</span>
+                    <span class="file-size-badge">{{ formatFileSize(doc.file_size) }}</span>
+                    <span v-if="doc.is_verified" class="verified-badge">✓ Overené</span>
+                    <span v-if="isTimesheet(doc)" :class="timesheetBadgeForDoc(doc)">
+                      {{ getTimesheetStatusForDoc(doc) }}
+                    </span>
+                  </div>
+                </div>
+                <div class="document-actions-detail">
+                  <button @click="downloadDocumentFile(doc)" class="download-btn-detail" title="Stiahnuť">
+                    ⬇ Stiahnuť
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <footer class="modal-footer">
           <button class="ghost" @click="closeModal">Zavrieť</button>
-          <button class="dohoda-btn" @click="downloadDohoda(selected)" title="Stiahnuť dohodu">
-            📄 Stiahnuť dohodu
+          <button v-if="selected?.internship_type === 'prax'" class="dohoda-btn" @click="downloadDohoda(selected)" title="Generovať dohodu">
+            Generovať dohodu
           </button>
           <button class="upload-btn" @click="uploadDocument(selected)">
             Nahrať dokument
@@ -368,7 +392,7 @@
                     <div class="company-name">{{ company.company_name }}</div>
                     <div class="company-info">
                       {{ company.address?.city || '' }}
-                      <span v-if="company.contact_person_email"> "¢ {{ company.contact_person_email }}</span>
+                      <span v-if="company.contact_person_email">- {{ company.contact_person_email }}</span>
                     </div>
                   </div>
                 </div>
@@ -432,6 +456,38 @@
                     class="dropdown-item"
                   >
                     Letný semester
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Internship Type -->
+            <div class="form-group">
+              <label for="internshipType">Typ *</label>
+              <div class="autocomplete-wrapper">
+                <input
+                  id="internshipType"
+                  v-model="createForm.internshipTypeDisplay"
+                  @focus="showInternshipTypeDropdown = true"
+                  type="text"
+                  placeholder="Vyberte typ..."
+                  autocomplete="off"
+                  readonly
+                  required
+                  :class="{ 'readonly-input': true }"
+                />
+                <div v-if="showInternshipTypeDropdown" class="dropdown">
+                  <div
+                    @click="selectInternshipType('prax')"
+                    class="dropdown-item"
+                  >
+                    Prax
+                  </div>
+                  <div
+                    @click="selectInternshipType('brigada')"
+                    class="dropdown-item"
+                  >
+                    Brigáda
                   </div>
                 </div>
               </div>
@@ -565,6 +621,38 @@
               </div>
             </div>
 
+            <!-- Internship Type -->
+            <div class="form-group">
+              <label for="edit_internshipType">Typ *</label>
+              <div class="autocomplete-wrapper">
+                <input
+                  id="edit_internshipType"
+                  v-model="editForm.internshipTypeDisplay"
+                  @focus="showEditInternshipTypeDropdown = true"
+                  type="text"
+                  placeholder="Vyberte typ..."
+                  autocomplete="off"
+                  readonly
+                  required
+                  :class="{ 'readonly-input': true }"
+                />
+                <div v-if="showEditInternshipTypeDropdown" class="dropdown">
+                  <div
+                    @click="selectEditInternshipType('prax')"
+                    class="dropdown-item"
+                  >
+                    Prax
+                  </div>
+                  <div
+                    @click="selectEditInternshipType('brigada')"
+                    class="dropdown-item"
+                  >
+                    Brigáda
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Date Start -->
             <div class="form-group">
               <label for="edit_date_start">Dátum začiatku *</label>
@@ -583,6 +671,142 @@
           <button class="ghost" @click="closeEditModal">Zrušiť</button>
           <button class="submit-btn" @click="submitEditForm" :disabled="editSubmitting">
             {{ editSubmitting ? 'Ukladá sa...' : 'Uložiť zmeny' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Document Management Modal -->
+    <div v-if="showDocumentModal" class="modal-overlay" @click.self="closeDocumentModal">
+      <div class="modal-content document-modal">
+        <header class="modal-header">
+          <h2>Správa dokumentov - {{ documentModalInternship?.company?.company_name }}</h2>
+          <button class="close-btn" @click="closeDocumentModal">✕</button>
+        </header>
+
+        <Spinner v-if="documentLoading" overlay />
+
+        <div class="modal-body">
+          <!-- Upload Section -->
+          <div class="upload-section">
+            <h3>Nahrať nový dokument</h3>
+            <form @submit.prevent="submitUploadDocument" class="upload-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="document_type">Typ dokumentu *</label>
+                  <select id="document_type" v-model="uploadForm.document_type_id" required>
+                    <option value="">Vyberte typ dokumentu...</option>
+                    <option v-for="type in documentTypes" :key="type.id" :value="type.id">
+                      {{ type.document_type_name }}
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="document_name">Názov dokumentu</label>
+                  <input
+                    id="document_name"
+                    v-model="uploadForm.document_name"
+                    type="text"
+                    placeholder="Nepovinné - použije sa názov typu"
+                  />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="description">Popis</label>
+                <textarea
+                  id="description"
+                  v-model="uploadForm.description"
+                  rows="2"
+                  placeholder="Voliteľný popis dokumentu..."
+                ></textarea>
+              </div>
+              <div class="form-group file-input-group">
+                <label for="file">Súbor * (PDF, DOC, DOCX, JPG, PNG - max 10MB)</label>
+                <input
+                  id="file"
+                  type="file"
+                  @change="handleFileSelect"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  required
+                />
+                <div v-if="uploadForm.file" class="file-info">
+                  <span class="file-name">{{ uploadForm.file.name }}</span>
+                  <span class="file-size">({{ formatFileSize(uploadForm.file.size) }})</span>
+                </div>
+              </div>
+              <button type="submit" class="submit-btn" :disabled="uploadSubmitting">
+                {{ uploadSubmitting ? 'Nahrávam...' : 'Nahrať dokument' }}
+              </button>
+            </form>
+          </div>
+
+          <!-- Documents List -->
+          <div class="documents-section">
+            <h3>Nahraté dokumenty ({{ documents.length }})</h3>
+
+            <div v-if="documents.length === 0" class="empty-documents">
+              <p>Zatiaľ neboli nahrané žiadne dokumenty.</p>
+            </div>
+
+            <div v-else class="documents-grid">
+              <div v-for="doc in documents" :key="doc.id" class="document-card">
+                <div class="document-icon">
+                  <span v-if="doc.file_mime_type?.includes('pdf')">📄</span>
+                  <span v-else-if="doc.file_mime_type?.includes('image')">🖼️</span>
+                  <span v-else>📎</span>
+                </div>
+                <div class="document-info">
+                  <h4>{{ doc.document_name }}</h4>
+                  <p class="document-type-name">{{ doc.document_type?.document_type_name }}</p>
+                  <p v-if="doc.description" class="document-description">{{ doc.description }}</p>
+                  <div class="document-meta">
+                    <span class="upload-date">{{ formatDate(doc.uploaded_at) }}</span>
+                    <span class="file-size-badge">{{ formatFileSize(doc.file_size) }}</span>
+                    <span v-if="doc.is_verified" class="verified-badge">✓ Overené</span>
+                    <span v-if="isTimesheet(doc)" :class="timesheetBadgeForDoc(doc)">
+                      {{ getTimesheetStatusForDoc(doc) }}
+                    </span>
+                  </div>
+                </div>
+                <div class="document-actions">
+                  <button @click="downloadDocumentFile(doc)" class="download-btn" title="Stiahnuť">
+                    ⬇ Stiahnuť
+                  </button>
+                  <button
+                    v-if="canDeleteDocument(doc)"
+                    @click="confirmDeleteDocument(doc)"
+                    class="delete-btn"
+                    title="Vymazať"
+                  >
+                    🗑️ Vymazať
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="ghost" @click="closeDocumentModal">Zavrieť</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteConfirm" class="modal-backdrop delete-confirm-backdrop" @click.self="cancelDelete">
+      <div class="modal-card confirm-modal">
+        <header class="modal-header">
+          <h2>Potvrdenie vymazania</h2>
+          <button class="close-btn" @click="cancelDelete">✕</button>
+        </header>
+        <div class="modal-body">
+          <p>Naozaj chcete vymazať dokument <strong>{{ documentToDelete?.document_name }}</strong>?</p>
+          <p class="warning-text">Táto akcia sa nedá vrátiť späť.</p>
+        </div>
+        <footer class="modal-footer">
+          <button class="ghost" @click="cancelDelete">Zrušiť</button>
+          <button class="delete-confirm-btn" @click="executeDelete" :disabled="deleteSubmitting">
+            {{ deleteSubmitting ? 'Mažem...' : 'Vymazať' }}
           </button>
         </footer>
       </div>
@@ -620,6 +844,7 @@ const companies = ref([])
 const showCompanyDropdown = ref(false)
 const showYearDropdown = ref(false)
 const showSemesterDropdown = ref(false)
+const showInternshipTypeDropdown = ref(false)
 
 const createForm = reactive({
   companySearch: '',
@@ -628,6 +853,8 @@ const createForm = reactive({
   academic_year: '',
   semester: '',
   semesterDisplay: '',
+  internship_type: '',
+  internshipTypeDisplay: '',
   date_start: '',
   date_end: ''
 })
@@ -639,6 +866,7 @@ const editSubmitting = ref(false)
 const showEditCompanyDropdown = ref(false)
 const showEditYearDropdown = ref(false)
 const showEditSemesterDropdown = ref(false)
+const showEditInternshipTypeDropdown = ref(false)
 const editingInternship = ref(null)
 
 const editForm = reactive({
@@ -648,8 +876,28 @@ const editForm = reactive({
   academic_year: '',
   semester: '',
   semesterDisplay: '',
+  internship_type: '',
+  internshipTypeDisplay: '',
   date_start: '',
   date_end: ''
+})
+
+// Document Management State
+const showDocumentModal = ref(false)
+const documentModalInternship = ref(null)
+const documentLoading = ref(false)
+const documents = ref([])
+const documentTypes = ref([])
+const uploadSubmitting = ref(false)
+const showDeleteConfirm = ref(false)
+const documentToDelete = ref(null)
+const deleteSubmitting = ref(false)
+
+const uploadForm = reactive({
+  document_type_id: '',
+  document_name: '',
+  description: '',
+  file: null
 })
 
 // Filters & Sorting
@@ -918,6 +1166,10 @@ const filteredInternships = computed(() => {
           aVal = a.academic_year
           bVal = b.academic_year
           break
+        case 'internshipType':
+          aVal = (a.internship_type || 'prax').toLowerCase()
+          bVal = (b.internship_type || 'prax').toLowerCase()
+          break
         case 'dateStart':
           aVal = new Date(a.date_start)
           bVal = new Date(b.date_start)
@@ -1013,12 +1265,19 @@ function selectSemester(semester) {
   showSemesterDropdown.value = false
 }
 
+function selectInternshipType(type) {
+  createForm.internship_type = type
+  createForm.internshipTypeDisplay = type === 'prax' ? 'Prax' : 'Brigáda'
+  showInternshipTypeDropdown.value = false
+}
+
 function closeCreateModal() {
   showCreateModal.value = false
   resetCreateForm()
   showCompanyDropdown.value = false
   showYearDropdown.value = false
   showSemesterDropdown.value = false
+  showInternshipTypeDropdown.value = false
 }
 
 function resetCreateForm() {
@@ -1028,6 +1287,8 @@ function resetCreateForm() {
   createForm.academic_year = currentAcademicYear.value
   createForm.semester = ''
   createForm.semesterDisplay = ''
+  createForm.internship_type = ''
+  createForm.internshipTypeDisplay = ''
   createForm.date_start = ''
   createForm.date_end = ''
 }
@@ -1058,6 +1319,7 @@ async function submitCreateForm() {
       company_id: createForm.company_id,
       academic_year: createForm.academic_year,
       semester: parseInt(createForm.semester),
+      internship_type: createForm.internship_type,
       date_start: createForm.date_start,
       date_end: createForm.date_end
     }
@@ -1144,7 +1406,7 @@ function handleClickOutside(event) {
 // Edit Modal Functions
 function editInternship(internship) {
   editingInternship.value = internship
-  
+
   // Populate form with existing data
   const company = internship.company
   editForm.companySearch = company?.company_name || ''
@@ -1153,9 +1415,11 @@ function editInternship(internship) {
   editForm.academic_year = internship.academic_year || ''
   editForm.semester = String(internship.semester) || ''
   editForm.semesterDisplay = internship.semester === 1 ? 'Zimný semester' : internship.semester === 2 ? 'Letný semester' : ''
+  editForm.internship_type = internship.internship_type || 'prax'
+  editForm.internshipTypeDisplay = internship.internship_type === 'prax' ? 'Prax' : 'Brigáda'
   editForm.date_start = internship.date_start || ''
   editForm.date_end = internship.date_end || ''
-  
+
   showEditModal.value = true
 }
 
@@ -1189,6 +1453,12 @@ function selectEditSemester(semester) {
   showEditSemesterDropdown.value = false
 }
 
+function selectEditInternshipType(type) {
+  editForm.internship_type = type
+  editForm.internshipTypeDisplay = type === 'prax' ? 'Prax' : 'Brigáda'
+  showEditInternshipTypeDropdown.value = false
+}
+
 function closeEditModal() {
   showEditModal.value = false
   editingInternship.value = null
@@ -1196,6 +1466,7 @@ function closeEditModal() {
   showEditCompanyDropdown.value = false
   showEditYearDropdown.value = false
   showEditSemesterDropdown.value = false
+  showEditInternshipTypeDropdown.value = false
 }
 
 function resetEditForm() {
@@ -1205,6 +1476,8 @@ function resetEditForm() {
   editForm.academic_year = ''
   editForm.semester = ''
   editForm.semesterDisplay = ''
+  editForm.internship_type = ''
+  editForm.internshipTypeDisplay = ''
   editForm.date_start = ''
   editForm.date_end = ''
 }
@@ -1235,6 +1508,7 @@ async function submitEditForm() {
       company_id: editForm.company_id,
       academic_year: editForm.academic_year,
       semester: parseInt(editForm.semester),
+      internship_type: editForm.internship_type,
       date_start: editForm.date_start,
       date_end: editForm.date_end
     }
@@ -1301,14 +1575,199 @@ function closeModal() {
   selected.value = null
 }
 
-// Document management (placeholder for now)
-function manageDocuments() {
-  showAlert('Správa dokumentov bude dostupná v budúcej verzii.', 'info')
+// Document Management Functions
+async function manageDocuments() {
+  // Open document modal with list of all internships
+  showAlert('Vyberte prax zo zoznamu pre správu dokumentov kliknutím na tlačidlo "Nahrať".', 'info')
 }
 
-// Upload document (placeholder)
-function uploadDocument(internship) {
-  showAlert('Nahrávanie dokumentov bude dostupné v budúcej verzii.', 'info')
+async function uploadDocument(internship) {
+  documentModalInternship.value = internship
+  showDocumentModal.value = true
+  await fetchDocuments(internship.id)
+  await fetchDocumentTypes()
+}
+
+async function fetchDocuments(internshipId) {
+  documentLoading.value = true
+  try {
+    const response = await api.get(`/student/internships/${internshipId}/documents`)
+    documents.value = response.data.documents || []
+  } catch (err) {
+    showAlert('Nepodarilo sa načítať dokumenty.', 'error')
+    console.error('Error fetching documents:', err)
+  } finally {
+    documentLoading.value = false
+  }
+}
+
+async function fetchDocumentTypes() {
+  try {
+    const response = await api.get('/student/document-types')
+    documentTypes.value = response.data.documentTypes || []
+  } catch (err) {
+    showAlert('Nepodarilo sa načítať typy dokumentov.', 'error')
+    console.error('Error fetching document types:', err)
+  }
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0]
+  if (file) {
+    // Check file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      showAlert('Súbor je príliš veľký. Maximálna veľkosť je 10MB.', 'error')
+      event.target.value = ''
+      return
+    }
+    uploadForm.file = file
+  }
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+}
+
+async function submitUploadDocument() {
+  if (!uploadForm.file) {
+    showAlert('Musíte vybrať súbor.', 'error')
+    return
+  }
+
+  if (!uploadForm.document_type_id) {
+    showAlert('Musíte vybrať typ dokumentu.', 'error')
+    return
+  }
+
+  uploadSubmitting.value = true
+
+  try {
+    const formData = new FormData()
+    formData.append('file', uploadForm.file)
+    formData.append('document_type_id', uploadForm.document_type_id)
+    if (uploadForm.document_name) {
+      formData.append('document_name', uploadForm.document_name)
+    }
+    if (uploadForm.description) {
+      formData.append('description', uploadForm.description)
+    }
+
+    await api.post(`/student/internships/${documentModalInternship.value.id}/documents`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    showAlert('Dokument bol úspešne nahraný!', 'success')
+
+    // Reset form
+    resetUploadForm()
+
+    // Refresh documents list
+    await fetchDocuments(documentModalInternship.value.id)
+
+    // Refresh internships to update document counts
+    await fetchInternships()
+
+  } catch (err) {
+    showAlert(err.response?.data?.message || 'Nepodarilo sa nahrať dokument.', 'error')
+    console.error('Error uploading document:', err)
+  } finally {
+    uploadSubmitting.value = false
+  }
+}
+
+function resetUploadForm() {
+  uploadForm.document_type_id = ''
+  uploadForm.document_name = ''
+  uploadForm.description = ''
+  uploadForm.file = null
+
+  // Reset file input
+  const fileInput = document.getElementById('file')
+  if (fileInput) {
+    fileInput.value = ''
+  }
+}
+
+async function downloadDocumentFile(doc) {
+  try {
+    const response = await api.get(`/student/documents/${doc.id}/download`, {
+      responseType: 'blob'
+    })
+
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', doc.file_name)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+
+    showAlert('Dokument bol stiahnutý.', 'success')
+  } catch (err) {
+    showAlert('Nepodarilo sa stiahnuť dokument.', 'error')
+    console.error('Error downloading document:', err)
+  }
+}
+
+function canDeleteDocument(doc) {
+  // Allow deletion of all documents
+  return true
+}
+
+function confirmDeleteDocument(doc) {
+  documentToDelete.value = doc
+  showDeleteConfirm.value = true
+}
+
+function cancelDelete() {
+  documentToDelete.value = null
+  showDeleteConfirm.value = false
+}
+
+async function executeDelete() {
+  if (!documentToDelete.value) return
+
+  deleteSubmitting.value = true
+
+  try {
+    const response = await api.delete(`/student/documents/${documentToDelete.value.id}`)
+
+    console.log('Delete response:', response)
+
+    // Close confirmation modal first
+    cancelDelete()
+
+    // Show success message
+    showAlert('Dokument bol vymazaný.', 'success')
+
+    // Refresh documents list
+    await fetchDocuments(documentModalInternship.value.id)
+
+    // Refresh internships to update document counts
+    await fetchInternships()
+
+  } catch (err) {
+    console.error('Error deleting document:', err)
+    console.error('Error response:', err.response)
+    showAlert(err.response?.data?.message || 'Nepodarilo sa vymazať dokument.', 'error')
+  } finally {
+    deleteSubmitting.value = false
+  }
+}
+
+function closeDocumentModal() {
+  showDocumentModal.value = false
+  documentModalInternship.value = null
+  documents.value = []
+  resetUploadForm()
 }
 
 // Download Dohoda PDF
@@ -1726,6 +2185,11 @@ onBeforeUnmount(() => {
 .badge.badge-success {
   background: #d1fae5;
   color: #065f46;
+}
+
+.badge.badge-info {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 .badge.badge-failed {
@@ -2575,6 +3039,335 @@ button.close-btn:hover {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Document Management Modal Styles */
+.modal-content.document-modal {
+  max-width: 900px;
+}
+
+.upload-section {
+  background: #f9fafb;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 32px;
+  border: 2px dashed #d1d5db;
+}
+
+.upload-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  transition: all 0.2s;
+}
+
+.form-group textarea:focus {
+  outline: none;
+  border-color: #38a169;
+  box-shadow: 0 0 0 3px rgba(56, 161, 105, 0.1);
+}
+
+.file-input-group input[type="file"] {
+  padding: 10px;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.file-input-group input[type="file"]:hover {
+  border-color: #38a169;
+}
+
+.file-info {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.file-name {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.file-size {
+  color: #6b7280;
+}
+
+.documents-section {
+  margin-top: 24px;
+}
+
+.documents-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.empty-documents {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.documents-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.document-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.document-card:hover {
+  border-color: #38a169;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.document-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  border-radius: 8px;
+  font-size: 24px;
+}
+
+.document-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.document-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+  word-break: break-word;
+}
+
+.document-type-name {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.document-description {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.document-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.upload-date {
+  color: #6b7280;
+}
+
+.file-size-badge {
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.document-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.document-actions button {
+  padding: 8px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.download-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.delete-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* Delete Confirmation Modal */
+.modal-card.confirm-modal {
+  max-width: 500px;
+}
+
+.warning-text {
+  color: #ef4444;
+  font-weight: 600;
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+/* Detail View Document Cards */
+.documents-grid-detail {
+  display: grid;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.document-card-detail {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.document-card-detail:hover {
+  border-color: #38a169;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.document-actions-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.download-btn-detail {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-btn-detail:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.delete-confirm-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-confirm-btn:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.delete-confirm-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Delete Confirmation Modal - Higher z-index to appear on top */
+.modal-backdrop.delete-confirm-backdrop {
+  z-index: 3000;
+}
+
+/* Responsive Document Modal */
+@media (max-width: 768px) {
+  .modal-content.document-modal {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .document-card {
+    flex-direction: column;
+  }
+
+  .document-actions {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .document-actions button {
+    flex: 1;
   }
 }
 </style>
