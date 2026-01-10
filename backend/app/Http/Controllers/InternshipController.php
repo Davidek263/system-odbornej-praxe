@@ -998,14 +998,25 @@ class InternshipController extends Controller
 
     public function markDefendedExternal(Request $request, $id)
     {
-        // bezpečnostná poistka – musí to byť token, nie user session
+        // Security check 1: Must be using token authentication (not session)
         if (!$request->user()->currentAccessToken()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized token.',
+                'message' => 'This endpoint requires API token authentication.',
+                'error' => 'TOKEN_REQUIRED'
             ], 401);
         }
 
+        // Security check 2: Token must have 'internship:defend' ability
+        if (!$request->user()->tokenCan('internship:defend')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token does not have required permission: internship:defend',
+                'error' => 'INSUFFICIENT_PERMISSIONS'
+            ], 403);
+        }
+
+        // Validate request data
         $validator = Validator::make($request->all(), [
             'defense_date' => 'required|date',
             'defense_result' => 'required|string|max:500',
@@ -1015,6 +1026,7 @@ class InternshipController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
+                'message' => 'Validation failed.',
                 'errors' => $validator->errors(),
             ], 422);
         }
@@ -1022,60 +1034,82 @@ class InternshipController extends Controller
         try {
             DB::beginTransaction();
 
+            // Find internship
             $internship = Internship::with('currentStatus')->findOrFail($id);
 
-            // kontrola stavu
+            // Critical check: Internship must be in "Schválená" status
             if ($internship->currentStatus->internship_status_name !== 'Schválená') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Internship must be in "Schválená" status.',
+                    'message' => 'Internship must be in "Schválená" (Approved) status to be marked as defended.',
                     'current_status' => $internship->currentStatus->internship_status_name,
+                    'error' => 'INVALID_STATUS'
                 ], 400);
             }
 
+            // Get "Obhájená" status
             $defendedStatus = InternshipStatus::where(
                 'internship_status_name',
                 'Obhájená'
             )->first();
 
             if (!$defendedStatus) {
-                throw new \Exception('Status "Obhájená" not found.');
+                throw new \Exception('Status "Obhájená" not found in database.');
             }
 
-            // update stavu
+            // Update internship status
             $internship->current_status_id = $defendedStatus->id;
             $internship->save();
 
-            // história
+            // Create status change history with defense information
             InternshipStatusChange::create([
                 'internship_id' => $internship->id,
                 'internship_status_id' => $defendedStatus->id,
-                'changed_by_user_id' => null, // externý systém
+                'changed_by_user_id' => null, // null = external system
                 'status_changed_at' => now(),
                 'notes' =>
                     "Obhájená externým systémom\n" .
-                    "Dátum: {$request->defense_date}\n" .
+                    "Dátum obhajoby: {$request->defense_date}\n" .
                     "Výsledok: {$request->defense_result}\n" .
-                    "Známka: {$request->defense_grade}",
+                    ($request->defense_grade ? "Známka: {$request->defense_grade}\n" : "") .
+                    "API Token ID: " . $request->user()->currentAccessToken()->id,
             ]);
+
+            // TODO: Send email notification to student and guarantor
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Internship marked as defended.',
+                'message' => 'Internship successfully marked as defended.',
                 'data' => [
                     'internship_id' => $internship->id,
+                    'old_status' => 'Schválená',
                     'new_status' => 'Obhájená',
+                    'defense_date' => $request->defense_date,
+                    'defense_result' => $request->defense_result,
+                    'defense_grade' => $request->defense_grade,
+                    'changed_at' => now()->toIso8601String(),
                 ],
             ], 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Internship not found.',
+                'error' => 'NOT_FOUND'
+            ], 404);
 
         } catch (\Exception $e) {
             DB::rollBack();
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to mark as defended.',
+                'message' => 'Failed to mark internship as defended.',
+                'error' => 'SERVER_ERROR',
+                'details' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }

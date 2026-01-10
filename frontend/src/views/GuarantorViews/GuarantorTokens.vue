@@ -118,14 +118,19 @@
         </header>
         <div class="docs-content">
           <div class="endpoint-section">
-            <h3>Endpoint na označenie praxe ako obhájenej</h3>
+            <h3>Endpoint pre externý systém</h3>
+            
             <div class="endpoint-box">
               <span class="method">POST</span>
               <code class="url">{{ apiBaseUrl }}/external/mark-defended/{internship_id}</code>
             </div>
 
+            <p class="endpoint-description">
+              Zmení stav praxe zo <strong>"Schválená"</strong> na <strong>"Obhájená"</strong>.
+            </p>
+
             <h4>Hlavičky:</h4>
-            <pre class="code-block">Authorization: Bearer YOUR_TOKEN_HERE
+            <pre class="code-block">Authorization: Bearer YOUR_API_TOKEN
 Content-Type: application/json</pre>
 
             <h4>Request Body:</h4>
@@ -135,12 +140,15 @@ Content-Type: application/json</pre>
   "defense_grade": "A"
 }</pre>
 
-            <h4>Požiadavky:</h4>
-            <ul class="requirements-list">
-              <li>Prax musí byť v stave <strong>"Schválená"</strong></li>
-              <li>Po úspešnom volaní sa stav zmení na <strong>"Obhájená"</strong></li>
-              <li>Token musí mať oprávnenie <code>internship:defend</code></li>
-            </ul>
+            <h4>Úspešná odpoveď:</h4>
+            <pre class="code-block">{
+  "success": true,
+  "message": "Internship successfully marked as defended.",
+  "data": {
+    "internship_id": 123,
+    "new_status": "Obhájená"
+  }
+}</pre>
 
             <h4>Príklad cURL:</h4>
             <pre class="code-block">curl -X POST {{ apiBaseUrl }}/external/mark-defended/123 \
@@ -151,6 +159,14 @@ Content-Type: application/json</pre>
     "defense_result": "Úspešne obhájené",
     "defense_grade": "A"
   }'</pre>
+
+            <h4>Požiadavky:</h4>
+            <ul class="requirements-list">
+              <li>Prax musí byť v stave <strong>"Schválená"</strong></li>
+              <li>Token musí mať oprávnenie <code>internship:defend</code></li>
+              <li>Všetky polia <code>defense_date</code> a <code>defense_result</code> sú povinné</li>
+              <li>V produkčnom prostredí používajte HTTPS</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -779,8 +795,15 @@ onMounted(() => {
   font-weight: 700;
 }
 
+.endpoint-description {
+  margin: 0 0 24px 0;
+  font-size: 15px;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
 .endpoint-section h4 {
-  margin: 24px 0 12px 0;
+  margin: 32px 0 12px 0;
   font-size: 15px;
   color: #374151;
   font-weight: 700;
@@ -1273,6 +1296,10 @@ onMounted(() => {
   .code-block {
     font-size: 11px;
     padding: 12px;
+  }
+
+  .endpoint-description {
+    font-size: 14px;
   }
 
   .modal-overlay {

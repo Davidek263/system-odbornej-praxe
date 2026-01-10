@@ -167,14 +167,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('guarantor-internships')->group(function () {
         Route::get('/', [InternshipController::class, 'getGuarantorInternships']);
     });
+});
 
-    /*
-    |--------------------------------------------------------------------------
-    | External System API (OAuth2 – Sanctum)
-    |--------------------------------------------------------------------------
-    */
+/*
+|--------------------------------------------------------------------------
+| External System API (OAuth2 – Sanctum)
+| Note: Ability check is done in controller for better error messages
+|--------------------------------------------------------------------------
+*/
 
-    Route::middleware(['auth:sanctum', 'abilities:internship:defend'])->group(function () {
-        Route::post('/external/mark-defended/{id}', [InternshipController::class, 'markDefendedExternal']);
-    });
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/external/mark-defended/{id}', [InternshipController::class, 'markDefendedExternal']);
 });
