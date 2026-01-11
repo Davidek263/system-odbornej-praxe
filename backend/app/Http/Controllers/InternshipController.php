@@ -562,6 +562,7 @@ class InternshipController extends Controller
             'company_id' => 'required|exists:company,id',
             'academic_year' => 'required|string|max:9',
             'semester' => 'required|integer|in:1,2',
+            'internship_type' => 'nullable|in:prax,brigada',
             'date_start' => 'required|date',
             'date_end' => 'required|date|after:date_start',
         ]);
@@ -599,6 +600,12 @@ class InternshipController extends Controller
             $internship->company_id = $request->company_id;
             $internship->academic_year = $request->academic_year;
             $internship->semester = $request->semester;
+
+            // Only update internship_type if provided
+            if ($request->has('internship_type')) {
+                $internship->internship_type = $request->internship_type;
+            }
+
             $internship->date_start = $request->date_start;
             $internship->date_end = $request->date_end;
             $internship->save();
@@ -821,6 +828,7 @@ class InternshipController extends Controller
                 'regex:/^\d{4}\/\d{4}$/', // Format: 2024/2025
             ],
             'semester' => 'required|integer|in:1,2', // 1 = Winter, 2 = Summer
+            'internship_type' => 'required|in:prax,brigada', // prax = school agreement, brigada = employer agreement
             'date_start' => 'required|date',
             'date_end' => 'required|date|after:date_start',
         ]);
@@ -857,6 +865,7 @@ class InternshipController extends Controller
                 'company_id' => $request->company_id,
                 'academic_year' => $request->academic_year,
                 'semester' => $request->semester,
+                'internship_type' => $request->internship_type,
                 'date_start' => $request->date_start,
                 'date_end' => $request->date_end,
                 'current_status_id' => $createdStatus->id,
@@ -909,6 +918,7 @@ class InternshipController extends Controller
                 'regex:/^\d{4}\/\d{4}$/', // Format: 2024/2025
             ],
             'semester' => 'required|integer|in:1,2', // 1 = Winter, 2 = Summer
+            'internship_type' => 'required|in:prax,brigada',
             'date_start' => 'required|date',
             'date_end' => 'required|date|after:date_start',
         ]);
@@ -960,6 +970,7 @@ class InternshipController extends Controller
                 'company_id' => $request->company_id,
                 'academic_year' => $request->academic_year,
                 'semester' => $request->semester,
+                'internship_type' => $request->internship_type,
                 'date_start' => $request->date_start,
                 'date_end' => $request->date_end,
             ]);

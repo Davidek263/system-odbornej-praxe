@@ -481,7 +481,7 @@ onMounted(() => {
 
 .tokens-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ffb74d 0%, #ff8a65 100%);
   padding: 24px;
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }

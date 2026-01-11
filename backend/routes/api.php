@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InternshipController;
 use App\Http\Controllers\ExternalSystemTokenController;
+use App\Http\Controllers\StudentDocumentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -85,6 +86,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('student')->group(function () {
         // Get companies for student (no role check)
         Route::get('/companies', [InternshipController::class, 'getCompaniesForStudent']);
+
+        // Document management routes
+        Route::get('/document-types', [StudentDocumentController::class, 'getDocumentTypes']);
+        Route::get('/internships/{id}/documents', [StudentDocumentController::class, 'getInternshipDocuments']);
+        Route::post('/internships/{id}/documents', [StudentDocumentController::class, 'uploadDocument']);
+        Route::get('/documents/{id}/download', [StudentDocumentController::class, 'downloadDocument']);
+        Route::delete('/documents/{id}', [StudentDocumentController::class, 'deleteDocument']);
     });
     
     Route::prefix('student-internships')->group(function () {

@@ -154,6 +154,14 @@
                     </span>
                   </div>
                 </th>
+                <th class="sortable" @click="toggleSort('internshipType')">
+                  <div class="th-content">
+                    <span>Typ</span>
+                    <span class="sort-indicator" v-if="sortColumn === 'internshipType'">
+                      {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                    </span>
+                  </div>
+                </th>
                 <th class="sortable" @click="toggleSort('dateStart')">
                   <div class="th-content">
                     <span>Termín praxe</span>
@@ -200,6 +208,11 @@
                   <div class="muted">{{ getSemesterText(internship.semester) }}</div>
                 </td>
                 <td>
+                  <span :class="internship.internship_type === 'prax' ? 'badge badge-success' : 'badge badge-info'">
+                    {{ internship.internship_type === 'prax' ? 'Prax' : 'Brigáda' }}
+                  </span>
+                </td>
+                <td>
                   <div>{{ formatDate(internship.date_start) }}</div>
                   <div class="muted">{{ formatDate(internship.date_end) }}</div>
                 </td>
@@ -214,18 +227,12 @@
                       {{ getTimesheetStatus(internship) }}
                     </span>
                   </div>
-                  <div v-else class="muted">—</div>
+                  <div v-else class="muted">Bez výkazu</div>
                 </td>
                 <td class="actions-col">
                   <button class="ghost" @click="viewDetails(internship)">Detail</button>
                   <button class="edit" @click="editInternship(internship)">Upraviť</button>
-                  <button 
-                    class="status" 
-                    @click="changeStatus(internship)"
-                    :disabled="processing[internship.id]"
-                  >
-                    Zmeniť stav
-                  </button>
+                  <button class="status" @click="changeStatus(internship)":disabled="processing[internship.id]">Zmeniť stav</button>
                 </td>
               </tr>
             </tbody>
@@ -292,8 +299,20 @@
           <div class="detail-section">
             <h3>Firma</h3>
             <p><strong>Názov:</strong> {{ selected.company?.company_name || '—' }}</p>
-            <p v-if="selected.company?.city"><strong>Mesto:</strong> {{ selected.company.city }}</p>
-            <p v-if="selected.company?.email"><strong>Email:</strong> {{ selected.company.email }}</p>
+            <p v-if="selected.company?.contact_person_name">
+              <strong>Kontaktná osoba:</strong> {{ selected.company.contact_person_name }}
+            </p>
+            <p v-if="selected.company?.contact_person_email">
+              <strong>Email:</strong> {{ selected.company.contact_person_email }}
+            </p>
+            <p v-if="selected.company?.contact_person_phone">
+              <strong>Telefón:</strong> {{ selected.company.contact_person_phone }}
+            </p>
+            <p v-if="selected.company?.address">
+              <strong>Adresa:</strong>
+              {{ selected.company.address.street }} {{ selected.company.address.street_number }},
+              {{ selected.company.address.postal_code }} {{ selected.company.address.city }}
+            </p>
           </div>
 
           <div class="detail-section">
@@ -328,17 +347,37 @@
             </div>
           </div>
 
-          <div class="detail-section" v-if="selected.documents && selected.documents.length">
-            <h3>Dokumenty</h3>
-            <ul class="documents-list">
-              <li v-for="doc in selected.documents" :key="doc.id">
-                <a :href="doc.file_path" target="_blank" rel="noopener" class="document-link">
-                  {{ doc.document_name }}
-                </a>
-                <span class="document-type">({{ doc.document_type?.document_type_name }})</span>
-                <span v-if="doc.is_verified" class="verified-badge">Overené</span>
-              </li>
-            </ul>
+          <div class="detail-section">
+            <h3>Dokumenty ({{ selected.documents?.length || 0 }})</h3>
+
+            <div v-if="!selected.documents || selected.documents.length === 0" class="empty-documents">
+              <p>Zatiaľ neboli nahrané žiadne dokumenty.</p>
+            </div>
+
+            <div v-else class="documents-grid-detail">
+              <div v-for="doc in selected.documents" :key="doc.id" class="document-card-detail">
+                <div class="document-icon">
+                  <span v-if="doc.file_mime_type?.includes('pdf')">📄</span>
+                  <span v-else-if="doc.file_mime_type?.includes('image')">🖼️</span>
+                  <span v-else>📎</span>
+                </div>
+                <div class="document-info">
+                  <h4>{{ doc.document_name }}</h4>
+                  <p class="document-type-name">{{ doc.document_type?.document_type_name }}</p>
+                  <p v-if="doc.description" class="document-description">{{ doc.description }}</p>
+                  <div class="document-meta">
+                    <span class="upload-date">Nahrané: {{ formatDate(doc.uploaded_at) }}</span>
+                    <span class="file-size-badge">{{ formatFileSize(doc.file_size) }}</span>
+                    <span v-if="doc.is_verified" class="verified-badge">✓ Overené</span>
+                  </div>
+                </div>
+                <div class="document-actions-detail">
+                  <a :href="doc.file_path" target="_blank" class="download-btn-detail" title="Stiahnuť">
+                    ⬇ Stiahnuť
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -487,6 +526,38 @@
               </div>
             </div>
 
+            <!-- Internship Type -->
+            <div class="form-group">
+              <label for="edit_internshipType">Typ *</label>
+              <div class="autocomplete-wrapper">
+                <input
+                  id="edit_internshipType"
+                  v-model="editForm.internshipTypeDisplay"
+                  @focus="showEditInternshipTypeDropdown = true"
+                  type="text"
+                  placeholder="Vyberte typ..."
+                  autocomplete="off"
+                  readonly
+                  required
+                  :class="{ 'readonly-input': true }"
+                />
+                <div v-if="showEditInternshipTypeDropdown" class="dropdown">
+                  <div
+                    @click="selectEditInternshipType('prax')"
+                    class="dropdown-item"
+                  >
+                    Prax
+                  </div>
+                  <div
+                    @click="selectEditInternshipType('brigada')"
+                    class="dropdown-item"
+                  >
+                    Brigáda
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Date Start -->
             <div class="form-group">
               <label for="edit_date_start">Dátum začiatku *</label>
@@ -608,6 +679,7 @@ const showEditStudentDropdown = ref(false)
 const showEditCompanyDropdown = ref(false)
 const showEditYearDropdown = ref(false)
 const showEditSemesterDropdown = ref(false)
+const showEditInternshipTypeDropdown = ref(false)
 
 // Forms
 const editForm = reactive({
@@ -621,6 +693,8 @@ const editForm = reactive({
   academic_year: '',
   semester: '',
   semesterDisplay: '',
+  internship_type: '',
+  internshipTypeDisplay: '',
   date_start: '',
   date_end: ''
 })
@@ -668,13 +742,21 @@ function formatDateTime(d) {
   if (!d) return '—'
   const dt = new Date(d)
   if (isNaN(dt)) return d
-  return dt.toLocaleString('sk-SK', { 
-    day: '2-digit', 
-    month: '2-digit', 
+  return dt.toLocaleString('sk-SK', {
+    day: '2-digit',
+    month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
 }
 
 function getSemesterText(semester) {
@@ -909,6 +991,10 @@ const filteredInternships = computed(() => {
           aVal = a.academic_year
           bVal = b.academic_year
           break
+        case 'internshipType':
+          aVal = (a.internship_type || 'prax').toLowerCase()
+          bVal = (b.internship_type || 'prax').toLowerCase()
+          break
         case 'dateStart':
           aVal = new Date(a.date_start)
           bVal = new Date(b.date_start)
@@ -1025,6 +1111,8 @@ function editInternship(internship) {
   editForm.academic_year = internship.academic_year || ''
   editForm.semester = String(internship.semester) || ''
   editForm.semesterDisplay = internship.semester === 1 ? 'Zimný semester' : internship.semester === 2 ? 'Letný semester' : ''
+  editForm.internship_type = internship.internship_type || 'prax'
+  editForm.internshipTypeDisplay = internship.internship_type === 'prax' ? 'Prax' : 'Brigáda'
 
   // Správne formátovanie dátumov pre HTML input type="date"
   editForm.date_start = internship.date_start ? new Date(internship.date_start).toISOString().split('T')[0] : ''
@@ -1080,12 +1168,19 @@ function selectEditSemester(semester) {
   showEditSemesterDropdown.value = false
 }
 
+function selectEditInternshipType(type) {
+  editForm.internship_type = type
+  editForm.internshipTypeDisplay = type === 'prax' ? 'Prax' : 'Brigáda'
+  showEditInternshipTypeDropdown.value = false
+}
+
 function closeEditModal() {
   editMode.value = false
   showEditStudentDropdown.value = false
   showEditCompanyDropdown.value = false
   showEditYearDropdown.value = false
   showEditSemesterDropdown.value = false
+  showEditInternshipTypeDropdown.value = false
 
   // Reset form
   editForm.id = null
@@ -1098,6 +1193,8 @@ function closeEditModal() {
   editForm.academic_year = ''
   editForm.semester = ''
   editForm.semesterDisplay = ''
+  editForm.internship_type = ''
+  editForm.internshipTypeDisplay = ''
   editForm.date_start = ''
   editForm.date_end = ''
 }
@@ -1135,6 +1232,7 @@ async function saveInternship() {
       company_id: editForm.company_id,
       academic_year: editForm.academic_year,
       semester: parseInt(editForm.semester),
+      internship_type: editForm.internship_type,
       date_start: editForm.date_start,
       date_end: editForm.date_end
     })
@@ -1160,6 +1258,7 @@ function handleClickOutside(event) {
     showEditCompanyDropdown.value = false
     showEditYearDropdown.value = false
     showEditSemesterDropdown.value = false
+    showEditInternshipTypeDropdown.value = false
     return
   }
 
@@ -1168,23 +1267,33 @@ function handleClickOutside(event) {
   const companyInput = document.getElementById('edit_company')
   const yearInput = document.getElementById('edit_academic_year')
   const semesterInput = document.getElementById('edit_semester')
+  const internshipTypeInput = document.getElementById('edit_internshipType')
 
   if (clickedWrapper.contains(studentInput)) {
     showEditCompanyDropdown.value = false
     showEditYearDropdown.value = false
     showEditSemesterDropdown.value = false
+    showEditInternshipTypeDropdown.value = false
   } else if (clickedWrapper.contains(companyInput)) {
     showEditStudentDropdown.value = false
     showEditYearDropdown.value = false
     showEditSemesterDropdown.value = false
+    showEditInternshipTypeDropdown.value = false
   } else if (clickedWrapper.contains(yearInput)) {
     showEditStudentDropdown.value = false
     showEditCompanyDropdown.value = false
     showEditSemesterDropdown.value = false
+    showEditInternshipTypeDropdown.value = false
   } else if (clickedWrapper.contains(semesterInput)) {
     showEditStudentDropdown.value = false
     showEditCompanyDropdown.value = false
     showEditYearDropdown.value = false
+    showEditInternshipTypeDropdown.value = false
+  } else if (clickedWrapper.contains(internshipTypeInput)) {
+    showEditStudentDropdown.value = false
+    showEditCompanyDropdown.value = false
+    showEditYearDropdown.value = false
+    showEditSemesterDropdown.value = false
   }
 }
 
@@ -1631,7 +1740,6 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 8px;
   align-items: center;
-  flex-wrap: wrap;
 }
 
 /* Button styles */
@@ -1970,6 +2078,123 @@ button.approve:hover:not(:disabled) {
   border-radius: 4px;
   font-size: 11px;
   font-weight: 700;
+}
+
+/* Detail View Document Cards */
+.empty-documents {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.documents-grid-detail {
+  display: grid;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.document-card-detail {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.document-card-detail:hover {
+  border-color: #ff8a65;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.document-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  border-radius: 8px;
+  font-size: 24px;
+}
+
+.document-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.document-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+  word-break: break-word;
+}
+
+.document-type-name {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.document-description {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.document-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.upload-date {
+  color: #6b7280;
+}
+
+.file-size-badge {
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.document-actions-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.download-btn-detail {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.download-btn-detail:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
 }
 
 .modal-footer {

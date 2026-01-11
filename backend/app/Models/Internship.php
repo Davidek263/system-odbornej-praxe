@@ -15,6 +15,7 @@ class Internship extends Model
     protected $fillable = [
         'academic_year',
         'semester',
+        'internship_type',
         'date_start',
         'date_end',
         'current_status_id',
@@ -86,5 +87,26 @@ class Internship extends Model
     public function hasStarted()
     {
         return now()->gte($this->date_start);
+    }
+
+    /**
+     * Check if this is an internship (prax) or job/brigade
+     */
+    public function isPrax()
+    {
+        return $this->internship_type === 'prax';
+    }
+
+    public function isBrigada()
+    {
+        return $this->internship_type === 'brigada';
+    }
+
+    /**
+     * Get human-readable internship type name
+     */
+    public function getInternshipTypeLabel()
+    {
+        return $this->internship_type === 'prax' ? 'Odborná prax' : 'Brigáda/Práca';
     }
 }
