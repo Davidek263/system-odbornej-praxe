@@ -8,6 +8,9 @@ use App\Models\Company;
 use App\Mail\PasswordMail;
 use Illuminate\Support\Str;
 use App\Mail\ActivationMail;
+use App\Mail\CompanyPendingApprovalMail;
+use App\Mail\CompanyRegistrationReceivedMail;
+use App\Mail\StudentRegistrationWithCredentialsMail;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
@@ -64,18 +67,11 @@ class AuthController extends Controller
 
             // Generate temporary password
             $temporaryPassword = Str::random(12);
-            
-            $emailToSend = $request->filled('alternative_email')
-                ? $request->alternative_email
-                : $request->student_email;
-
-            // Send temporary password
-            Mail::to($emailToSend)->send(new PasswordMail($temporaryPassword));
 
             // Get student role
             $studentRole = DB::table('roles')->where('role_name', 'student')->first();
 
-            // Create user account  
+            // Create user account
             $user = User::create([
                 'first_name' => $request->first_name,
                 'last_name' => $request->last_name,
@@ -98,11 +94,30 @@ class AuthController extends Controller
                 'activation_token_expires_at' => now()->addHours(48), // 48 hour expiry
             ]);
 
-            Mail::to($emailToSend)->send(new ActivationMail($request, $activationToken));
+            // Send emails to both student email and alternative email (if provided)
+            $emailsToSend = [$request->student_email];
 
-            // Send activation email with temporary password
-            // TODO: Implement email sending
-            // Mail::to($user->student_email)->send(new StudentActivationMail($user, $temporaryPassword, $activationToken));
+            if ($request->filled('alternative_email')) {
+                $emailsToSend[] = $request->alternative_email;
+            }
+
+            \Log::info('Attempting to send student registration emails', [
+                'emails' => $emailsToSend,
+                'user_id' => $user->id,
+            ]);
+
+            foreach ($emailsToSend as $email) {
+                try {
+                    Mail::to($email)->send(new StudentRegistrationWithCredentialsMail($user, $temporaryPassword, $activationToken));
+                    \Log::info('Student registration email sent successfully', ['email' => $email]);
+                } catch (\Exception $mailException) {
+                    \Log::error('Failed to send student registration email', [
+                        'email' => $email,
+                        'error' => $mailException->getMessage(),
+                    ]);
+                    // Don't fail the registration if email fails
+                }
+            }
 
             DB::commit();
 
@@ -240,37 +255,36 @@ public function setInitialPassword(Request $request)
             // Get company role
             $companyRole = DB::table('roles')->where('role_name', 'company')->first();
 
-            // Create user account for company
+            // Create user account for company (password and activation will be set after approval)
             $user = User::create([
                 'first_name' => $request->contact_person_name,
-                'last_name' => $request->contact_person_last_name, // Company representative
+                'last_name' => $request->contact_person_last_name,
                 'email' => $request->contact_person_email,
-                'password' => Hash::make($request->password),
+                'password' => Hash::make(Str::random(32)), // Temporary random password, will be replaced after approval
                 'phone_number' => $request->contact_person_phone,
                 'company_id' => $company->id,
                 'roles_id' => $companyRole->id,
-                'active' => false, // Inactive until email verified
-                'must_change_password' => true, // They set password during registration
+                'active' => false, // Inactive until approved by guarantor and email verified
+                'must_change_password' => true,
             ]);
 
-            // Generate activation token
-            $activationToken = Str::random(64);
-            $user->update([
-                'activation_token' => $activationToken,
-                'activation_token_expires_at' => now()->addHours(48), // 48 hour expiry
-            ]);
+            // Send registration confirmation email to company
+            Mail::to($company->contact_person_email)->send(new CompanyRegistrationReceivedMail($company));
 
-            // Send activation email
-            // TODO: Implement email sending
-            // Mail::to($user->email)->send(new CompanyActivationMail($user, $activationToken));
+            // Send notification email to guarantor about new company pending approval
+            $guarantorRole = DB::table('roles')->where('role_name', 'guarantor')->first();
+            if ($guarantorRole) {
+                $guarantors = User::where('roles_id', $guarantorRole->id)->where('active', true)->get();
+                foreach ($guarantors as $guarantor) {
+                    Mail::to($guarantor->email)->send(new CompanyPendingApprovalMail($company, $user));
+                }
+            }
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Company registration successful. Please check your email to activate your account.',
+                'message' => 'Registration successful. You will receive an email once your company is approved by the guarantor.',
                 'company_id' => $company->id,
-                // For development/testing only - remove in production
-                'activation_token' => $activationToken,
             ], 201);
 
         } catch (\Exception $e) {

@@ -56,6 +56,9 @@
           <RouterLink to="/guarantor-dashboard" class="nav-item" active-class="active-link">
             Praxe
           </RouterLink>
+          <RouterLink to="/guarantor/pending-companies" class="nav-item" active-class="active-link">
+            Firmy
+          </RouterLink>
           <RouterLink to="/guarantor-dashboard/tokens" class="nav-item" active-class="active-link">
             Tokeny
           </RouterLink>

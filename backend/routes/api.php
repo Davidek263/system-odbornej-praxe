@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InternshipController;
 use App\Http\Controllers\ExternalSystemTokenController;
 use App\Http\Controllers\StudentDocumentController;
+use App\Http\Controllers\CompanyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -155,16 +156,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('guarantor')->group(function () {
         // Get all internships with filters
         Route::get('/internships', [InternshipController::class, 'getGuarantorInternships']);
-        
+
         // Update internship (full access)
         Route::put('/internships/{id}', [InternshipController::class, 'updateInternship']);
-        
+
         // Change internship status
         Route::post('/internships/{id}/change-status', [InternshipController::class, 'changeInternshipStatus']);
-        
+
         // Get students and companies for dropdowns
         Route::get('/students', [InternshipController::class, 'getAllStudents']);
         Route::get('/companies', [InternshipController::class, 'getAllCompanies']);
+
+        // Company approval routes
+        Route::get('/pending-companies', [CompanyController::class, 'getPendingCompanies']);
+        Route::post('/companies/{id}/approve', [CompanyController::class, 'approveCompany']);
+        Route::post('/companies/{id}/reject', [CompanyController::class, 'rejectCompany']);
 
         Route::get('/external-system-tokens', [ExternalSystemTokenController::class, 'index']);
         Route::post('/external-system-tokens', [ExternalSystemTokenController::class, 'store']);

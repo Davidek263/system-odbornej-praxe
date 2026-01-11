@@ -9,6 +9,7 @@ import StudentDashboard from '../views/StudentViews/StudentDashboard.vue'
 import SetPasswordView from '../views/SetPassword.vue'
 import GuarantorDashboard from '../views/GuarantorViews/GuarantorDashboard.vue'
 import GuarantorTokens from '@/views/GuarantorViews/GuarantorTokens.vue'
+import PendingCompanies from '@/views/GuarantorViews/PendingCompanies.vue'
 import ProfileView from '../views/ProfileView.vue'
 
 const routes = [
@@ -22,6 +23,7 @@ const routes = [
   { path: '/student-dashboard', name: 'studentdashboard', component: StudentDashboard, meta: { requiresAuth: true, roles: ['student']} },
   { path: '/guarantor-dashboard', name: 'guarantordashboard', component: GuarantorDashboard, meta: { requiresAuth: true, roles: ['guarantor']} },
   { path: '/guarantor-dashboard/tokens', name: 'guarantortokens', component: GuarantorTokens, meta: { requiresAuth: true, roles: ['guarantor']} },
+  { path: '/guarantor/pending-companies', name: 'pendingcompanies', component: PendingCompanies, meta: { requiresAuth: true, roles: ['guarantor']} },
   { path: '/set-password', name: 'setpassword', component: SetPasswordView },
   { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true }},
 ]
