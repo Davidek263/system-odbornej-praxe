@@ -383,6 +383,9 @@
 </template>
 
 <script setup>
+// ============================================================
+// IMPORTS & SETUP
+// ============================================================
 import { reactive, ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { Chart, registerables } from 'chart.js'
 import api from '@/api'
@@ -392,6 +395,10 @@ import { useRouter } from 'vue-router'
 Chart.register(...registerables)
 
 const router = useRouter()
+
+// ============================================================
+// ALERT SYSTEM
+// ============================================================
 const alert = reactive({ show: false, type: 'error', message: '', duration: 5000 })
 
 function showAlert(message, type = 'error', duration = 5000) {
@@ -401,7 +408,9 @@ function showAlert(message, type = 'error', duration = 5000) {
   alert.show = true
 }
 
-// State
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
 const loading = ref(false)
 const exporting = ref(false)
 const internships = ref([])
@@ -422,7 +431,9 @@ let studyFieldChartInstance = null
 let internshipTypeChartInstance = null
 let companyChartInstance = null
 
-// Statistics
+// ============================================================
+// COMPUTED PROPERTIES
+// ============================================================
 const stats = computed(() => {
   const created = internships.value.filter(i => i.current_status?.internship_status_name === 'Vytvorená').length
   const confirmed = internships.value.filter(i => i.current_status?.internship_status_name === 'Potvrdená').length
@@ -442,7 +453,9 @@ const stats = computed(() => {
   }
 })
 
-// Export modal state
+// ============================================================
+// EXPORT STATE
+// ============================================================
 const exportModal = ref(false)
 
 const exportOptions = reactive({
@@ -489,7 +502,6 @@ const statuses = [
   'Zamietnutá'
 ]
 
-// Computed
 const academicYears = computed(() => {
   const years = new Set()
   internships.value.forEach(i => {
@@ -516,7 +528,9 @@ const studyFields = computed(() => {
   return Array.from(fields).sort()
 })
 
-// Export modal computed filters
+// ============================================================
+// EXPORT FILTERS (COMPUTED)
+// ============================================================
 const filteredExportStudyFields = computed(() => {
   if (!exportOptions.filters.studyField) return studyFields.value
   const search = exportOptions.filters.studyField.toLowerCase()
@@ -541,7 +555,9 @@ const filteredExportStatuses = computed(() => {
   return statuses.filter(status => status.toLowerCase().includes(search))
 })
 
-// API calls
+// ============================================================
+// API CALLS
+// ============================================================
 async function fetchStatistics() {
   loading.value = true
   try {
@@ -568,16 +584,10 @@ async function fetchStatistics() {
   }
 }
 
-// Render charts
+// ============================================================
+// CHART RENDERING
+// ============================================================
 function renderCharts() {
-  console.log('Rendering charts...', {
-    statusChart: statusChart.value,
-    yearChart: yearChart.value,
-    semesterChart: semesterChart.value,
-    studyFieldChart: studyFieldChart.value,
-    internshipTypeChart: internshipTypeChart.value,
-    companyChart: companyChart.value
-  })
   renderStatusChart()
   renderYearChart()
   renderSemesterChart()
@@ -591,10 +601,7 @@ function renderStatusChart() {
     statusChartInstance.destroy()
   }
 
-  if (!statusChart.value) {
-    console.error('Status chart canvas not found')
-    return
-  }
+  if (!statusChart.value) return
 
   const ctx = statusChart.value.getContext('2d')
   statusChartInstance = new Chart(ctx, {
@@ -630,7 +637,6 @@ function renderStatusChart() {
       }
     }
   })
-  console.log('Status chart rendered')
 }
 
 function renderYearChart() {
@@ -638,10 +644,7 @@ function renderYearChart() {
     yearChartInstance.destroy()
   }
 
-  if (!yearChart.value) {
-    console.error('Year chart canvas not found')
-    return
-  }
+  if (!yearChart.value) return
 
   const yearCounts = {}
   internships.value.forEach(i => {
@@ -680,7 +683,6 @@ function renderYearChart() {
       }
     }
   })
-  console.log('Year chart rendered')
 }
 
 function renderSemesterChart() {
@@ -688,10 +690,7 @@ function renderSemesterChart() {
     semesterChartInstance.destroy()
   }
 
-  if (!semesterChart.value) {
-    console.error('Semester chart canvas not found')
-    return
-  }
+  if (!semesterChart.value) return
 
   // Count internships by semester
   const semesterCounts = {
@@ -748,7 +747,6 @@ function renderSemesterChart() {
       }
     }
   })
-  console.log('Semester chart rendered')
 }
 
 function renderInternshipTypeChart() {
@@ -756,10 +754,7 @@ function renderInternshipTypeChart() {
     internshipTypeChartInstance.destroy()
   }
 
-  if (!internshipTypeChart.value) {
-    console.error('Internship type chart canvas not found')
-    return
-  }
+  if (!internshipTypeChart.value) return
 
   // Count internships by type
   const typeCounts = {
@@ -816,7 +811,6 @@ function renderInternshipTypeChart() {
       }
     }
   })
-  console.log('Internship type chart rendered')
 }
 
 function renderStudyFieldChart() {
@@ -824,10 +818,7 @@ function renderStudyFieldChart() {
     studyFieldChartInstance.destroy()
   }
 
-  if (!studyFieldChart.value) {
-    console.error('Study field chart canvas not found')
-    return
-  }
+  if (!studyFieldChart.value) return
 
   const fieldCounts = {}
   internships.value.forEach(i => {
@@ -868,7 +859,6 @@ function renderStudyFieldChart() {
       }
     }
   })
-  console.log('Study field chart rendered')
 }
 
 function renderCompanyChart() {
@@ -876,10 +866,7 @@ function renderCompanyChart() {
     companyChartInstance.destroy()
   }
 
-  if (!companyChart.value) {
-    console.error('Company chart canvas not found')
-    return
-  }
+  if (!companyChart.value) return
 
   const companyCounts = {}
   internships.value.forEach(i => {
@@ -922,10 +909,11 @@ function renderCompanyChart() {
       }
     }
   })
-  console.log('Company chart rendered')
 }
 
-// CSV Export functions
+// ============================================================
+// EXPORT FUNCTIONS
+// ============================================================
 function openExportModal() {
   exportModal.value = true
 }
@@ -1038,7 +1026,9 @@ async function downloadCsv(customOptions = null) {
   }
 }
 
-// Click outside handler for dropdowns
+// ============================================================
+// EVENT HANDLERS
+// ============================================================
 function handleClickOutside(event) {
   const target = event.target
   const clickedWrapper = target.closest('.autocomplete-wrapper')
@@ -1051,6 +1041,9 @@ function handleClickOutside(event) {
   }
 }
 
+// ============================================================
+// LIFECYCLE HOOKS
+// ============================================================
 onMounted(() => {
   fetchStatistics()
   document.addEventListener('click', handleClickOutside)

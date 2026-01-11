@@ -85,7 +85,7 @@
                   <button
                     v-else
                     class="delete-btn"
-                    @click="deleteToken(token)"
+                    @click="revokeToken(token)"
                     :disabled="processing[token.id]"
                   >
                     Vymazať
@@ -300,10 +300,16 @@ Content-Type: application/json</pre>
 </template>
 
 <script setup>
+// ============================================================
+// IMPORTS & SETUP
+// ============================================================
 import { ref, reactive, onMounted, computed } from 'vue'
 import api from '@/api'
 import PageAlert from '@/components/PageAlert.vue'
 
+// ============================================================
+// ALERT SYSTEM
+// ============================================================
 const alert = reactive({ show: false, type: 'error', message: '', duration: 5000 })
 
 function showAlert(message, type = 'error', duration = 5000) {
@@ -313,6 +319,9 @@ function showAlert(message, type = 'error', duration = 5000) {
   alert.show = true
 }
 
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
 const tokens = ref([])
 const loading = ref(false)
 const showModal = ref(false)
@@ -325,10 +334,16 @@ const form = reactive({
   expires_days: 90,
 })
 
+// ============================================================
+// COMPUTED PROPERTIES
+// ============================================================
 const apiBaseUrl = computed(() => {
   return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
 })
 
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
 function formatDate(dateString) {
   if (!dateString) return '—'
   const date = new Date(dateString)
@@ -374,6 +389,9 @@ function getExpiryDate() {
   return formatDate(date.toISOString())
 }
 
+// ============================================================
+// API CALLS
+// ============================================================
 async function fetchTokens() {
   loading.value = true
   try {
@@ -387,6 +405,9 @@ async function fetchTokens() {
   }
 }
 
+// ============================================================
+// UI FUNCTIONS
+// ============================================================
 function openCreateModal() {
   showModal.value = true
   createdToken.value = null
@@ -465,10 +486,9 @@ async function revokeToken(token) {
   }
 }
 
-async function deleteToken(token) {
-  await revokeToken(token)
-}
-
+// ============================================================
+// LIFECYCLE HOOKS
+// ============================================================
 onMounted(() => {
   fetchTokens()
 })
