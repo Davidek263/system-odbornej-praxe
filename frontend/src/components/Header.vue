@@ -59,6 +59,9 @@
           <RouterLink to="/guarantor-dashboard/tokens" class="nav-item" active-class="active-link">
             Tokeny
           </RouterLink>
+          <RouterLink to="/guarantor-dashboard/statistics" class="nav-item" active-class="active-link">
+            Štatistiky
+          </RouterLink>
           <RouterLink to="/profile" class="nav-item" active-class="active-link">
             Profil
           </RouterLink>
