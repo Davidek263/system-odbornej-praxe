@@ -233,7 +233,7 @@
                 <td class="actions-col">
                   <button class="ghost" @click="viewDetails(internship)">Detail</button>
                   <button class="edit" @click="editInternship(internship)">Upraviť</button>
-                  <button class="status" @click="changeStatus(internship)":disabled="processing[internship.id]">Zmeniť stav</button>
+                  <button class="status" @click="changeStatus(internship)" :disabled="processing.status">Zmeniť stav</button>
                 </td>
               </tr>
             </tbody>
@@ -351,7 +351,7 @@
           <div class="detail-section">
             <h3>Dokumenty ({{ selected.documents?.length || 0 }})</h3>
 
-            <div v-if="!selected.documents || selected.documents.length === 0" class="empty-documents">
+            <div v-if="!selected.documents?.length" class="empty-documents">
               <p>Zatiaľ neboli nahrané žiadne dokumenty.</p>
             </div>
 
@@ -611,6 +611,8 @@
                 <option value="">Vyberte nový stav</option>
                 <option
                   v-for="status in statuses"
+                  :key="status"
+                  :value="status"
                 >
                   {{ status }}
                 </option>
@@ -649,12 +651,19 @@
 </template>
 
 <script setup>
+// ============================================================
+// IMPORTS & SETUP
+// ============================================================
 import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import api from '@/api'
 import PageAlert from '@/components/PageAlert.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+
+// ============================================================
+// ALERT SYSTEM
+// ============================================================
 const alert = reactive({ show: false, type: 'error', message: '', duration: 5000 })
 
 function showAlert(message, type = 'error', duration = 5000) {
@@ -664,7 +673,9 @@ function showAlert(message, type = 'error', duration = 5000) {
   alert.show = true
 }
 
-// State
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
 const internships = ref([])
 const allStudents = ref([])
 const allCompanies = ref([])
@@ -675,14 +686,16 @@ const editMode = ref(false)
 const statusMode = ref(false)
 const showAdvancedFilters = ref(false)
 
-// Edit Modal State
+// Dropdown visibility states
 const showEditStudentDropdown = ref(false)
 const showEditCompanyDropdown = ref(false)
 const showEditYearDropdown = ref(false)
 const showEditSemesterDropdown = ref(false)
 const showEditInternshipTypeDropdown = ref(false)
 
-// Forms
+// ============================================================
+// FORM STATE
+// ============================================================
 const editForm = reactive({
   id: null,
   studentSearch: '',
@@ -707,7 +720,9 @@ const statusForm = reactive({
   notes: ''
 })
 
-// Filters & Sorting
+// ============================================================
+// FILTERS & SORTING
+// ============================================================
 const filters = reactive({
   search: '',
   status: '',
@@ -722,6 +737,7 @@ const sortDirection = ref('asc')
 const pageSize = ref(10)
 const currentPage = ref(1)
 
+// Available internship statuses
 const statuses = [
   'Vytvorená',
   'Potvrdená',
@@ -731,7 +747,9 @@ const statuses = [
   'Zamietnutá'
 ]
 
-// Helper functions
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
 function formatDate(d) {
   if (!d) return '—'
   const dt = new Date(d)
@@ -823,6 +841,9 @@ function timesheetBadge(internship) {
   return badges[status] || 'badge'
 }
 
+// ============================================================
+// UI FUNCTIONS
+// ============================================================
 function toggleAdvancedFilters() {
   showAdvancedFilters.value = !showAdvancedFilters.value
 }
@@ -844,7 +865,9 @@ function toggleSort(column) {
   currentPage.value = 1
 }
 
-// Computed
+// ============================================================
+// COMPUTED PROPERTIES
+// ============================================================
 const academicYears = computed(() => {
   const years = new Set()
   internships.value.forEach(i => {
@@ -1039,7 +1062,9 @@ const paginated = computed(() => {
   return filteredInternships.value.slice(start, start + pageSize.value)
 })
 
-// API calls
+// ============================================================
+// API CALLS
+// ============================================================
 async function fetchInternships() {
   loading.value = true
   try {
@@ -1085,6 +1110,9 @@ function applyFilters() {
   currentPage.value = 1
 }
 
+// ============================================================
+// MODAL FUNCTIONS - DETAIL VIEW
+// ============================================================
 function viewDetails(internship) {
   selected.value = internship
 }
@@ -1093,7 +1121,9 @@ function closeDetailModal() {
   selected.value = null
 }
 
-// Edit internship
+// ============================================================
+// MODAL FUNCTIONS - EDIT
+// ============================================================
 function editInternship(internship) {
   editForm.id = internship.id
 
@@ -1123,7 +1153,9 @@ function editInternship(internship) {
   selected.value = null
 }
 
-// Edit Modal Filter Functions
+// ============================================================
+// DROPDOWN HANDLERS
+// ============================================================
 function filterEditStudents() {
   showEditStudentDropdown.value = true
   if (editForm.selectedStudent && editForm.studentSearch !== `${editForm.selectedStudent.first_name} ${editForm.selectedStudent.last_name}`) {
@@ -1248,7 +1280,6 @@ async function saveInternship() {
   }
 }
 
-// Click outside handler for dropdowns
 function handleClickOutside(event) {
   const target = event.target
   const clickedWrapper = target.closest('.autocomplete-wrapper')
@@ -1260,10 +1291,6 @@ function handleClickOutside(event) {
     showEditYearDropdown.value = false
     showEditSemesterDropdown.value = false
     showEditInternshipTypeDropdown.value = false
-    showExportStudyFieldDropdown.value = false
-    showExportAcademicYearDropdown.value = false
-    showExportCompanyDropdown.value = false
-    showExportStatusDropdown.value = false
     return
   }
 
@@ -1302,7 +1329,9 @@ function handleClickOutside(event) {
   }
 }
 
-// Change status
+// ============================================================
+// MODAL FUNCTIONS - STATUS CHANGE
+// ============================================================
 function changeStatus(internship) {
   statusForm.internship_id = internship.id
   statusForm.currentStatus = internship.current_status?.internship_status_name || ''
@@ -1349,14 +1378,18 @@ async function saveStatus() {
   }
 }
 
-// Pagination
+// ============================================================
+// PAGINATION
+// ============================================================
 function changePage(n) {
   if (n < 1 || n > totalPages.value) return
   currentPage.value = n
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// Mount
+// ============================================================
+// LIFECYCLE HOOKS
+// ============================================================
 onMounted(() => {
   fetchInternships()
   fetchStudents()
@@ -1445,8 +1478,7 @@ onBeforeUnmount(() => {
 }
 
 .refresh-btn,
-.filter-btn,
-.export-btn {
+.filter-btn {
   padding: 10px 18px;
   border: none;
   border-radius: 8px;
@@ -1466,16 +1498,6 @@ onBeforeUnmount(() => {
   transform: translateY(-1px);
 }
 
-.export-btn {
-  background: #3b82f6;
-  color: white;
-}
-
-.export-btn:hover:not(:disabled) {
-  background: #2563eb;
-  transform: translateY(-1px);
-}
-
 .filter-btn {
   background: rgba(255, 255, 255, 0.2);
   color: white;
@@ -1488,85 +1510,9 @@ onBeforeUnmount(() => {
 }
 
 .refresh-btn:disabled,
-.filter-btn:disabled,
-.export-btn:disabled {
+.filter-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-/* Checkbox grid for export modal */
-.checkbox-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px 14px;
-  margin-top: 10px;
-}
-
-.check-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #f9fafb;
-  cursor: pointer;
-  font-weight: 600;
-  color: #374151;
-  transition: all 0.15s;
-}
-
-.check-item:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-}
-
-.check-item input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-}
-
-/* Export Column Item */
-.export-column-item {
-  margin-bottom: 12px;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fafafa;
-  transition: all 0.2s;
-}
-
-.export-column-item:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-}
-
-.filter-input-wrapper {
-  margin-top: 10px;
-  padding-left: 28px;
-  animation: slideDown 0.2s ease;
-}
-
-.filter-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-.filter-input:focus {
-  outline: none;
-  border-color: #42b883;
-  box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1);
-}
-
-@media (max-width: 768px) {
-  .checkbox-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Advanced Filters */
@@ -2456,8 +2402,7 @@ button.close-btn:hover {
   }
 
   .refresh-btn,
-  .filter-btn,
-  .export-btn {
+  .filter-btn {
     width: 100%;
     padding: 12px 18px;
     font-size: 15px;
