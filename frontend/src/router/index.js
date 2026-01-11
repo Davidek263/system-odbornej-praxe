@@ -11,6 +11,7 @@ import GuarantorDashboard from '../views/GuarantorViews/GuarantorDashboard.vue'
 import GuarantorTokens from '@/views/GuarantorViews/GuarantorTokens.vue'
 import PendingCompanies from '@/views/GuarantorViews/PendingCompanies.vue'
 import ProfileView from '../views/ProfileView.vue'
+import EmailChangeSuccess from '../views/EmailChangeSuccess.vue'
 
 const routes = [
   { path: '/', redirect: '/home' },
@@ -26,6 +27,7 @@ const routes = [
   { path: '/guarantor/pending-companies', name: 'pendingcompanies', component: PendingCompanies, meta: { requiresAuth: true, roles: ['guarantor']} },
   { path: '/set-password', name: 'setpassword', component: SetPasswordView },
   { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true }},
+  { path: '/email-changed-success', name: 'email-changed-success', component: EmailChangeSuccess },
 ]
 
 const router = createRouter({
@@ -42,6 +44,12 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
+  // Force logout if logout parameter is present (from email change verification)
+  if (to.query.logout === 'true') {
+    localStorage.clear()
+    sessionStorage.clear()
+  }
+
   const token = localStorage.getItem('token')
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
