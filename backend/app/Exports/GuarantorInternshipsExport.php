@@ -28,10 +28,10 @@ class GuarantorInternshipsExport implements FromCollection, WithHeadings, WithMa
     public function getCsvSettings(): array
     {
         return [
-            'delimiter' => ';',     // ✅ SK Excel
+            'delimiter' => ';',     //  SK Excel
             'enclosure' => '"',
             'line_ending' => PHP_EOL,
-            'use_bom' => true,      // ✅ diakritika
+            'use_bom' => true,      //  diakritika
         ];
     }
 

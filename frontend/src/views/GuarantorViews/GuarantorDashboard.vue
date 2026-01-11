@@ -25,6 +25,17 @@
             <button @click="fetchInternships" :disabled="loading" class="refresh-btn">
               {{ loading ? 'Načítavam...' : 'Aktualizovať' }}
             </button>
+
+            <!-- CSV export button -->
+            <button
+              @click="openExportModal"
+              :disabled="loading || exporting"
+              class="export-btn"
+              title="Stiahnuť CSV report podľa aktuálnych filtrov"
+            >
+              {{ exporting ? 'Exportujem...' : 'Stiahnuť CSV' }}
+            </button>
+
             <button @click="toggleAdvancedFilters" class="filter-btn" :class="{ active: showAdvancedFilters }">
               Filtre {{ showAdvancedFilters ? '▲' : '▼' }}
             </button>
@@ -608,8 +619,8 @@
               <label>Nový stav *</label>
               <select v-model="statusForm.new_status" required>
                 <option value="">Vyberte nový stav</option>
-                <option 
-                  v-for="status in statuses" 
+                <option
+                  v-for="status in statuses"
                 >
                   {{ status }}
                 </option>
@@ -618,15 +629,15 @@
 
             <div class="form-group">
               <label>Poznámka</label>
-              <textarea 
-                v-model="statusForm.notes" 
+              <textarea
+                v-model="statusForm.notes"
                 rows="3"
                 placeholder="Voliteľná poznámka ku zmene stavu..."
               ></textarea>
             </div>
 
             <div class="info-box">
-              <strong>ℹ️ Upozornenie:</strong> 
+              <strong>ℹ️ Upozornenie:</strong>
               Po zmene stavu bude automaticky odoslaná emailová notifikácia študentovi aj firme.
             </div>
           </form>
@@ -634,12 +645,270 @@
 
         <footer class="modal-footer">
           <button class="ghost" @click="closeStatusModal">Zrušiť</button>
-          <button 
-            class="approve" 
-            @click="saveStatus" 
+          <button
+            class="approve"
+            @click="saveStatus"
             :disabled="processing.status || !statusForm.new_status"
           >
             {{ processing.status ? 'Ukladám...' : 'Zmeniť stav' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- CSV Export Modal -->
+    <div v-if="exportModal" class="modal-backdrop" @click.self="closeExportModal">
+      <div class="modal-card modal-medium">
+        <header class="modal-header">
+          <h2>CSV report – výber stĺpcov a filtrov</h2>
+          <button class="close-btn" @click="closeExportModal">✕</button>
+        </header>
+
+        <div class="modal-body">
+          <div class="detail-section" style="border-bottom:none; padding-bottom:0; margin-bottom:0;">
+            <p style="font-size: 14px; color: #666; margin-bottom: 16px;">Zakliknite stĺpce, ktoré chcete exportovať. Pre každý stĺpec môžete pridať filter.</p>
+
+            <!-- Študijný odbor -->
+            <div class="export-column-item">
+              <label class="check-item">
+                <input type="checkbox" v-model="exportOptions.columns.studyField" />
+                Študijný odbor
+              </label>
+              <div v-if="exportOptions.columns.studyField" class="filter-input-wrapper">
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    v-model="exportOptions.filters.studyField"
+                    @focus="showExportStudyFieldDropdown = true"
+                    placeholder="Filtrovať podľa odboru..."
+                    class="filter-input"
+                    autocomplete="off"
+                  />
+                  <div v-if="showExportStudyFieldDropdown && filteredExportStudyFields.length" class="dropdown">
+                    <div
+                      v-for="field in filteredExportStudyFields"
+                      :key="field"
+                      @click="exportOptions.filters.studyField = field; showExportStudyFieldDropdown = false"
+                      class="dropdown-item"
+                    >
+                      {{ field }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Akademický rok -->
+            <div class="export-column-item">
+              <label class="check-item">
+                <input type="checkbox" v-model="exportOptions.columns.academicYear" />
+                Akademický rok
+              </label>
+              <div v-if="exportOptions.columns.academicYear" class="filter-input-wrapper">
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    v-model="exportOptions.filters.academicYear"
+                    @focus="showExportAcademicYearDropdown = true"
+                    placeholder="Filtrovať podľa roka..."
+                    class="filter-input"
+                    autocomplete="off"
+                  />
+                  <div v-if="showExportAcademicYearDropdown && filteredExportAcademicYears.length" class="dropdown">
+                    <div
+                      v-for="year in filteredExportAcademicYears"
+                      :key="year"
+                      @click="exportOptions.filters.academicYear = year; showExportAcademicYearDropdown = false"
+                      class="dropdown-item"
+                    >
+                      {{ year }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Meno -->
+            <div class="export-column-item">
+              <label class="check-item">
+                <input type="checkbox" v-model="exportOptions.columns.firstName" />
+                Meno
+              </label>
+              <div v-if="exportOptions.columns.firstName" class="filter-input-wrapper">
+                <input
+                  type="text"
+                  v-model="exportOptions.filters.firstName"
+                  placeholder="Filtrovať podľa mena..."
+                  class="filter-input"
+                />
+              </div>
+            </div>
+
+            <!-- Priezvisko -->
+            <div class="export-column-item">
+              <label class="check-item">
+                <input type="checkbox" v-model="exportOptions.columns.lastName" />
+                Priezvisko
+              </label>
+              <div v-if="exportOptions.columns.lastName" class="filter-input-wrapper">
+                <input
+                  type="text"
+                  v-model="exportOptions.filters.lastName"
+                  placeholder="Filtrovať podľa priezviska..."
+                  class="filter-input"
+                />
+              </div>
+            </div>
+
+            <!-- Email -->
+            <div class="export-column-item">
+              <label class="check-item">
+                <input type="checkbox" v-model="exportOptions.columns.email" />
+                Email
+              </label>
+              <div v-if="exportOptions.columns.email" class="filter-input-wrapper">
+                <input
+                  type="text"
+                  v-model="exportOptions.filters.email"
+                  placeholder="Filtrovať podľa emailu..."
+                  class="filter-input"
+                />
+              </div>
+            </div>
+
+            <!-- Študentský email -->
+            <div class="export-column-item">
+              <label class="check-item">
+                <input type="checkbox" v-model="exportOptions.columns.studentEmail" />
+                Študentský email
+              </label>
+              <div v-if="exportOptions.columns.studentEmail" class="filter-input-wrapper">
+                <input
+                  type="text"
+                  v-model="exportOptions.filters.studentEmail"
+                  placeholder="Filtrovať podľa študentského emailu..."
+                  class="filter-input"
+                />
+              </div>
+            </div>
+
+            <!-- Alternatívny email -->
+            <div class="export-column-item">
+              <label class="check-item">
+                <input type="checkbox" v-model="exportOptions.columns.alternativeEmail" />
+                Alternatívny email
+              </label>
+              <div v-if="exportOptions.columns.alternativeEmail" class="filter-input-wrapper">
+                <input
+                  type="text"
+                  v-model="exportOptions.filters.alternativeEmail"
+                  placeholder="Filtrovať podľa alternatívneho emailu..."
+                  class="filter-input"
+                />
+              </div>
+            </div>
+
+            <!-- Firma -->
+            <div class="export-column-item">
+              <label class="check-item">
+                <input type="checkbox" v-model="exportOptions.columns.company" />
+                Firma
+              </label>
+              <div v-if="exportOptions.columns.company" class="filter-input-wrapper">
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    v-model="exportOptions.filters.company"
+                    @focus="showExportCompanyDropdown = true"
+                    placeholder="Filtrovať podľa firmy..."
+                    class="filter-input"
+                    autocomplete="off"
+                  />
+                  <div v-if="showExportCompanyDropdown && filteredExportCompanies.length" class="dropdown">
+                    <div
+                      v-for="company in filteredExportCompanies"
+                      :key="company"
+                      @click="exportOptions.filters.company = company; showExportCompanyDropdown = false"
+                      class="dropdown-item"
+                    >
+                      {{ company }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dátum začiatku -->
+            <div class="export-column-item">
+              <label class="check-item">
+                <input type="checkbox" v-model="exportOptions.columns.dateStart" />
+                Dátum začiatku
+              </label>
+              <div v-if="exportOptions.columns.dateStart" class="filter-input-wrapper">
+                <input
+                  type="date"
+                  v-model="exportOptions.filters.dateStart"
+                  class="filter-input"
+                />
+              </div>
+            </div>
+
+            <!-- Dátum konca -->
+            <div class="export-column-item">
+              <label class="check-item">
+                <input type="checkbox" v-model="exportOptions.columns.dateEnd" />
+                Dátum konca
+              </label>
+              <div v-if="exportOptions.columns.dateEnd" class="filter-input-wrapper">
+                <input
+                  type="date"
+                  v-model="exportOptions.filters.dateEnd"
+                  class="filter-input"
+                />
+              </div>
+            </div>
+
+            <!-- Stav praxe -->
+            <div class="export-column-item">
+              <label class="check-item">
+                <input type="checkbox" v-model="exportOptions.columns.status" />
+                Stav praxe
+              </label>
+              <div v-if="exportOptions.columns.status" class="filter-input-wrapper">
+                <div class="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    v-model="exportOptions.filters.status"
+                    @focus="showExportStatusDropdown = true"
+                    placeholder="Filtrovať podľa stavu..."
+                    class="filter-input"
+                    autocomplete="off"
+                  />
+                  <div v-if="showExportStatusDropdown && filteredExportStatuses.length" class="dropdown">
+                    <div
+                      v-for="status in filteredExportStatuses"
+                      :key="status"
+                      @click="exportOptions.filters.status = status; showExportStatusDropdown = false"
+                      class="dropdown-item"
+                    >
+                      {{ status }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-box" style="margin-top:16px;">
+              <strong>ℹ️ Tip:</strong>
+              Filtry sa aplikujú len na údaje v exporte. Hlavný filter hore platí aj pre export.
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="ghost" @click="closeExportModal">Zrušiť</button>
+          <button class="approve" @click="confirmExport" :disabled="exporting">
+            {{ exporting ? 'Exportujem...' : 'Generovať CSV' }}
           </button>
         </footer>
       </div>
@@ -668,11 +937,50 @@ const internships = ref([])
 const allStudents = ref([])
 const allCompanies = ref([])
 const loading = ref(false)
+const exporting = ref(false)
 const processing = reactive({ edit: false, status: false })
 const selected = ref(null)
 const editMode = ref(false)
 const statusMode = ref(false)
 const showAdvancedFilters = ref(false)
+
+// Export modal state
+const exportModal = ref(false)
+
+const exportOptions = reactive({
+  columns: {
+    studyField: true,
+    academicYear: true,
+    firstName: true,
+    lastName: true,
+    email: true,
+    studentEmail: true,
+    alternativeEmail: true,
+    company: true,
+    dateStart: true,
+    dateEnd: true,
+    status: true,
+  },
+  filters: {
+    studyField: '',
+    academicYear: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    studentEmail: '',
+    alternativeEmail: '',
+    company: '',
+    dateStart: '',
+    dateEnd: '',
+    status: '',
+  }
+})
+
+// Export modal dropdown states
+const showExportStudyFieldDropdown = ref(false)
+const showExportAcademicYearDropdown = ref(false)
+const showExportCompanyDropdown = ref(false)
+const showExportStatusDropdown = ref(false)
 
 // Edit Modal State
 const showEditStudentDropdown = ref(false)
@@ -841,6 +1149,127 @@ function toggleSort(column) {
     sortDirection.value = 'asc'
   }
   currentPage.value = 1
+}
+
+// CSV Export functions
+function openExportModal() {
+  exportModal.value = true
+}
+
+function closeExportModal() {
+  exportModal.value = false
+}
+
+function buildExportPayload() {
+  const columns = Object.entries(exportOptions.columns)
+    .filter(([, v]) => v)
+    .map(([k]) => k)
+
+  // Only include filters that have values
+  const filters = Object.entries(exportOptions.filters)
+    .filter(([, v]) => v && v.trim() !== '')
+    .reduce((acc, [k, v]) => {
+      acc[k] = v
+      return acc
+    }, {})
+
+  return { columns, filters }
+}
+
+async function confirmExport() {
+  const { columns, filters } = buildExportPayload()
+  if (!columns.length) {
+    showAlert('Musíte vybrať aspoň jeden stĺpec.', 'error')
+    return
+  }
+
+  exportModal.value = false
+  await downloadCsv({ columns, filters })
+}
+
+// Helper function to extract filename from Content-Disposition header
+function getFilenameFromHeaders(headers) {
+  const disposition =
+    headers?.['content-disposition'] ||
+    headers?.['Content-Disposition'] ||
+    headers?.get?.('content-disposition') ||
+    headers?.get?.('Content-Disposition')
+
+  if (!disposition) return null
+
+  const utf8Match = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i)
+  if (utf8Match && utf8Match[1]) return decodeURIComponent(utf8Match[1].replace(/"/g, ''))
+
+  const normalMatch = disposition.match(/filename\s*=\s*"?([^"]+)"?/i)
+  if (normalMatch && normalMatch[1]) return normalMatch[1]
+
+  return null
+}
+
+function buildFallbackCsvName() {
+  const pad = (n) => String(n).padStart(2, '0')
+  const d = new Date()
+  const stamp =
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}`
+  return `report_praxe_${stamp}.csv`
+}
+
+async function downloadCsv(customOptions = null) {
+  exporting.value = true
+  try {
+    const payload = {
+      academic_year: filters.academicYear || undefined,
+      status: filters.status || undefined,
+      company: filters.company || undefined,
+      study_field: filters.studyField || undefined,
+      student: filters.student || undefined,
+      search: filters.search || undefined,
+
+      ...(customOptions ? {
+        columns: customOptions.columns,
+        filters: customOptions.filters
+      } : {})
+    }
+
+    const response = await api.post('/guarantor/internships/export', payload, {
+      responseType: 'blob',
+    })
+
+    // Get filename from header, or use fallback
+    let filename = getFilenameFromHeaders(response.headers) || buildFallbackCsvName()
+
+    // Ensure CSV extension
+    filename = filename.replace(/\.xlsx$/i, '.csv')
+    if (!/\.csv$/i.test(filename)) filename = `${filename}.csv`
+
+    // Add BOM for proper diacritics in Excel
+    const bom = '\uFEFF'
+    const blob = new Blob([bom, response.data], { type: 'text/csv;charset=utf-8;' })
+
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+
+    showAlert('CSV report bol úspešne stiahnutý.', 'success', 3000)
+  } catch (err) {
+    console.error(err)
+    showAlert(err.response?.data?.message || 'Nepodarilo sa stiahnuť CSV report.', 'error')
+
+    if (err.response?.status === 401) {
+      setTimeout(() => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        router.push('/login')
+      }, 2000)
+    }
+  } finally {
+    exporting.value = false
+  }
 }
 
 // Computed
@@ -1036,6 +1465,31 @@ const totalPages = computed(() => Math.max(1, Math.ceil(filteredInternships.valu
 const paginated = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   return filteredInternships.value.slice(start, start + pageSize.value)
+})
+
+// Export modal computed filters
+const filteredExportStudyFields = computed(() => {
+  if (!exportOptions.filters.studyField) return studyFields.value
+  const search = exportOptions.filters.studyField.toLowerCase()
+  return studyFields.value.filter(field => field.toLowerCase().includes(search))
+})
+
+const filteredExportAcademicYears = computed(() => {
+  if (!exportOptions.filters.academicYear) return academicYears.value
+  const search = exportOptions.filters.academicYear.toLowerCase()
+  return academicYears.value.filter(year => year.toLowerCase().includes(search))
+})
+
+const filteredExportCompanies = computed(() => {
+  if (!exportOptions.filters.company) return companies.value
+  const search = exportOptions.filters.company.toLowerCase()
+  return companies.value.filter(company => company.toLowerCase().includes(search))
+})
+
+const filteredExportStatuses = computed(() => {
+  if (!exportOptions.filters.status) return statuses
+  const search = exportOptions.filters.status.toLowerCase()
+  return statuses.filter(status => status.toLowerCase().includes(search))
 })
 
 // API calls
@@ -1259,6 +1713,10 @@ function handleClickOutside(event) {
     showEditYearDropdown.value = false
     showEditSemesterDropdown.value = false
     showEditInternshipTypeDropdown.value = false
+    showExportStudyFieldDropdown.value = false
+    showExportAcademicYearDropdown.value = false
+    showExportCompanyDropdown.value = false
+    showExportStatusDropdown.value = false
     return
   }
 
@@ -1440,7 +1898,8 @@ onBeforeUnmount(() => {
 }
 
 .refresh-btn,
-.filter-btn {
+.filter-btn,
+.export-btn {
   padding: 10px 18px;
   border: none;
   border-radius: 8px;
@@ -1460,6 +1919,16 @@ onBeforeUnmount(() => {
   transform: translateY(-1px);
 }
 
+.export-btn {
+  background: #3b82f6;
+  color: white;
+}
+
+.export-btn:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
 .filter-btn {
   background: rgba(255, 255, 255, 0.2);
   color: white;
@@ -1472,9 +1941,85 @@ onBeforeUnmount(() => {
 }
 
 .refresh-btn:disabled,
-.filter-btn:disabled {
+.filter-btn:disabled,
+.export-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Checkbox grid for export modal */
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  margin-top: 10px;
+}
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+  cursor: pointer;
+  font-weight: 600;
+  color: #374151;
+  transition: all 0.15s;
+}
+
+.check-item:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.check-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/* Export Column Item */
+.export-column-item {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+  transition: all 0.2s;
+}
+
+.export-column-item:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.filter-input-wrapper {
+  margin-top: 10px;
+  padding-left: 28px;
+  animation: slideDown 0.2s ease;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #42b883;
+  box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1);
+}
+
+@media (max-width: 768px) {
+  .checkbox-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Advanced Filters */
@@ -1944,6 +2489,12 @@ button.approve:hover:not(:disabled) {
   max-width: 600px;
 }
 
+.modal-card.modal-medium {
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
 @keyframes modalFadeIn {
   from {
     opacity: 0;
@@ -2358,7 +2909,8 @@ button.close-btn:hover {
   }
 
   .refresh-btn,
-  .filter-btn {
+  .filter-btn,
+  .export-btn {
     width: 100%;
     padding: 12px 18px;
     font-size: 15px;

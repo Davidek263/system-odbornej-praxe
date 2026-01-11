@@ -792,6 +792,216 @@ class InternshipController extends Controller
         }
     }
     /**
+     * Export internships to CSV (Guarantor only)
+     * POST /guarantor/internships/export
+     */
+    public function exportGuarantorInternships(Request $request)
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user->hasRole('guarantor')) {
+                return response()->json([
+                    'message' => 'Unauthorized. Only guarantors can export internships.',
+                ], 403);
+            }
+
+            // Build query with filters
+            $query = Internship::with([
+                'student.studyField',
+                'company',
+                'currentStatus',
+            ]);
+
+            // Apply filters
+            if ($request->filled('academic_year')) {
+                $query->where('academic_year', $request->input('academic_year'));
+            }
+
+            if ($request->filled('status')) {
+                $statusName = $request->input('status');
+                $query->whereHas('currentStatus', function ($q) use ($statusName) {
+                    $q->where('internship_status_name', $statusName);
+                });
+            }
+
+            if ($request->filled('company')) {
+                $companyName = $request->input('company');
+                $query->whereHas('company', function ($q) use ($companyName) {
+                    $q->where('company_name', $companyName);
+                });
+            }
+
+            if ($request->filled('study_field')) {
+                $fieldName = $request->input('study_field');
+                $query->whereHas('student.studyField', function ($q) use ($fieldName) {
+                    $q->where('study_field_name', $fieldName);
+                });
+            }
+
+            if ($request->filled('student')) {
+                $needle = mb_strtolower($request->input('student'));
+                $query->whereHas('student', function ($q) use ($needle) {
+                    $q->whereRaw('LOWER(first_name) LIKE ?', ["%{$needle}%"])
+                      ->orWhereRaw('LOWER(last_name) LIKE ?', ["%{$needle}%"]);
+                });
+            }
+
+            if ($request->filled('search')) {
+                $s = mb_strtolower($request->input('search'));
+                $query->where(function ($q) use ($s) {
+                    $q->whereHas('student', function ($qs) use ($s) {
+                        $qs->whereRaw('LOWER(first_name) LIKE ?', ["%{$s}%"])
+                           ->orWhereRaw('LOWER(last_name) LIKE ?', ["%{$s}%"])
+                           ->orWhereRaw('LOWER(email) LIKE ?', ["%{$s}%"])
+                           ->orWhereRaw('LOWER(student_email) LIKE ?', ["%{$s}%"]);
+                    })
+                    ->orWhereHas('company', function ($qc) use ($s) {
+                        $qc->whereRaw('LOWER(company_name) LIKE ?', ["%{$s}%"]);
+                    })
+                    ->orWhereHas('student.studyField', function ($qf) use ($s) {
+                        $qf->whereRaw('LOWER(study_field_name) LIKE ?', ["%{$s}%"])
+                           ->orWhereRaw('LOWER(abbreviation) LIKE ?', ["%{$s}%"]);
+                    })
+                    ->orWhereRaw('LOWER(academic_year) LIKE ?', ["%{$s}%"])
+                    ->orWhereHas('currentStatus', function ($qst) use ($s) {
+                        $qst->whereRaw('LOWER(internship_status_name) LIKE ?', ["%{$s}%"]);
+                    });
+                });
+            }
+
+            // Apply export-specific filters from the export modal
+            $exportFilters = $request->input('filters', []);
+
+            if (!empty($exportFilters['studyField'])) {
+                $query->whereHas('student.studyField', function ($q) use ($exportFilters) {
+                    $q->whereRaw('LOWER(study_field_name) LIKE ?', ['%' . mb_strtolower($exportFilters['studyField']) . '%']);
+                });
+            }
+
+            if (!empty($exportFilters['academicYear'])) {
+                $query->whereRaw('LOWER(academic_year) LIKE ?', ['%' . mb_strtolower($exportFilters['academicYear']) . '%']);
+            }
+
+            if (!empty($exportFilters['firstName'])) {
+                $query->whereHas('student', function ($q) use ($exportFilters) {
+                    $q->whereRaw('LOWER(first_name) LIKE ?', ['%' . mb_strtolower($exportFilters['firstName']) . '%']);
+                });
+            }
+
+            if (!empty($exportFilters['lastName'])) {
+                $query->whereHas('student', function ($q) use ($exportFilters) {
+                    $q->whereRaw('LOWER(last_name) LIKE ?', ['%' . mb_strtolower($exportFilters['lastName']) . '%']);
+                });
+            }
+
+            if (!empty($exportFilters['email'])) {
+                $query->whereHas('student', function ($q) use ($exportFilters) {
+                    $q->whereRaw('LOWER(email) LIKE ?', ['%' . mb_strtolower($exportFilters['email']) . '%']);
+                });
+            }
+
+            if (!empty($exportFilters['studentEmail'])) {
+                $query->whereHas('student', function ($q) use ($exportFilters) {
+                    $q->whereRaw('LOWER(student_email) LIKE ?', ['%' . mb_strtolower($exportFilters['studentEmail']) . '%']);
+                });
+            }
+
+            if (!empty($exportFilters['alternativeEmail'])) {
+                $query->whereHas('student', function ($q) use ($exportFilters) {
+                    $q->whereRaw('LOWER(alternative_email) LIKE ?', ['%' . mb_strtolower($exportFilters['alternativeEmail']) . '%']);
+                });
+            }
+
+            if (!empty($exportFilters['company'])) {
+                $query->whereHas('company', function ($q) use ($exportFilters) {
+                    $q->whereRaw('LOWER(company_name) LIKE ?', ['%' . mb_strtolower($exportFilters['company']) . '%']);
+                });
+            }
+
+            if (!empty($exportFilters['dateStart'])) {
+                $query->where('date_start', '>=', $exportFilters['dateStart']);
+            }
+
+            if (!empty($exportFilters['dateEnd'])) {
+                $query->where('date_end', '<=', $exportFilters['dateEnd']);
+            }
+
+            if (!empty($exportFilters['status'])) {
+                $query->whereHas('currentStatus', function ($q) use ($exportFilters) {
+                    $q->whereRaw('LOWER(internship_status_name) LIKE ?', ['%' . mb_strtolower($exportFilters['status']) . '%']);
+                });
+            }
+
+            $internships = $query->orderBy('created_at', 'desc')->get();
+
+            // Get selected columns
+            $columns = $request->input('columns', []);
+
+            // Column mapping
+            $columnMap = [
+                'studyField' => ['label' => 'Studijny odbor', 'value' => fn($i) => $i->student->studyField->study_field_name ?? '—'],
+                'academicYear' => ['label' => 'Akademicky rok', 'value' => fn($i) => $i->academic_year ?? '—'],
+                'firstName' => ['label' => 'Meno', 'value' => fn($i) => $i->student->first_name ?? '—'],
+                'lastName' => ['label' => 'Priezvisko', 'value' => fn($i) => $i->student->last_name ?? '—'],
+                'email' => ['label' => 'Email', 'value' => fn($i) => $i->student->email ?? '—'],
+                'studentEmail' => ['label' => 'Studentsky email', 'value' => fn($i) => $i->student->student_email ?? '—'],
+                'alternativeEmail' => ['label' => 'Alternativny email', 'value' => fn($i) => $i->student->alternative_email ?? '—'],
+                'company' => ['label' => 'Firma', 'value' => fn($i) => $i->company->company_name ?? '—'],
+                'dateStart' => ['label' => 'Datum zaciatku', 'value' => fn($i) => $i->date_start ?? '—'],
+                'dateEnd' => ['label' => 'Datum konca', 'value' => fn($i) => $i->date_end ?? '—'],
+                'status' => ['label' => 'Stav praxe', 'value' => fn($i) => $i->currentStatus->internship_status_name ?? '—'],
+            ];
+
+            // Generate CSV content
+            $output = fopen('php://temp', 'r+');
+
+            // Add BOM for UTF-8
+            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            // Build headers
+            $headers = [];
+            foreach ($columns as $col) {
+                if (isset($columnMap[$col])) {
+                    $headers[] = $columnMap[$col]['label'];
+                }
+            }
+
+            // Write headers without quotes
+            fwrite($output, implode(';', $headers) . "\n");
+
+            // Write data rows without quotes
+            foreach ($internships as $internship) {
+                $row = [];
+                foreach ($columns as $col) {
+                    if (isset($columnMap[$col])) {
+                        $row[] = ($columnMap[$col]['value'])($internship);
+                    }
+                }
+                fwrite($output, implode(';', $row) . "\n");
+            }
+
+            rewind($output);
+            $csv = stream_get_contents($output);
+            fclose($output);
+
+            // Generate filename
+            $timestamp = now()->format('Y-m-d_H-i');
+            $filename = "report_praxe_{$timestamp}.csv";
+
+            return response($csv, 200)
+                ->header('Content-Type', 'text/csv; charset=UTF-8')
+                ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to export internships.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Get all companies for student (no role check)
      * GET /student/companies
      */
