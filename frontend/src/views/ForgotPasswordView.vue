@@ -38,11 +38,21 @@
   </div>
 </template>
 <script setup>
+// ============================================================
+// IMPORTS & SETUP
+// ============================================================
 import { ref, reactive } from 'vue'
 import axios from 'axios'
 import PageAlert from '@/components/PageAlert.vue'
 import Spinner from '@/components/Spinner.vue'
 
+const api = axios.create({
+  baseURL: 'http://localhost:8000/api',
+})
+
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
 const email = ref('')
 const loading = ref(false)
 
@@ -56,10 +66,9 @@ const alert = reactive({
   message: ''
 })
 
-const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
-})
-
+// ============================================================
+// FUNCTIONS
+// ============================================================
 function showAlert(message, type = 'error') {
   alert.message = message
   alert.type = type

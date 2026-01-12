@@ -25,6 +25,7 @@
             <button @click="fetchInternships" :disabled="loading" class="refresh-btn">
               {{ loading ? 'Načítavam...' : 'Aktualizovať' }}
             </button>
+
             <button @click="toggleAdvancedFilters" class="filter-btn" :class="{ active: showAdvancedFilters }">
               Filtre {{ showAdvancedFilters ? '▲' : '▼' }}
             </button>
@@ -232,7 +233,7 @@
                 <td class="actions-col">
                   <button class="ghost" @click="viewDetails(internship)">Detail</button>
                   <button class="edit" @click="editInternship(internship)">Upraviť</button>
-                  <button class="status" @click="changeStatus(internship)":disabled="processing[internship.id]">Zmeniť stav</button>
+                  <button class="status" @click="changeStatus(internship)" :disabled="processing.status">Zmeniť stav</button>
                 </td>
               </tr>
             </tbody>
@@ -350,7 +351,7 @@
           <div class="detail-section">
             <h3>Dokumenty ({{ selected.documents?.length || 0 }})</h3>
 
-            <div v-if="!selected.documents || selected.documents.length === 0" class="empty-documents">
+            <div v-if="!selected.documents?.length" class="empty-documents">
               <p>Zatiaľ neboli nahrané žiadne dokumenty.</p>
             </div>
 
@@ -608,8 +609,10 @@
               <label>Nový stav *</label>
               <select v-model="statusForm.new_status" required>
                 <option value="">Vyberte nový stav</option>
-                <option 
-                  v-for="status in statuses" 
+                <option
+                  v-for="status in statuses"
+                  :key="status"
+                  :value="status"
                 >
                   {{ status }}
                 </option>
@@ -618,15 +621,15 @@
 
             <div class="form-group">
               <label>Poznámka</label>
-              <textarea 
-                v-model="statusForm.notes" 
+              <textarea
+                v-model="statusForm.notes"
                 rows="3"
                 placeholder="Voliteľná poznámka ku zmene stavu..."
               ></textarea>
             </div>
 
             <div class="info-box">
-              <strong>ℹ️ Upozornenie:</strong> 
+              <strong>ℹ️ Upozornenie:</strong>
               Po zmene stavu bude automaticky odoslaná emailová notifikácia študentovi aj firme.
             </div>
           </form>
@@ -634,9 +637,9 @@
 
         <footer class="modal-footer">
           <button class="ghost" @click="closeStatusModal">Zrušiť</button>
-          <button 
-            class="approve" 
-            @click="saveStatus" 
+          <button
+            class="approve"
+            @click="saveStatus"
             :disabled="processing.status || !statusForm.new_status"
           >
             {{ processing.status ? 'Ukladám...' : 'Zmeniť stav' }}
@@ -648,12 +651,19 @@
 </template>
 
 <script setup>
+// ============================================================
+// IMPORTS & SETUP
+// ============================================================
 import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import api from '@/api'
 import PageAlert from '@/components/PageAlert.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+
+// ============================================================
+// ALERT SYSTEM
+// ============================================================
 const alert = reactive({ show: false, type: 'error', message: '', duration: 5000 })
 
 function showAlert(message, type = 'error', duration = 5000) {
@@ -663,7 +673,9 @@ function showAlert(message, type = 'error', duration = 5000) {
   alert.show = true
 }
 
-// State
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
 const internships = ref([])
 const allStudents = ref([])
 const allCompanies = ref([])
@@ -674,14 +686,16 @@ const editMode = ref(false)
 const statusMode = ref(false)
 const showAdvancedFilters = ref(false)
 
-// Edit Modal State
+// Dropdown visibility states
 const showEditStudentDropdown = ref(false)
 const showEditCompanyDropdown = ref(false)
 const showEditYearDropdown = ref(false)
 const showEditSemesterDropdown = ref(false)
 const showEditInternshipTypeDropdown = ref(false)
 
-// Forms
+// ============================================================
+// FORM STATE
+// ============================================================
 const editForm = reactive({
   id: null,
   studentSearch: '',
@@ -706,7 +720,9 @@ const statusForm = reactive({
   notes: ''
 })
 
-// Filters & Sorting
+// ============================================================
+// FILTERS & SORTING
+// ============================================================
 const filters = reactive({
   search: '',
   status: '',
@@ -721,6 +737,7 @@ const sortDirection = ref('asc')
 const pageSize = ref(10)
 const currentPage = ref(1)
 
+// Available internship statuses
 const statuses = [
   'Vytvorená',
   'Potvrdená',
@@ -730,7 +747,9 @@ const statuses = [
   'Zamietnutá'
 ]
 
-// Helper functions
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
 function formatDate(d) {
   if (!d) return '—'
   const dt = new Date(d)
@@ -822,6 +841,9 @@ function timesheetBadge(internship) {
   return badges[status] || 'badge'
 }
 
+// ============================================================
+// UI FUNCTIONS
+// ============================================================
 function toggleAdvancedFilters() {
   showAdvancedFilters.value = !showAdvancedFilters.value
 }
@@ -843,7 +865,9 @@ function toggleSort(column) {
   currentPage.value = 1
 }
 
-// Computed
+// ============================================================
+// COMPUTED PROPERTIES
+// ============================================================
 const academicYears = computed(() => {
   const years = new Set()
   internships.value.forEach(i => {
@@ -1038,7 +1062,9 @@ const paginated = computed(() => {
   return filteredInternships.value.slice(start, start + pageSize.value)
 })
 
-// API calls
+// ============================================================
+// API CALLS
+// ============================================================
 async function fetchInternships() {
   loading.value = true
   try {
@@ -1084,6 +1110,9 @@ function applyFilters() {
   currentPage.value = 1
 }
 
+// ============================================================
+// MODAL FUNCTIONS - DETAIL VIEW
+// ============================================================
 function viewDetails(internship) {
   selected.value = internship
 }
@@ -1092,7 +1121,9 @@ function closeDetailModal() {
   selected.value = null
 }
 
-// Edit internship
+// ============================================================
+// MODAL FUNCTIONS - EDIT
+// ============================================================
 function editInternship(internship) {
   editForm.id = internship.id
 
@@ -1122,7 +1153,9 @@ function editInternship(internship) {
   selected.value = null
 }
 
-// Edit Modal Filter Functions
+// ============================================================
+// DROPDOWN HANDLERS
+// ============================================================
 function filterEditStudents() {
   showEditStudentDropdown.value = true
   if (editForm.selectedStudent && editForm.studentSearch !== `${editForm.selectedStudent.first_name} ${editForm.selectedStudent.last_name}`) {
@@ -1247,7 +1280,6 @@ async function saveInternship() {
   }
 }
 
-// Click outside handler for dropdowns
 function handleClickOutside(event) {
   const target = event.target
   const clickedWrapper = target.closest('.autocomplete-wrapper')
@@ -1297,7 +1329,9 @@ function handleClickOutside(event) {
   }
 }
 
-// Change status
+// ============================================================
+// MODAL FUNCTIONS - STATUS CHANGE
+// ============================================================
 function changeStatus(internship) {
   statusForm.internship_id = internship.id
   statusForm.currentStatus = internship.current_status?.internship_status_name || ''
@@ -1344,14 +1378,18 @@ async function saveStatus() {
   }
 }
 
-// Pagination
+// ============================================================
+// PAGINATION
+// ============================================================
 function changePage(n) {
   if (n < 1 || n > totalPages.value) return
   currentPage.value = n
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// Mount
+// ============================================================
+// LIFECYCLE HOOKS
+// ============================================================
 onMounted(() => {
   fetchInternships()
   fetchStudents()
@@ -1942,6 +1980,12 @@ button.approve:hover:not(:disabled) {
 
 .modal-card.modal-small {
   max-width: 600px;
+}
+
+.modal-card.modal-medium {
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 @keyframes modalFadeIn {

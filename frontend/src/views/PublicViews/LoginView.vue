@@ -60,6 +60,9 @@
 </template>
 
 <script setup>
+// ============================================================
+// IMPORTS & SETUP
+// ============================================================
 import { reactive, ref, onMounted } from 'vue'
 import api from '@/api'
 import PageAlert from '@/components/PageAlert.vue'
@@ -69,6 +72,9 @@ import { useRouter, useRoute } from 'vue-router'
 const router = useRouter()
 const route = useRoute()
 
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
 const form = reactive({
   email: '',
   password: '',
@@ -77,6 +83,9 @@ const errors = reactive({})
 const alert = reactive({ show: false, type: 'error', message: '' })
 const loading = ref(false)
 
+// ============================================================
+// FUNCTIONS
+// ============================================================
 function showAlert(message, type = 'error') {
   alert.message = message
   alert.type = type

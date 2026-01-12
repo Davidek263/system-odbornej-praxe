@@ -10,6 +10,7 @@ import SetPasswordView from '../views/SetPassword.vue'
 import GuarantorDashboard from '../views/GuarantorViews/GuarantorDashboard.vue'
 import GuarantorTokens from '@/views/GuarantorViews/GuarantorTokens.vue'
 import PendingCompanies from '@/views/GuarantorViews/PendingCompanies.vue'
+import GuarantorStatistics from '@/views/GuarantorViews/GuarantorStatistics.vue'
 import ProfileView from '../views/ProfileView.vue'
 import EmailChangeSuccess from '../views/EmailChangeSuccess.vue'
 
@@ -25,6 +26,7 @@ const routes = [
   { path: '/guarantor-dashboard', name: 'guarantordashboard', component: GuarantorDashboard, meta: { requiresAuth: true, roles: ['guarantor']} },
   { path: '/guarantor-dashboard/tokens', name: 'guarantortokens', component: GuarantorTokens, meta: { requiresAuth: true, roles: ['guarantor']} },
   { path: '/guarantor/pending-companies', name: 'pendingcompanies', component: PendingCompanies, meta: { requiresAuth: true, roles: ['guarantor']} },
+  { path: '/guarantor-dashboard/statistics', name: 'guarantorstatistics', component: GuarantorStatistics, meta: { requiresAuth: true, roles: ['guarantor']} },
   { path: '/set-password', name: 'setpassword', component: SetPasswordView },
   { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true }},
   { path: '/email-changed-success', name: 'email-changed-success', component: EmailChangeSuccess },

@@ -815,6 +815,9 @@
 </template>
 
 <script setup>
+// ============================================================
+// IMPORTS & SETUP
+// ============================================================
 import { reactive, ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import api from '@/api'
 import PageAlert from '@/components/PageAlert.vue'
@@ -822,6 +825,10 @@ import Spinner from '@/components/Spinner.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+
+// ============================================================
+// ALERT SYSTEM
+// ============================================================
 const alert = reactive({ show: false, type: 'error', message: '', duration: 5000 })
 
 function showAlert(message, type = 'error') {
@@ -830,7 +837,9 @@ function showAlert(message, type = 'error') {
   alert.show = true
 }
 
-// State
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
 const internships = ref([])
 const loading = ref(false)
 const selected = ref(null)
@@ -900,7 +909,9 @@ const uploadForm = reactive({
   file: null
 })
 
-// Filters & Sorting
+// ============================================================
+// FILTERS & SORTING
+// ============================================================
 const filters = reactive({
   search: '',
   status: '',
@@ -913,7 +924,9 @@ const sortDirection = ref('asc')
 const pageSize = ref(10)
 const currentPage = ref(1)
 
-// Helper functions
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
 function formatDate(d) {
   if (!d) return '"”'
   const dt = new Date(d)
@@ -1115,7 +1128,9 @@ const filteredEditYears = computed(() => {
   )
 })
 
-// Dashboard Computed
+// ============================================================
+// COMPUTED PROPERTIES
+// ============================================================
 const academicYears = computed(() => {
   const years = new Set()
   internships.value.forEach(i => {
@@ -1530,7 +1545,9 @@ async function submitEditForm() {
   }
 }
 
-// API calls - FIXED: No parameter needed, backend gets student from auth
+// ============================================================
+// API CALLS
+// ============================================================
 async function fetchInternships() {
   loading.value = true
   try {
@@ -1567,6 +1584,9 @@ function applyFilters() {
   currentPage.value = 1
 }
 
+// ============================================================
+// MODAL FUNCTIONS
+// ============================================================
 function viewDetails(internship) {
   selected.value = internship
 }
@@ -1575,7 +1595,9 @@ function closeModal() {
   selected.value = null
 }
 
-// Document Management Functions
+// ============================================================
+// ACTION FUNCTIONS
+// ============================================================
 async function manageDocuments() {
   // Open document modal with list of all internships
   showAlert('Vyberte prax zo zoznamu pre správu dokumentov kliknutím na tlačidlo "Nahrať".', 'info')
@@ -1799,14 +1821,18 @@ async function downloadDohoda(internship) {
   }
 }
 
-// Pagination
+// ============================================================
+// PAGINATION
+// ============================================================
 function changePage(n) {
   if (n < 1 || n > totalPages.value) return
   currentPage.value = n
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// Mount
+// ============================================================
+// LIFECYCLE HOOKS
+// ============================================================
 onMounted(() => {
   fetchInternships()
   fetchCompanies()

@@ -1,5 +1,5 @@
 <template>
-    <div class="profile-page">
+    <div class="profile-page" :style="{ background: backgroundGradient }">
         <PageAlert
             v-if="alert.show"
             :type="alert.type"
@@ -29,35 +29,120 @@
 
             <!-- Profile Information -->
             <div class="profile-body">
-                <div class="section-header">
-                    <h2>Základné informácie</h2>
-                </div>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">Meno</span>
-                        <span class="info-value">{{ user.fullName }}</span>
+                <!-- Student Information -->
+                <template v-if="user.roleName?.toLowerCase() === 'student'">
+                    <div class="section-header">
+                        <h2>Základné informácie</h2>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Email</span>
-                        <span class="info-value">{{ user.email }}</span>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Meno</span>
+                            <span class="info-value">{{ user.fullName }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Email</span>
+                            <span class="info-value">{{ user.email }}</span>
+                        </div>
+                        <div class="info-item" v-if="user.studentEmail">
+                            <span class="info-label">Študentský email</span>
+                            <span class="info-value">{{ user.studentEmail }}</span>
+                        </div>
+                        <div class="info-item" v-if="user.alternativeEmail">
+                            <span class="info-label">Alternatívny email</span>
+                            <span class="info-value">{{ user.alternativeEmail }}</span>
+                        </div>
+                        <div class="info-item" v-if="user.phone">
+                            <span class="info-label">Telefónne číslo</span>
+                            <span class="info-value">{{ user.phone }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Rola</span>
+                            <span class="info-value">{{ user.role }}</span>
+                        </div>
+                        <div class="info-item" v-if="user.studyProgram && user.studyProgram !== '—'">
+                            <span class="info-label">Študijný program</span>
+                            <span class="info-value">{{ user.studyProgram }}</span>
+                        </div>
                     </div>
-                    <div class="info-item" v-if="user.phone">
-                        <span class="info-label">Telefónne číslo</span>
-                        <span class="info-value">{{ user.phone }}</span>
+                </template>
+
+                <!-- Company Information -->
+                <template v-else-if="user.roleName?.toLowerCase() === 'company'">
+                    <div class="section-header">
+                        <h2>Informácie o účte</h2>
                     </div>
-                    <div class="info-item" v-if="user.alternativeEmail">
-                        <span class="info-label">Alternatívny email</span>
-                        <span class="info-value">{{ user.alternativeEmail }}</span>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Meno</span>
+                            <span class="info-value">{{ user.fullName }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Email</span>
+                            <span class="info-value">{{ user.email }}</span>
+                        </div>
+                        <div class="info-item" v-if="user.phone">
+                            <span class="info-label">Telefónne číslo</span>
+                            <span class="info-value">{{ user.phone }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Rola</span>
+                            <span class="info-value">{{ user.role }}</span>
+                        </div>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Rola</span>
-                        <span class="info-value">{{ user.role }}</span>
+
+                    <div class="divider"></div>
+
+                    <div class="section-header">
+                        <h2>Informácie o spoločnosti</h2>
                     </div>
-                    <div class="info-item" v-if="isStudent && user.studyProgram">
-                        <span class="info-label">Študijný program</span>
-                        <span class="info-value">{{ user.studyProgram }}</span>
+                    <div class="info-grid">
+                        <div class="info-item" v-if="user.companyName">
+                            <span class="info-label">Názov spoločnosti</span>
+                            <span class="info-value">{{ user.companyName }}</span>
+                        </div>
+                        <div class="info-item" v-if="user.companyAddress">
+                            <span class="info-label">Adresa</span>
+                            <span class="info-value">{{ user.companyAddress }}</span>
+                        </div>
+                        <div class="info-item" v-if="user.companyCity">
+                            <span class="info-label">Mesto</span>
+                            <span class="info-value">{{ user.companyCity }}</span>
+                        </div>
+                        <div class="info-item" v-if="user.contactPerson">
+                            <span class="info-label">Kontaktná osoba</span>
+                            <span class="info-value">{{ user.contactPerson }}</span>
+                        </div>
+                        <div class="info-item" v-if="user.contactEmail">
+                            <span class="info-label">Kontaktný email</span>
+                            <span class="info-value">{{ user.contactEmail }}</span>
+                        </div>
+                        <div class="info-item" v-if="user.contactPhone">
+                            <span class="info-label">Kontaktný telefón</span>
+                            <span class="info-value">{{ user.contactPhone }}</span>
+                        </div>
                     </div>
-                </div>
+                </template>
+
+                <!-- Guarantor Information (Basic) -->
+                <template v-else>
+                    <div class="section-header">
+                        <h2>Základné informácie</h2>
+                    </div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Meno</span>
+                            <span class="info-value">{{ user.fullName }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Email</span>
+                            <span class="info-value">{{ user.email }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Rola</span>
+                            <span class="info-value">{{ user.role }}</span>
+                        </div>
+                    </div>
+                </template>
             </div>
 
             <div class="divider"></div>
@@ -241,6 +326,9 @@
 </template>
 
 <script setup>
+// ============================================================
+// IMPORTS & SETUP
+// ============================================================
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api'
@@ -249,7 +337,9 @@ import Spinner from '@/components/Spinner.vue'
 
 const router = useRouter()
 
-// State
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
 const loading = ref(false)
 const changePasswordMode = ref(false)
 const alert = reactive({ show: false, type: 'error', message: '' })
@@ -265,11 +355,9 @@ const studentEmailForm = reactive({ student_email: '' })
 const alternativeEmailForm = reactive({ alternative_email: '' })
 const companyEmailForm = reactive({ email: '' })
 
-// načítame usera z localStorage
 const storedUser = localStorage.getItem('user')
 let rawUser = storedUser ? JSON.parse(storedUser) : null
 
-// ak by tam user nebol, pošleme ho pre istotu na login
 if (!rawUser) {
     router.push({ name: 'login' })
 }
@@ -292,7 +380,9 @@ const passwordForm = reactive({
     password_confirmation: ''
 })
 
-// helper na pekné zobrazenie študijného odboru
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
 const formatStudyProgram = () => {
     if (!rawUser) return '—'
 
@@ -318,7 +408,11 @@ const formatStudyProgram = () => {
     return '—'
 }
 
-// namapujeme, čo chceme zobraziť
+// ============================================================
+// COMPUTED PROPERTIES
+// ============================================================
+const userExists = computed(() => !!rawUser)
+
 const user = computed(() => {
     if (!rawUser) {
         return {
@@ -327,7 +421,16 @@ const user = computed(() => {
             phone: '',
             alternativeEmail: '',
             role: '',
-            studyProgram: ''
+            roleName: '',
+            studyProgram: '',
+            studentEmail: '',
+            // Company fields
+            companyName: '',
+            companyAddress: '',
+            companyCity: '',
+            contactPerson: '',
+            contactEmail: '',
+            contactPhone: ''
         }
     }
 
@@ -342,7 +445,31 @@ const user = computed(() => {
         phone: rawUser.phone ?? rawUser.phone_number ?? '',
         alternativeEmail: rawUser.alternative_email ?? rawUser.alternativeEmail ?? '',
         role: rawUser.role_name ?? rawUser.role ?? '—',
-        studyProgram: formatStudyProgram()
+        roleName: rawUser.role_name ?? rawUser.role ?? '',
+        studyProgram: formatStudyProgram(),
+        studentEmail: rawUser.student_email ?? '',
+        // Company fields (from nested company object)
+        companyName: rawUser.company?.company_name ?? '',
+        companyAddress: rawUser.company?.address?.street ?? '',
+        companyCity: rawUser.company?.address?.city ?? '',
+        contactPerson: rawUser.company?.contact_person_name ?? '',
+        contactEmail: rawUser.company?.contact_person_email ?? '',
+        contactPhone: rawUser.company?.contact_person_phone ?? ''
+    }
+})
+
+// Background gradient based on role
+const backgroundGradient = computed(() => {
+    const role = user.value.roleName?.toLowerCase()
+    switch(role) {
+        case 'student':
+            return 'linear-gradient(135deg, #42b883 0%, #2c3e50 100%)'
+        case 'company':
+            return 'linear-gradient(135deg, #76cbec 0%, #607d9b 100%)'
+        case 'guarantor':
+            return 'linear-gradient(135deg, #ffb74d 0%, #ff8a65 100%)'
+        default:
+            return 'linear-gradient(135deg, #42b883 0%, #2c3e50 100%)'
     }
 })
 
@@ -357,7 +484,9 @@ const initials = computed(() => {
     return (first + last).toUpperCase()
 })
 
-// Helper functions
+// ============================================================
+// UI FUNCTIONS
+// ============================================================
 function showAlert(message, type = 'error') {
     alert.message = message
     alert.type = type
