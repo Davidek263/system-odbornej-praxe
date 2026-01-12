@@ -157,7 +157,7 @@
                 <div class="email-section">
                     <div class="section-label">Študentský email (UKF)</div>
                     <div v-if="!editStudentEmailMode" class="email-display">
-                        <span class="email-value">{{ user.email }}</span>
+                        <span class="email-value">{{ user.studentEmail || user.email }}</span>
                         <button type="button" class="btn-edit-inline" @click="enterStudentEmailEditMode">
                             Upraviť
                         </button>
@@ -411,7 +411,6 @@ const formatStudyProgram = () => {
 // ============================================================
 // COMPUTED PROPERTIES
 // ============================================================
-const userExists = computed(() => !!rawUser)
 
 const user = computed(() => {
     if (!rawUser) {
@@ -553,7 +552,7 @@ function changePassword() {
 // Student Email functions
 function enterStudentEmailEditMode() {
     editStudentEmailMode.value = true
-    studentEmailForm.student_email = rawUser.student_email || ''
+    studentEmailForm.student_email = rawUser.student_email || rawUser.email || ''
     clearErrors()
 }
 

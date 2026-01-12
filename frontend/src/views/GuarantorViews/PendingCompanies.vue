@@ -208,30 +208,55 @@ onMounted(() => {
 
 <style scoped>
 .pending-companies-page {
-  padding: 20px;
-  max-width: 1400px;
-  margin: 0 auto;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #ffb74d 0%, #ff8a65 100%);
+  padding: 24px;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+@media (max-width: 768px) {
+  .pending-companies-page {
+    padding: 12px;
+  }
 }
 
 .panel-card {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: fadeIn 0.6s ease;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .panel-header {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: #fff;
+  padding: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #e8e8e8;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .panel-header h1 {
-  font-size: 24px;
-  color: #2c3e50;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #fff;
   margin: 0;
 }
 
@@ -258,7 +283,7 @@ onMounted(() => {
 .no-data {
   text-align: center;
   padding: 60px 20px;
-  color: #666;
+  color: #6b7280;
 }
 
 .no-data p {
@@ -270,6 +295,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
   gap: 24px;
+  padding: 24px;
 }
 
 .company-card {
