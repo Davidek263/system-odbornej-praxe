@@ -1290,6 +1290,8 @@ class InternshipController extends Controller
         }
     }
 
+
+    // Security check 1: Must be using token authentication (not session)
     // ============================================================
     // EXTERNAL API - Defense Marking Integration
     // ============================================================
@@ -1316,10 +1318,9 @@ class InternshipController extends Controller
             ], 403);
         }
 
+        // Validate request data (only optional notes field)
         $validator = Validator::make($request->all(), [
-            'defense_date' => 'required|date',
-            'defense_result' => 'required|string|max:500',
-            'defense_grade' => 'nullable|string|max:10',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         if ($validator->fails()) {
@@ -1353,17 +1354,13 @@ class InternshipController extends Controller
             $internship->current_status_id = $defendedStatus->id;
             $internship->save();
 
+            // Create status change history
             InternshipStatusChange::create([
                 'internship_id' => $internship->id,
                 'internship_status_id' => $defendedStatus->id,
                 'changed_by_user_id' => null,
                 'status_changed_at' => now(),
-                'notes' =>
-                    "Obhájená externým systémom\n" .
-                    "Dátum obhajoby: {$request->defense_date}\n" .
-                    "Výsledok: {$request->defense_result}\n" .
-                    ($request->defense_grade ? "Známka: {$request->defense_grade}\n" : "") .
-                    "API Token ID: " . $request->user()->currentAccessToken()->id,
+                'notes' => $request->notes ?? 'Obhájená externým systémom',
             ]);
 
             // Load relationships for email
@@ -1389,9 +1386,7 @@ class InternshipController extends Controller
                     'internship_id' => $internship->id,
                     'old_status' => 'Schválená',
                     'new_status' => 'Obhájená',
-                    'defense_date' => $request->defense_date,
-                    'defense_result' => $request->defense_result,
-                    'defense_grade' => $request->defense_grade,
+                    'notes' => $request->notes ?? 'Obhájená externým systémom',
                     'changed_at' => now()->toIso8601String(),
                 ],
             ], 200);

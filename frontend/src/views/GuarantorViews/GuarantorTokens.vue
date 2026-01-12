@@ -14,7 +14,7 @@
         <header class="panel-header">
           <div>
             <h1>🔐 Tokeny pre externý systém</h1>
-            <p class="subtitle">Správa API tokenov pre integráciu s externým obhajobovým systémom</p>
+            <p class="subtitle">API tokeny pre integráciu s externým obhajobovým systémom</p>
           </div>
           <button class="create-btn" @click="openCreateModal">
             <span class="icon">+</span>
@@ -25,8 +25,7 @@
         <div class="info-banner">
           <div class="info-icon">ℹ️</div>
           <div class="info-content">
-            <strong>Dôležité:</strong> Token sa zobrazí iba raz pri vytvorení. Uložte si ho na bezpečnom mieste.
-            Pomocou tokenu môže externý systém označiť prax ako obhájenú cez API endpoint.
+            <strong>Token sa zobrazí iba raz pri vytvorení.</strong> Uložte si ho na bezpečnom mieste.
           </div>
         </div>
 
@@ -118,7 +117,7 @@
         </header>
         <div class="docs-content">
           <div class="endpoint-section">
-            <h3>Endpoint pre externý systém</h3>
+            <h3>API Endpoint</h3>
             
             <div class="endpoint-box">
               <span class="method">POST</span>
@@ -129,43 +128,41 @@
               Zmení stav praxe zo <strong>"Schválená"</strong> na <strong>"Obhájená"</strong>.
             </p>
 
-            <h4>Hlavičky:</h4>
-            <pre class="code-block">Authorization: Bearer YOUR_API_TOKEN
-Content-Type: application/json</pre>
+            <h4>Autentifikácia:</h4>
+            <pre class="code-block">Authorization: Bearer YOUR_API_TOKEN</pre>
 
-            <h4>Request Body:</h4>
+            <h4>Request body (voliteľné):</h4>
             <pre class="code-block">{
-  "defense_date": "2024-06-15",
-  "defense_result": "Úspešne obhájené",
-  "defense_grade": "A"
+  "notes": "Poznámka k obhajobe (max 500 znakov)"
 }</pre>
 
-            <h4>Úspešná odpoveď:</h4>
+            <h4>Príklady použitia:</h4>
+            
+            <pre class="code-block"># Bez poznámky
+curl -X POST {{ apiBaseUrl }}/external/mark-defended/123 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# S poznámkou
+curl -X POST {{ apiBaseUrl }}/external/mark-defended/123 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"notes": "Obhájené s hodnotením A"}'</pre>
+
+            <h4>Odpoveď:</h4>
             <pre class="code-block">{
   "success": true,
-  "message": "Internship successfully marked as defended.",
   "data": {
     "internship_id": 123,
-    "new_status": "Obhájená"
+    "old_status": "Schválená",
+    "new_status": "Obhájená",
+    "changed_at": "2024-06-15T14:30:00Z"
   }
 }</pre>
 
-            <h4>Príklad cURL:</h4>
-            <pre class="code-block">curl -X POST {{ apiBaseUrl }}/external/mark-defended/123 \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "defense_date": "2024-06-15",
-    "defense_result": "Úspešne obhájené",
-    "defense_grade": "A"
-  }'</pre>
-
-            <h4>Požiadavky:</h4>
+            <h4>Podmienky:</h4>
             <ul class="requirements-list">
               <li>Prax musí byť v stave <strong>"Schválená"</strong></li>
               <li>Token musí mať oprávnenie <code>internship:defend</code></li>
-              <li>Všetky polia <code>defense_date</code> a <code>defense_result</code> sú povinné</li>
-              <li>V produkčnom prostredí používajte HTTPS</li>
             </ul>
           </div>
         </div>
@@ -187,8 +184,8 @@ Content-Type: application/json</pre>
             <h3>Token bol úspešne vytvorený!</h3>
             
             <div class="warning-box">
-              <strong>⚠️ Dôležité upozornenie:</strong>
-              <p>Tento token sa zobrazí iba raz. Uložte si ho na bezpečnom mieste!</p>
+              <strong>⚠️ Dôležité:</strong>
+              <p>Token sa zobrazí iba raz. Uložte si ho teraz!</p>
             </div>
 
             <div class="token-display">
@@ -242,7 +239,7 @@ Content-Type: application/json</pre>
                   </span>
                 </label>
               </div>
-              <p class="help-text">Vyberte aspoň jedno oprávnenie pre token.</p>
+              <p class="help-text">Vyberte aspoň jedno oprávnenie.</p>
             </div>
 
             <div class="form-group">
@@ -261,11 +258,9 @@ Content-Type: application/json</pre>
             <div class="security-notice">
               <div class="notice-icon">🔒</div>
               <div class="notice-content">
-                <strong>Bezpečnostné odporúčania:</strong>
+                <strong>Bezpečnosť tokenu:</strong>
                 <ul>
-                  <li>Nikdy nezdieľajte token verejne</li>
-                  <li>Uložte token na bezpečnom mieste (napr. password manager)</li>
-                  <li>Používajte HTTPS pre všetky API volania</li>
+                  <li>Nikdy token nezdieľajte verejne</li>
                   <li>Pri kompromitácii okamžite zrušte token</li>
                 </ul>
               </div>
