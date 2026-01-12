@@ -184,8 +184,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/external-system-tokens', [ExternalSystemTokenController::class, 'index']);
         Route::post('/external-system-tokens', [ExternalSystemTokenController::class, 'store']);
         Route::delete('/external-system-tokens/{id}', [ExternalSystemTokenController::class, 'destroy']);
+
+        // CSV Export
+        Route::post('/internships/export', [InternshipController::class, 'exportGuarantorInternships']);
     });
-    
+
     // Legacy route (kept for backwards compatibility)
     Route::prefix('guarantor-internships')->group(function () {
         Route::get('/', [InternshipController::class, 'getGuarantorInternships']);

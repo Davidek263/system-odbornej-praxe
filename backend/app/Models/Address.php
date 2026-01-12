@@ -5,11 +5,32 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Address Model
+ *
+ * Represents a physical address that can be associated with users and companies.
+ * Stores complete address information including street, city, postal code, and country.
+ *
+ * Key Relationships:
+ * - Has many Users (users can have addresses)
+ * - Has many Companies (companies must have addresses)
+ *
+ * Important Attributes:
+ * - street: Street name
+ * - street_number: Building/house number
+ * - city: City name
+ * - postal_code: Postal/ZIP code
+ * - country: Country name
+ */
 class Address extends Model
 {
     use HasFactory;
 
     protected $table = 'address';
+
+    // ============================================================
+    // FILLABLE ATTRIBUTES
+    // ============================================================
 
     protected $fillable = [
         'street',
@@ -19,23 +40,42 @@ class Address extends Model
         'country',
     ];
 
+    // ============================================================
+    // CASTS
+    // ============================================================
+
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
 
-    // Relationships
+    // ============================================================
+    // RELATIONSHIPS
+    // ============================================================
+
+    /**
+     * Get all users associated with this address.
+     */
     public function users()
     {
         return $this->hasMany(User::class, 'address_id', 'id');
     }
 
+    /**
+     * Get all companies associated with this address.
+     */
     public function companies()
     {
         return $this->hasMany(Company::class, 'address_id', 'id');
     }
 
-    // Helper method to get full address as string
+    // ============================================================
+    // ACCESSORS
+    // ============================================================
+
+    /**
+     * Get the full address as a formatted string.
+     */
     public function getFullAddressAttribute()
     {
         return trim(sprintf(
