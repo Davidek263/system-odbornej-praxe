@@ -1314,7 +1314,8 @@ onBeforeUnmount(() => {
 .modal-card.modal-medium {
   max-width: 800px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes modalFadeIn {
@@ -1335,6 +1336,7 @@ onBeforeUnmount(() => {
   padding: 20px 24px;
   border-bottom: 1px solid #e5e7eb;
   background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -1366,8 +1368,9 @@ onBeforeUnmount(() => {
 
 .modal-body {
   padding: 24px;
-  max-height: calc(90vh - 140px);
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .detail-section {
@@ -1485,6 +1488,7 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   gap: 12px;
   background: #f9fafb;
+  flex-shrink: 0;
 }
 
 .ghost,

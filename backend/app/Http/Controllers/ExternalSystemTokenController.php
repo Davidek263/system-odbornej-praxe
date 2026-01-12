@@ -2,12 +2,24 @@
 
 namespace App\Http\Controllers;
 
+// ============================================================
+// IMPORTS
+// ============================================================
 use Illuminate\Http\Request;
 use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Support\Facades\Validator;
 
+/**
+ * External System Token Controller
+ *
+ * Manages API tokens for external systems (e.g., IS STAG integration).
+ * Allows guarantors to create, view, and revoke tokens with specific abilities.
+ */
 class ExternalSystemTokenController extends Controller
 {
+    // ======================================
+    // GET ALL EXTERNAL TOKENS
+    // ======================================
     /**
      * Get all external system tokens for the guarantor
      * GET /guarantor/external-system-tokens
@@ -47,6 +59,9 @@ class ExternalSystemTokenController extends Controller
         ], 200);
     }
 
+    // ======================================
+    // CREATE NEW EXTERNAL TOKEN
+    // ======================================
     /**
      * Create new external system token
      * POST /guarantor/external-system-tokens
@@ -99,6 +114,9 @@ class ExternalSystemTokenController extends Controller
         ], 201);
     }
 
+    // ======================================
+    // REVOKE EXTERNAL TOKEN
+    // ======================================
     /**
      * Revoke (delete) external system token
      * DELETE /guarantor/external-system-tokens/{id}

@@ -2,157 +2,62 @@
 
 namespace App\Http\Controllers;
 
+// ============================================================
+// IMPORTS
+// ============================================================
+
+use App\Models\Company;
+use App\Models\Document;
 use App\Models\Internship;
 use App\Models\InternshipStatus;
 use App\Models\InternshipStatusChange;
-use App\Models\Document;
 use App\Models\TimesheetStatus;
 use App\Models\TimesheetStatusHistory;
+use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Barryvdh\DomPDF\Facade\Pdf;
 
+/**
+ * InternshipController
+ *
+ * Manages internship lifecycle operations including:
+ * - Student internship creation and management
+ * - Company internship confirmations and rejections
+ * - Guarantor oversight and status management
+ * - Timesheet approval/rejection workflows
+ * - PDF document generation (Dohoda)
+ * - CSV export functionality for reporting
+ * - External API integration for defense marking
+ *
+ * Supports three primary user roles:
+ * - Student: Create, view, and edit own internships
+ * - Company: View, confirm, reject internships and timesheets
+ * - Guarantor: Full oversight, status changes, and reporting
+ */
 class InternshipController extends Controller
 {
-    /**
-     * Generate Dohoda PDF for an internship
-     * GET /internships/{id}/generate-dohoda
-     */
-    public function generateDohoda($id)
-    {
-        try {
-            $internship = Internship::with([
-                'student.studyField',
-                'student.address',
-                'company.address',
-            ])->findOrFail($id);
-
-            // Check if user has permission
-            $user = auth()->user();
-            
-            if ($user->hasRole('student') && $internship->users_id !== $user->id) {
-                return response()->json([
-                    'message' => 'Unauthorized to generate Dohoda for this internship.',
-                ], 403);
-            }
-
-            // Prepare data for the PDF
-            $data = [
-                'internship' => $internship,
-                'student' => $internship->student,
-                'company' => $internship->company,
-            ];
-
-            // Generate PDF
-            $pdf = Pdf::loadView('pdfs.dohoda-template', $data);
-            
-            // Set paper size and orientation
-            $pdf->setPaper('A4', 'portrait');
-            
-            // Generate filename
-            $filename = 'Dohoda_' 
-                . str_replace(' ', '_', $internship->student->last_name) 
-                . '_' 
-                . str_replace(' ', '_', $internship->company->company_name) 
-                . '_' 
-                . $internship->academic_year 
-                . '.pdf';
-            
-            $filename = preg_replace('/[^A-Za-z0-9_\-\.]/', '', $filename);
-
-            // Return PDF as download
-            return $pdf->download($filename);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to generate Dohoda PDF.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
+    // ============================================================
+    // STUDENT METHODS - Internship Creation & Management
+    // ============================================================
 
     /**
-     * Get all internships for a specific company
-     * Used by company dashboard
+     * Create new internship (Student creates internship)
+     * POST /internships
      */
-    public function getCompanyInternships($companyId)
-    {
-        try {
-            $internships = Internship::with([
-                'student.studyField',
-                'student.address',
-                'student.role',
-                'currentStatus',
-                'statusHistory.status',
-                'statusHistory.changedByUser',
-                'documents.documentType',
-                'documents.timesheetStatusHistory.status',
-                'documents.timesheetStatusHistory.changedByUser',
-                'company'
-            ])
-            ->where('company_id', $companyId)
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-            return response()->json([
-                'internships' => $internships,
-                'total' => $internships->count(),
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to fetch internships.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Get single internship details
-     */
-    public function getInternship($id)
-    {
-        try {
-            $internship = Internship::with([
-                'student.studyField',
-                'student.address',
-                'student.role',
-                'currentStatus',
-                'statusHistory.status',
-                'statusHistory.changedByUser',
-                'documents.documentType',
-                'company.address'
-            ])->findOrFail($id);
-
-            // Check if user has permission to view this internship
-            $user = auth()->user();
-            
-            if ($user->hasRole('company') && $internship->company_id !== $user->company_id) {
-                return response()->json([
-                    'message' => 'Unauthorized to view this internship.',
-                ], 403);
-            }
-
-            return response()->json([
-                'internship' => $internship,
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to fetch internship.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Company confirms internship (Vytvorená -> Potvrdená)
-     */
-    public function confirmInternship(Request $request, $id)
+    public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'notes' => 'nullable|string|max:500',
+            'company_id' => 'required|exists:company,id',
+            'academic_year' => [
+                'required',
+                'regex:/^\d{4}\/\d{4}$/',
+            ],
+            'semester' => 'required|integer|in:1,2',
+            'internship_type' => 'required|in:prax,brigada',
+            'date_start' => 'required|date',
+            'date_end' => 'required|date|after:date_start',
         ]);
 
         if ($validator->fails()) {
@@ -165,69 +70,78 @@ class InternshipController extends Controller
         try {
             DB::beginTransaction();
 
-            $internship = Internship::with('currentStatus', 'student', 'company')->findOrFail($id);
-            
-            // Check if user has permission
             $user = auth()->user();
-            if ($user->hasRole('company') && $internship->company_id !== $user->company_id) {
+
+            if (!$user->hasRole('student')) {
                 return response()->json([
-                    'message' => 'Unauthorized to confirm this internship.',
+                    'message' => 'Only students can create internships.',
                 ], 403);
             }
 
-            // Check if internship is in correct state
-            if ($internship->currentStatus->internship_status_name !== 'Vytvorená') {
-                return response()->json([
-                    'message' => 'Internship cannot be confirmed in its current state.',
-                    'current_status' => $internship->currentStatus->internship_status_name,
-                ], 400);
+            $createdStatus = InternshipStatus::where('internship_status_name', 'Vytvorená')->first();
+
+            if (!$createdStatus) {
+                throw new \Exception('Internship status "Vytvorená" not found in database.');
             }
 
-            // Get "Potvrdená" status
-            $confirmedStatus = InternshipStatus::where('internship_status_name', 'Potvrdená')->first();
-            
-            if (!$confirmedStatus) {
-                throw new \Exception('Potvrdená status not found in database.');
-            }
-
-            // Update internship status
-            $internship->current_status_id = $confirmedStatus->id;
-            $internship->save();
-
-            // Create status change history
-            InternshipStatusChange::create([
-                'internship_id' => $internship->id,
-                'internship_status_id' => $confirmedStatus->id,
-                'changed_by_user_id' => $user->id,
-                'status_changed_at' => now(),
-                'notes' => $request->notes ?? 'Potvrdené firmou',
+            $internship = Internship::create([
+                'users_id' => $user->id,
+                'company_id' => $request->company_id,
+                'academic_year' => $request->academic_year,
+                'semester' => $request->semester,
+                'internship_type' => $request->internship_type,
+                'date_start' => $request->date_start,
+                'date_end' => $request->date_end,
+                'current_status_id' => $createdStatus->id,
             ]);
 
-            // TODO: Send email notification to student and guarantor
+            DB::table('internship_status_change')->insert([
+                'internship_id' => $internship->id,
+                'internship_status_id' => $createdStatus->id,
+                'changed_by_user_id' => $user->id,
+                'status_changed_at' => now(),
+                'notes' => 'Prax vytvorená študentom',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Internship confirmed successfully.',
-                'internship' => $internship->load('currentStatus'),
-            ], 200);
+                'message' => 'Prax bola úspešne vytvorená.',
+                'internship' => $internship->load([
+                    'company.address',
+                    'currentStatus',
+                    'student',
+                ]),
+            ], 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
-                'message' => 'Failed to confirm internship.',
+                'message' => 'Nepodarilo sa vytvoriť prax.',
                 'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Company rejects internship (Vytvorená -> Zamietnutá)
+     * Update internship (Student can edit only in "Vytvorená" status)
+     * PUT /internships/{id}
      */
-    public function rejectInternship(Request $request, $id)
+    public function updateStudentInternship(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'notes' => 'nullable|string|max:500',
+            'company_id' => 'required|exists:company,id',
+            'academic_year' => [
+                'required',
+                'regex:/^\d{4}\/\d{4}$/',
+            ],
+            'semester' => 'required|integer|in:1,2',
+            'internship_type' => 'required|in:prax,brigada',
+            'date_start' => 'required|date',
+            'date_end' => 'required|date|after:date_start',
         ]);
 
         if ($validator->fails()) {
@@ -240,64 +154,77 @@ class InternshipController extends Controller
         try {
             DB::beginTransaction();
 
-            $internship = Internship::with('currentStatus', 'student', 'company')->findOrFail($id);
-            
-            // Check if user has permission
             $user = auth()->user();
-            if ($user->hasRole('company') && $internship->company_id !== $user->company_id) {
+
+            if (!$user->hasRole('student')) {
                 return response()->json([
-                    'message' => 'Unauthorized to reject this internship.',
+                    'message' => 'Only students can edit internships.',
                 ], 403);
             }
 
-            // Check if internship is in correct state
+            $internship = Internship::find($id);
+
+            if (!$internship) {
+                return response()->json([
+                    'message' => 'Internship not found.',
+                ], 404);
+            }
+
+            if ($internship->users_id !== $user->id) {
+                return response()->json([
+                    'message' => 'You can only edit your own internships.',
+                ], 403);
+            }
+
             if ($internship->currentStatus->internship_status_name !== 'Vytvorená') {
                 return response()->json([
-                    'message' => 'Internship cannot be rejected in its current state.',
-                    'current_status' => $internship->currentStatus->internship_status_name,
-                ], 400);
+                    'message' => 'Môžete upravovať iba praxe v stave "Vytvorená".',
+                ], 403);
             }
 
-            // Get "Zamietnutá" status
-            $rejectedStatus = InternshipStatus::where('internship_status_name', 'Zamietnutá')->first();
-            
-            if (!$rejectedStatus) {
-                throw new \Exception('Zamietnutá status not found in database.');
-            }
-
-            // Update internship status
-            $internship->current_status_id = $rejectedStatus->id;
-            $internship->save();
-
-            // Create status change history
-            InternshipStatusChange::create([
-                'internship_id' => $internship->id,
-                'internship_status_id' => $rejectedStatus->id,
-                'changed_by_user_id' => $user->id,
-                'status_changed_at' => now(),
-                'notes' => $request->notes ?? 'Zamietnuté firmou',
+            $internship->update([
+                'company_id' => $request->company_id,
+                'academic_year' => $request->academic_year,
+                'semester' => $request->semester,
+                'internship_type' => $request->internship_type,
+                'date_start' => $request->date_start,
+                'date_end' => $request->date_end,
             ]);
 
-            // TODO: Send email notification to student
+            DB::table('internship_status_change')->insert([
+                'internship_id' => $internship->id,
+                'internship_status_id' => $internship->current_status_id,
+                'changed_by_user_id' => $user->id,
+                'status_changed_at' => now(),
+                'notes' => 'Prax upravená študentom',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Internship rejected successfully.',
-                'internship' => $internship->load('currentStatus'),
+                'message' => 'Prax bola úspešne upravená.',
+                'internship' => $internship->load([
+                    'company.address',
+                    'currentStatus',
+                    'student',
+                ]),
             ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
-                'message' => 'Failed to reject internship.',
+                'message' => 'Failed to update internship.',
                 'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Get all internships for student
+     * Get all internships for logged-in student
+     * GET /student/internships
      */
     public function getStudentInternships()
     {
@@ -337,7 +264,392 @@ class InternshipController extends Controller
     }
 
     /**
+     * Get all companies for student (no role check)
+     * GET /student/companies
+     */
+    public function getCompaniesForStudent()
+    {
+        try {
+            $companies = Company::with('address')
+                ->orderBy('company_name')
+                ->get(['id', 'company_name', 'address_id', 'contact_person_name', 'contact_person_email', 'contact_person_phone']);
+
+            return response()->json([
+                'companies' => $companies,
+                'total' => $companies->count(),
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to fetch companies.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // ============================================================
+    // COMPANY METHODS - Internship & Timesheet Management
+    // ============================================================
+
+    /**
+     * Get all internships for a specific company
+     * GET /company/{companyId}/internships
+     */
+    public function getCompanyInternships($companyId)
+    {
+        try {
+            $internships = Internship::with([
+                'student.studyField',
+                'student.address',
+                'student.role',
+                'currentStatus',
+                'statusHistory.status',
+                'statusHistory.changedByUser',
+                'documents.documentType',
+                'documents.timesheetStatusHistory.status',
+                'documents.timesheetStatusHistory.changedByUser',
+                'company'
+            ])
+            ->where('company_id', $companyId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+            return response()->json([
+                'internships' => $internships,
+                'total' => $internships->count(),
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to fetch internships.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get single internship details
+     * GET /internships/{id}
+     */
+    public function getInternship($id)
+    {
+        try {
+            $internship = Internship::with([
+                'student.studyField',
+                'student.address',
+                'student.role',
+                'currentStatus',
+                'statusHistory.status',
+                'statusHistory.changedByUser',
+                'documents.documentType',
+                'company.address'
+            ])->findOrFail($id);
+
+            $user = auth()->user();
+
+            if ($user->hasRole('company') && $internship->company_id !== $user->company_id) {
+                return response()->json([
+                    'message' => 'Unauthorized to view this internship.',
+                ], 403);
+            }
+
+            return response()->json([
+                'internship' => $internship,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to fetch internship.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Company confirms internship (Vytvorená -> Potvrdená)
+     * POST /internships/{id}/confirm
+     */
+    public function confirmInternship(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $internship = Internship::with('currentStatus', 'student', 'company')->findOrFail($id);
+
+            $user = auth()->user();
+            if ($user->hasRole('company') && $internship->company_id !== $user->company_id) {
+                return response()->json([
+                    'message' => 'Unauthorized to confirm this internship.',
+                ], 403);
+            }
+
+            if ($internship->currentStatus->internship_status_name !== 'Vytvorená') {
+                return response()->json([
+                    'message' => 'Internship cannot be confirmed in its current state.',
+                    'current_status' => $internship->currentStatus->internship_status_name,
+                ], 400);
+            }
+
+            $confirmedStatus = InternshipStatus::where('internship_status_name', 'Potvrdená')->first();
+
+            if (!$confirmedStatus) {
+                throw new \Exception('Potvrdená status not found in database.');
+            }
+
+            $internship->current_status_id = $confirmedStatus->id;
+            $internship->save();
+
+            InternshipStatusChange::create([
+                'internship_id' => $internship->id,
+                'internship_status_id' => $confirmedStatus->id,
+                'changed_by_user_id' => $user->id,
+                'status_changed_at' => now(),
+                'notes' => $request->notes ?? 'Potvrdené firmou',
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Internship confirmed successfully.',
+                'internship' => $internship->load('currentStatus'),
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to confirm internship.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Company rejects internship (Vytvorená -> Zamietnutá)
+     * POST /internships/{id}/reject
+     */
+    public function rejectInternship(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $internship = Internship::with('currentStatus', 'student', 'company')->findOrFail($id);
+
+            $user = auth()->user();
+            if ($user->hasRole('company') && $internship->company_id !== $user->company_id) {
+                return response()->json([
+                    'message' => 'Unauthorized to reject this internship.',
+                ], 403);
+            }
+
+            if ($internship->currentStatus->internship_status_name !== 'Vytvorená') {
+                return response()->json([
+                    'message' => 'Internship cannot be rejected in its current state.',
+                    'current_status' => $internship->currentStatus->internship_status_name,
+                ], 400);
+            }
+
+            $rejectedStatus = InternshipStatus::where('internship_status_name', 'Zamietnutá')->first();
+
+            if (!$rejectedStatus) {
+                throw new \Exception('Zamietnutá status not found in database.');
+            }
+
+            $internship->current_status_id = $rejectedStatus->id;
+            $internship->save();
+
+            InternshipStatusChange::create([
+                'internship_id' => $internship->id,
+                'internship_status_id' => $rejectedStatus->id,
+                'changed_by_user_id' => $user->id,
+                'status_changed_at' => now(),
+                'notes' => $request->notes ?? 'Zamietnuté firmou',
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Internship rejected successfully.',
+                'internship' => $internship->load('currentStatus'),
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to reject internship.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Company approves timesheet (Nahraný -> Potvrdený)
+     * POST /timesheets/{documentId}/approve
+     */
+    public function approveTimesheet(Request $request, $documentId)
+    {
+        $validator = Validator::make($request->all(), [
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $document = Document::with(['documentType', 'internship.company'])->findOrFail($documentId);
+
+            if ($document->documentType->document_type_name !== 'Výkaz hodín') {
+                return response()->json([
+                    'message' => 'This document is not a timesheet.',
+                ], 400);
+            }
+
+            $user = auth()->user();
+            if ($user->hasRole('company') && $document->internship->company_id !== $user->company_id) {
+                return response()->json([
+                    'message' => 'Unauthorized to approve this timesheet.',
+                ], 403);
+            }
+
+            $approvedStatus = TimesheetStatus::where('timesheet_status_name', 'Potvrdený')->first();
+
+            if (!$approvedStatus) {
+                throw new \Exception('Potvrdený timesheet status not found in database.');
+            }
+
+            TimesheetStatusHistory::create([
+                'documents_id' => $document->id,
+                'timesheet_status_id' => $approvedStatus->id,
+                'changed_by_user_id' => $user->id,
+                'status_changed_at' => now(),
+                'notes' => $request->notes ?? 'Schválené firmou',
+            ]);
+
+            $document->is_verified = true;
+            $document->verified_by_user_id = $user->id;
+            $document->verified_at = now();
+            $document->save();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Timesheet approved successfully.',
+                'document' => $document->load('timesheetStatusHistory.status'),
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to approve timesheet.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Company rejects timesheet (Nahraný/Potvrdený -> Zamietnutý)
+     * POST /timesheets/{documentId}/reject
+     */
+    public function rejectTimesheet(Request $request, $documentId)
+    {
+        $validator = Validator::make($request->all(), [
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $document = Document::with(['documentType', 'internship.company'])->findOrFail($documentId);
+
+            if ($document->documentType->document_type_name !== 'Výkaz hodín') {
+                return response()->json([
+                    'message' => 'This document is not a timesheet.',
+                ], 400);
+            }
+
+            $user = auth()->user();
+            if ($user->hasRole('company') && $document->internship->company_id !== $user->company_id) {
+                return response()->json([
+                    'message' => 'Unauthorized to reject this timesheet.',
+                ], 403);
+            }
+
+            $rejectedStatus = TimesheetStatus::where('timesheet_status_name', 'Zamietnutý')->first();
+
+            if (!$rejectedStatus) {
+                throw new \Exception('Zamietnutý timesheet status not found in database.');
+            }
+
+            TimesheetStatusHistory::create([
+                'documents_id' => $document->id,
+                'timesheet_status_id' => $rejectedStatus->id,
+                'changed_by_user_id' => $user->id,
+                'status_changed_at' => now(),
+                'notes' => $request->notes ?? 'Zamietnuté firmou',
+            ]);
+
+            $document->is_verified = false;
+            $document->verified_by_user_id = null;
+            $document->verified_at = null;
+            $document->save();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Timesheet rejected successfully.',
+                'document' => $document->load('timesheetStatusHistory.status'),
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to reject timesheet.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // ============================================================
+    // GUARANTOR METHODS - Oversight & Management
+    // ============================================================
+
+    /**
      * Get all internships for guarantor with filters
+     * GET /guarantor/internships
      */
     public function getGuarantorInternships(Request $request)
     {
@@ -359,7 +671,6 @@ class InternshipController extends Controller
                 'documents.documentType'
             ]);
 
-            // Apply filters
             if ($request->has('academic_year')) {
                 $query->where('academic_year', $request->academic_year);
             }
@@ -398,162 +709,8 @@ class InternshipController extends Controller
     }
 
     /**
-     * Company approves timesheet (Nahraný -> Potvrdený)
-     * FR-08: Firma môže potvrdiť výkaz
-     */
-    public function approveTimesheet(Request $request, $documentId)
-    {
-        $validator = Validator::make($request->all(), [
-            'notes' => 'nullable|string|max:500',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $document = Document::with(['documentType', 'internship.company'])->findOrFail($documentId);
-            
-            // Check if document is a timesheet
-            if ($document->documentType->document_type_name !== 'Výkaz hodín') {
-                return response()->json([
-                    'message' => 'This document is not a timesheet.',
-                ], 400);
-            }
-
-            // Check if user has permission (must be from the same company)
-            $user = auth()->user();
-            if ($user->hasRole('company') && $document->internship->company_id !== $user->company_id) {
-                return response()->json([
-                    'message' => 'Unauthorized to approve this timesheet.',
-                ], 403);
-            }
-
-            // Get "Potvrdený" timesheet status
-            $approvedStatus = TimesheetStatus::where('timesheet_status_name', 'Potvrdený')->first();
-            
-            if (!$approvedStatus) {
-                throw new \Exception('Potvrdený timesheet status not found in database.');
-            }
-
-            // Create timesheet status history
-            TimesheetStatusHistory::create([
-                'documents_id' => $document->id,
-                'timesheet_status_id' => $approvedStatus->id,
-                'changed_by_user_id' => $user->id,
-                'status_changed_at' => now(),
-                'notes' => $request->notes ?? 'Schválené firmou',
-            ]);
-
-            // Update document verification status
-            $document->is_verified = true;
-            $document->verified_by_user_id = $user->id;
-            $document->verified_at = now();
-            $document->save();
-
-            // TODO: Send email notification to student
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Timesheet approved successfully.',
-                'document' => $document->load('timesheetStatusHistory.status'),
-            ], 200);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Failed to approve timesheet.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Company rejects timesheet (Nahraný/Potvrdený -> Zamietnutý)
-     * FR-08: Firma môže zamietnuť výkaz
-     */
-    public function rejectTimesheet(Request $request, $documentId)
-    {
-        $validator = Validator::make($request->all(), [
-            'notes' => 'nullable|string|max:500',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $document = Document::with(['documentType', 'internship.company'])->findOrFail($documentId);
-            
-            // Check if document is a timesheet
-            if ($document->documentType->document_type_name !== 'Výkaz hodín') {
-                return response()->json([
-                    'message' => 'This document is not a timesheet.',
-                ], 400);
-            }
-
-            // Check if user has permission (must be from the same company)
-            $user = auth()->user();
-            if ($user->hasRole('company') && $document->internship->company_id !== $user->company_id) {
-                return response()->json([
-                    'message' => 'Unauthorized to reject this timesheet.',
-                ], 403);
-            }
-
-            // Get "Zamietnutý" timesheet status
-            $rejectedStatus = TimesheetStatus::where('timesheet_status_name', 'Zamietnutý')->first();
-            
-            if (!$rejectedStatus) {
-                throw new \Exception('Zamietnutý timesheet status not found in database.');
-            }
-
-            // Create timesheet status history
-            TimesheetStatusHistory::create([
-                'documents_id' => $document->id,
-                'timesheet_status_id' => $rejectedStatus->id,
-                'changed_by_user_id' => $user->id,
-                'status_changed_at' => now(),
-                'notes' => $request->notes ?? 'Zamietnuté firmou',
-            ]);
-
-            // Update document verification status
-            $document->is_verified = false;
-            $document->verified_by_user_id = null;
-            $document->verified_at = null;
-            $document->save();
-
-            // TODO: Send email notification to student
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Timesheet rejected successfully.',
-                'document' => $document->load('timesheetStatusHistory.status'),
-            ], 200);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Failed to reject timesheet.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-        /**
      * Update internship (Guarantor only)
-     * Garant môže meniť firmu, študenta, dátumy
+     * PUT /guarantor/internships/{id}
      */
     public function updateInternship(Request $request, $id)
     {
@@ -587,21 +744,11 @@ class InternshipController extends Controller
 
             $internship = Internship::findOrFail($id);
 
-            // Store old values for notification
-            $oldData = [
-                'student' => $internship->student,
-                'company' => $internship->company,
-                'date_start' => $internship->date_start,
-                'date_end' => $internship->date_end,
-            ];
-
-            // Update internship
             $internship->users_id = $request->users_id;
             $internship->company_id = $request->company_id;
             $internship->academic_year = $request->academic_year;
             $internship->semester = $request->semester;
 
-            // Only update internship_type if provided
             if ($request->has('internship_type')) {
                 $internship->internship_type = $request->internship_type;
             }
@@ -610,14 +757,7 @@ class InternshipController extends Controller
             $internship->date_end = $request->date_end;
             $internship->save();
 
-            // Load fresh data with relationships
             $internship->load(['student', 'company', 'currentStatus']);
-
-            // TODO: Send email notifications to:
-            // - Old student (if changed)
-            // - New student (if changed)
-            // - Old company (if changed)
-            // - New company (if changed)
 
             DB::commit();
 
@@ -637,7 +777,7 @@ class InternshipController extends Controller
 
     /**
      * Change internship status (Guarantor only)
-     * Zmena stavu vyvolá emailovú notifikáciu
+     * POST /guarantor/internships/{id}/change-status
      */
     public function changeInternshipStatus(Request $request, $id)
     {
@@ -665,12 +805,11 @@ class InternshipController extends Controller
             DB::beginTransaction();
 
             $internship = Internship::with(['currentStatus', 'student', 'company'])->findOrFail($id);
-            
+
             $oldStatus = $internship->currentStatus->internship_status_name;
 
-            // Get new status
             $newStatus = InternshipStatus::where('internship_status_name', $request->status)->first();
-            
+
             if (!$newStatus) {
                 return response()->json([
                     'message' => 'Invalid status name.',
@@ -678,18 +817,15 @@ class InternshipController extends Controller
                 ], 400);
             }
 
-            // Validate status transition
             if ($newStatus == $oldStatus) {
                 return response()->json([
                     'message' => 'Invalid status transition.',
                 ], 400);
             }
 
-            // Update internship status
             $internship->current_status_id = $newStatus->id;
             $internship->save();
 
-            // Create status change history
             InternshipStatusChange::create([
                 'internship_id' => $internship->id,
                 'internship_status_id' => $newStatus->id,
@@ -698,14 +834,7 @@ class InternshipController extends Controller
                 'notes' => $request->notes ?? "Zmena stavu garantom: {$oldStatus} → {$request->status}",
             ]);
 
-            // Load fresh data
             $internship->load('currentStatus', 'statusHistory.status');
-
-            // TODO: Send email notifications to:
-            // - Student
-            // - Company
-            // Subject: Zmena stavu odbornej praxe
-            // Content: Stav vašej praxe sa zmenil z "{$oldStatus}" na "{$request->status}"
 
             DB::commit();
 
@@ -726,72 +855,6 @@ class InternshipController extends Controller
     }
 
     /**
-     * Get all students (for guarantor dropdown)
-     */
-    public function getAllStudents()
-    {
-        try {
-            $user = auth()->user();
-
-            if (!$user->hasRole('guarantor')) {
-                return response()->json([
-                    'message' => 'Unauthorized.',
-                ], 403);
-            }
-
-            $students = \App\Models\User::with('studyField')
-                ->whereHas('role', function($q) {
-                    $q->where('role_name', 'student');
-                })
-                ->where('active', true)
-                ->orderBy('last_name')
-                ->orderBy('first_name')
-                ->get(['id', 'first_name', 'last_name', 'email', 'student_email', 'study_field_id']);
-
-            return response()->json([
-                'students' => $students,
-                'total' => $students->count(),
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to fetch students.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Get all companies (for guarantor dropdown)
-     */
-    public function getAllCompanies()
-    {
-        try {
-            $user = auth()->user();
-
-            if (!$user->hasRole('guarantor')) {
-                return response()->json([
-                    'message' => 'Unauthorized.',
-                ], 403);
-            }
-
-            $companies = \App\Models\Company::with('address')
-                ->orderBy('company_name')
-                ->get(['id', 'company_name', 'address_id', 'contact_person_name', 'contact_person_email']);
-
-            return response()->json([
-                'companies' => $companies,
-                'total' => $companies->count(),
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to fetch companies.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-    /**
      * Export internships to CSV (Guarantor only)
      * POST /guarantor/internships/export
      */
@@ -806,14 +869,12 @@ class InternshipController extends Controller
                 ], 403);
             }
 
-            // Build query with filters
             $query = Internship::with([
                 'student.studyField',
                 'company',
                 'currentStatus',
             ]);
 
-            // Apply filters
             if ($request->filled('academic_year')) {
                 $query->where('academic_year', $request->input('academic_year'));
             }
@@ -870,7 +931,6 @@ class InternshipController extends Controller
                 });
             }
 
-            // Apply export-specific filters from the export modal
             $exportFilters = $request->input('filters', []);
 
             if (!empty($exportFilters['studyField'])) {
@@ -935,10 +995,8 @@ class InternshipController extends Controller
 
             $internships = $query->orderBy('created_at', 'desc')->get();
 
-            // Get selected columns
             $columns = $request->input('columns', []);
 
-            // Column mapping
             $columnMap = [
                 'studyField' => ['label' => 'Studijny odbor', 'value' => fn($i) => $i->student->studyField->study_field_name ?? '—'],
                 'academicYear' => ['label' => 'Akademicky rok', 'value' => fn($i) => $i->academic_year ?? '—'],
@@ -953,13 +1011,10 @@ class InternshipController extends Controller
                 'status' => ['label' => 'Stav praxe', 'value' => fn($i) => $i->currentStatus->internship_status_name ?? '—'],
             ];
 
-            // Generate CSV content
             $output = fopen('php://temp', 'r+');
 
-            // Add BOM for UTF-8
             fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
-            // Build headers
             $headers = [];
             foreach ($columns as $col) {
                 if (isset($columnMap[$col])) {
@@ -967,10 +1022,8 @@ class InternshipController extends Controller
                 }
             }
 
-            // Write headers without quotes
             fwrite($output, implode(';', $headers) . "\n");
 
-            // Write data rows without quotes
             foreach ($internships as $internship) {
                 $row = [];
                 foreach ($columns as $col) {
@@ -985,7 +1038,6 @@ class InternshipController extends Controller
             $csv = stream_get_contents($output);
             fclose($output);
 
-            // Generate filename
             $timestamp = now()->format('Y-m-d_H-i');
             $filename = "report_praxe_{$timestamp}.csv";
 
@@ -1001,16 +1053,65 @@ class InternshipController extends Controller
         }
     }
 
+    // ============================================================
+    // HELPER METHODS - Lookup Data for Dropdowns
+    // ============================================================
+
     /**
-     * Get all companies for student (no role check)
-     * GET /student/companies
+     * Get all students (for guarantor dropdown)
+     * GET /guarantor/students
      */
-    public function getCompaniesForStudent()
+    public function getAllStudents()
     {
         try {
-            $companies = \App\Models\Company::with('address')
+            $user = auth()->user();
+
+            if (!$user->hasRole('guarantor')) {
+                return response()->json([
+                    'message' => 'Unauthorized.',
+                ], 403);
+            }
+
+            $students = User::with('studyField')
+                ->whereHas('role', function($q) {
+                    $q->where('role_name', 'student');
+                })
+                ->where('active', true)
+                ->orderBy('last_name')
+                ->orderBy('first_name')
+                ->get(['id', 'first_name', 'last_name', 'email', 'student_email', 'study_field_id']);
+
+            return response()->json([
+                'students' => $students,
+                'total' => $students->count(),
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to fetch students.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all companies (for guarantor dropdown)
+     * GET /guarantor/companies
+     */
+    public function getAllCompanies()
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user->hasRole('guarantor')) {
+                return response()->json([
+                    'message' => 'Unauthorized.',
+                ], 403);
+            }
+
+            $companies = Company::with('address')
                 ->orderBy('company_name')
-                ->get(['id', 'company_name', 'address_id', 'contact_person_name', 'contact_person_email', 'contact_person_phone']);
+                ->get(['id', 'company_name', 'address_id', 'contact_person_name', 'contact_person_email']);
 
             return response()->json([
                 'companies' => $companies,
@@ -1025,201 +1126,71 @@ class InternshipController extends Controller
         }
     }
 
+    // ============================================================
+    // PDF GENERATION
+    // ============================================================
+
     /**
-     * Create new internship (Student creates internship)
-     * POST /internships
+     * Generate Dohoda PDF for an internship
+     * GET /internships/{id}/generate-dohoda
      */
-    public function store(Request $request)
+    public function generateDohoda($id)
     {
-        $validator = Validator::make($request->all(), [
-            'company_id' => 'required|exists:company,id',
-            'academic_year' => [
-                'required',
-                'regex:/^\d{4}\/\d{4}$/', // Format: 2024/2025
-            ],
-            'semester' => 'required|integer|in:1,2', // 1 = Winter, 2 = Summer
-            'internship_type' => 'required|in:prax,brigada', // prax = school agreement, brigada = employer agreement
-            'date_start' => 'required|date',
-            'date_end' => 'required|date|after:date_start',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         try {
-            DB::beginTransaction();
+            $internship = Internship::with([
+                'student.studyField',
+                'student.address',
+                'company.address',
+            ])->findOrFail($id);
 
             $user = auth()->user();
-            
-            // Verify user is a student
-            if (!$user->hasRole('student')) {
+
+            if ($user->hasRole('student') && $internship->users_id !== $user->id) {
                 return response()->json([
-                    'message' => 'Only students can create internships.',
+                    'message' => 'Unauthorized to generate Dohoda for this internship.',
                 ], 403);
             }
 
-            // Get "Vytvorená" status (Created)
-            $createdStatus = \App\Models\InternshipStatus::where('internship_status_name', 'Vytvorená')->first();
-            
-            if (!$createdStatus) {
-                throw new \Exception('Internship status "Vytvorená" not found in database.');
-            }
+            $data = [
+                'internship' => $internship,
+                'student' => $internship->student,
+                'company' => $internship->company,
+            ];
 
-            // Create internship
-            $internship = \App\Models\Internship::create([
-                'users_id' => $user->id,
-                'company_id' => $request->company_id,
-                'academic_year' => $request->academic_year,
-                'semester' => $request->semester,
-                'internship_type' => $request->internship_type,
-                'date_start' => $request->date_start,
-                'date_end' => $request->date_end,
-                'current_status_id' => $createdStatus->id,
-            ]);
+            $pdf = Pdf::loadView('pdfs.dohoda-template', $data);
 
-            // Create initial status change history
-            DB::table('internship_status_change')->insert([
-                'internship_id' => $internship->id,
-                'internship_status_id' => $createdStatus->id,
-                'changed_by_user_id' => $user->id,
-                'status_changed_at' => now(),
-                'notes' => 'Prax vytvorená študentom',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            $pdf->setPaper('A4', 'portrait');
 
-            // TODO: Generate "Dohoda o odbornej praxi" PDF (FR-05)
-            // $this->generateInternshipAgreement($internship);
+            $filename = 'Dohoda_'
+                . str_replace(' ', '_', $internship->student->last_name)
+                . '_'
+                . str_replace(' ', '_', $internship->company->company_name)
+                . '_'
+                . $internship->academic_year
+                . '.pdf';
 
-            // TODO: Send email notification to company (FR-06)
-            // Mail::to($internship->company->contact_person_email)
-            //     ->send(new InternshipCreatedNotification($internship));
+            $filename = preg_replace('/[^A-Za-z0-9_\-\.]/', '', $filename);
 
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Prax bola úspešne vytvorená.',
-                'internship' => $internship->load([
-                    'company.address',
-                    'currentStatus',
-                    'student',
-                ]),
-            ], 201);
+            return $pdf->download($filename);
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            
             return response()->json([
-                'message' => 'Nepodarilo sa vytvoriť prax.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-    public function updateStudentInternship(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'company_id' => 'required|exists:company,id',
-            'academic_year' => [
-                'required',
-                'regex:/^\d{4}\/\d{4}$/', // Format: 2024/2025
-            ],
-            'semester' => 'required|integer|in:1,2', // 1 = Winter, 2 = Summer
-            'internship_type' => 'required|in:prax,brigada',
-            'date_start' => 'required|date',
-            'date_end' => 'required|date|after:date_start',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $user = auth()->user();
-            
-            // Verify user is a student
-            if (!$user->hasRole('student')) {
-                return response()->json([
-                    'message' => 'Only students can edit internships.',
-                ], 403);
-            }
-
-            // Find internship
-            $internship = \App\Models\Internship::find($id);
-            
-            if (!$internship) {
-                return response()->json([
-                    'message' => 'Internship not found.',
-                ], 404);
-            }
-
-            // Verify ownership
-            if ($internship->users_id !== $user->id) {
-                return response()->json([
-                    'message' => 'You can only edit your own internships.',
-                ], 403);
-            }
-
-            // Students can only edit internships in "Vytvorená" status
-            if ($internship->currentStatus->internship_status_name !== 'Vytvorená') {
-                return response()->json([
-                    'message' => 'Môžete upravovať iba praxe v stave "Vytvorená".',
-                ], 403);
-            }
-
-            // Update internship
-            $internship->update([
-                'company_id' => $request->company_id,
-                'academic_year' => $request->academic_year,
-                'semester' => $request->semester,
-                'internship_type' => $request->internship_type,
-                'date_start' => $request->date_start,
-                'date_end' => $request->date_end,
-            ]);
-
-            // Log the change
-            DB::table('internship_status_change')->insert([
-                'internship_id' => $internship->id,
-                'internship_status_id' => $internship->current_status_id,
-                'changed_by_user_id' => $user->id,
-                'status_changed_at' => now(),
-                'notes' => 'Prax upravená študentom',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Prax bola úspešne upravená.',
-                'internship' => $internship->load([
-                    'company.address',
-                    'currentStatus',
-                    'student',
-                ]),
-            ], 200);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            return response()->json([
-                'message' => 'Failed to update internship.',
+                'message' => 'Failed to generate Dohoda PDF.',
                 'error' => $e->getMessage(),
             ], 500);
         }
     }
 
+    // ============================================================
+    // EXTERNAL API - Defense Marking Integration
+    // ============================================================
+
+    /**
+     * Mark internship as defended via external API
+     * POST /api/internships/{id}/mark-defended
+     */
     public function markDefendedExternal(Request $request, $id)
     {
-        // Security check 1: Must be using token authentication (not session)
         if (!$request->user()->currentAccessToken()) {
             return response()->json([
                 'success' => false,
@@ -1228,7 +1199,6 @@ class InternshipController extends Controller
             ], 401);
         }
 
-        // Security check 2: Token must have 'internship:defend' ability
         if (!$request->user()->tokenCan('internship:defend')) {
             return response()->json([
                 'success' => false,
@@ -1237,7 +1207,6 @@ class InternshipController extends Controller
             ], 403);
         }
 
-        // Validate request data
         $validator = Validator::make($request->all(), [
             'defense_date' => 'required|date',
             'defense_result' => 'required|string|max:500',
@@ -1255,10 +1224,8 @@ class InternshipController extends Controller
         try {
             DB::beginTransaction();
 
-            // Find internship
             $internship = Internship::with('currentStatus')->findOrFail($id);
 
-            // Critical check: Internship must be in "Schválená" status
             if ($internship->currentStatus->internship_status_name !== 'Schválená') {
                 return response()->json([
                     'success' => false,
@@ -1268,25 +1235,19 @@ class InternshipController extends Controller
                 ], 400);
             }
 
-            // Get "Obhájená" status
-            $defendedStatus = InternshipStatus::where(
-                'internship_status_name',
-                'Obhájená'
-            )->first();
+            $defendedStatus = InternshipStatus::where('internship_status_name', 'Obhájená')->first();
 
             if (!$defendedStatus) {
                 throw new \Exception('Status "Obhájená" not found in database.');
             }
 
-            // Update internship status
             $internship->current_status_id = $defendedStatus->id;
             $internship->save();
 
-            // Create status change history with defense information
             InternshipStatusChange::create([
                 'internship_id' => $internship->id,
                 'internship_status_id' => $defendedStatus->id,
-                'changed_by_user_id' => null, // null = external system
+                'changed_by_user_id' => null,
                 'status_changed_at' => now(),
                 'notes' =>
                     "Obhájená externým systémom\n" .
@@ -1295,8 +1256,6 @@ class InternshipController extends Controller
                     ($request->defense_grade ? "Známka: {$request->defense_grade}\n" : "") .
                     "API Token ID: " . $request->user()->currentAccessToken()->id,
             ]);
-
-            // TODO: Send email notification to student and guarantor
 
             DB::commit();
 
@@ -1316,7 +1275,7 @@ class InternshipController extends Controller
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             DB::rollBack();
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Internship not found.',
