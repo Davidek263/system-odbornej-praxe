@@ -5,14 +5,16 @@
     <title>Dohoda o odbornej praxi študenta</title>
     <style>
         @page {
-            margin: 2cm 2.5cm;
+            margin: 2cm 2cm 2cm 2cm;
         }
         
         body {
-            font-family: 'DejaVu Sans', 'Arial', sans-serif;
+            font-family: 'Calibri', 'Arial', sans-serif;
             font-size: 11pt;
-            line-height: 1.5;
+            line-height: 1.15;
             color: #000;
+            margin: 0;
+            padding: 0;
         }
         
         .text-center {
@@ -24,43 +26,43 @@
         }
         
         .mb-1 {
-            margin-bottom: 0.3em;
+            margin-bottom: 0;
         }
         
         .mb-2 {
-            margin-bottom: 0.8em;
+            margin-bottom: 0.2em;
         }
         
         .mb-3 {
-            margin-bottom: 1.2em;
+            margin-bottom: 0.5em;
         }
         
         h1 {
-            font-size: 13pt;
+            font-size: 11pt;
             font-weight: bold;
             text-align: center;
-            margin: 1em 0 0.5em 0;
+            margin: 0 0 0 0;
             text-transform: uppercase;
         }
         
         .subtitle {
             text-align: center;
-            font-size: 10pt;
-            margin-bottom: 1.5em;
-            line-height: 1.3;
+            font-size: 11pt;
+            margin-bottom: 0.8em;
+            line-height: 1.15;
         }
         
         h2 {
             font-size: 11pt;
             font-weight: bold;
-            margin: 1.2em 0 0.6em 0;
+            margin: 0.5em 0 0.3em 0;
             text-align: center;
         }
         
         h3 {
             font-size: 11pt;
             font-weight: bold;
-            margin: 0.8em 0 0.3em 0;
+            margin: 0.5em 0 0 0;
         }
         
         .section {
@@ -68,12 +70,12 @@
         }
         
         .party-info {
-            margin-bottom: 1.2em;
+            margin-bottom: 0.5em;
         }
         
         .party-info p {
-            margin: 0.15em 0;
-            line-height: 1.3;
+            margin: 0;
+            line-height: 1.15;
         }
         
         .student-table {
@@ -106,13 +108,13 @@
         }
         
         ul {
-            margin: 0.2em 0;
+            margin: 0;
             padding-left: 0;
             list-style: none;
         }
         
         li {
-            margin: 0.2em 0;
+            margin: 0;
             padding-left: 1.5em;
             text-indent: -0.7em;
         }
@@ -128,13 +130,13 @@
         }
         
         .signature-section {
-            margin-top: 2em;
+            margin-top: 1.5em;
         }
         
         .signature-row {
             display: table;
             width: 100%;
-            margin-bottom: 0.3em;
+            margin-bottom: 0.2em;
         }
         
         .signature-col {
@@ -153,18 +155,31 @@
         
         .signature-line {
             border-bottom: 1px dotted #000;
-            margin-top: 1.5em;
+            margin-top: 1em;
             margin-bottom: 0.2em;
         }
         
         .signature-student {
-            margin-top: 1.5em;
+            margin-top: 1em;
             text-align: center;
+            justify-content: end;
         }
         
         .signature-student .signature-line {
             max-width: 450px;
-            margin: 1.5em auto 0.2em auto;
+            margin: 1em auto 0.2em auto;
+        }
+
+        .dates {
+            margin-bottom: 1.5em;
+        }
+
+        .space {
+            margin-bottom: 1.5em;
+        }
+        
+        p {
+            margin: 0 0 0 0;
         }
     </style>
 </head>
@@ -179,17 +194,17 @@
         <h3>Univerzita Konštantína Filozofa v Nitre</h3>
         <p class="indent">Fakulta prírodných vied a informatiky</p>
         <p class="indent">Trieda A. Hlinku 1, 949 01 Nitra</p>
-        <p class="indent mb-1">v zastúpení Dr. h. c. prof. RNDr. František Petrovič, PhD., MBA – dekan fakulty</p>
+        <p class="indent mb-1">v zastúpení Dr. h. c. prof. RNDr. František Petrovič, PhD., MBA &#8211; dekan fakulty</p>
         <p class="indent">e-mail: dfpvai@ukf.sk&nbsp;&nbsp;&nbsp;&nbsp;tel. 037/6408 555</p>
     </div>
     
     <div class="party-info">
         <h3>Poskytovateľ odbornej praxe (organizácia, resp. inštitúcia)</h3>
         <p class="indent mb-1">
-            Plný názov a adresa {{ $company->company_name }}@if($company->address), {{ $company->address->street }} {{ $company->address->street_number }}, {{ $company->address->postal_code }} {{ $company->address->city }}@endif
+            {{ $company->company_name }}@if($company->address), {{ $company->address->street }} {{ $company->address->street_number }}, {{ $company->address->postal_code }} {{ $company->address->city }}@endif
         </p>
         <p class="indent mb-1">
-            v zastúpení {{ $company->contact_person_name ?? '.................................................................' }} (meno, pozícia)
+            v zastúpení {{ $company->contact_person_name ?? '.................................................................' }}
         </p>
     </div>
     
@@ -225,51 +240,57 @@
     </div>
     
     <div class="section">
-        <h2>II. Práva a povinnosti účastníkov dohody</h2>
+        <div class="space">
+            <h2>II. Práva a povinnosti účastníkov dohody</h2>
+            
+            <p class="bold mb-1">1. Fakulta prírodných vied a informatiky Univerzity Konštantína Filozofa v Nitre:</p>
+            
+            <p class="mb-1">1.1 Poverí svojho zamestnanca: Mgr. Dominik Halvoník, PhD. (ďalej garant odbornej praxe) garanciou odbornej praxe.</p>
+            
+            <p class="mb-1">1.2 Prostredníctvom garanta odbornej praxe:</p>
+            
+            <p class="indent mb-1">a) poskytne študentovi:</p>
+            <ul class="indent-2">
+                <li>informácie o organizácii praxe, o podmienkach dojednania dohody o odbornej praxi, o obsahovom zameraní odbornej praxe a o požiadavkách na obsahovú náplň správy z odbornej praxe,</li>
+                <li>návrh dohody o odbornej praxi študenta,</li>
+            </ul>
+            
+            <p class="indent mb-1">
+                b) rozhodne o udelení hodnotenia &#8222;ABS&#8221; (absolvoval) študentovi na základe dokladu &#8222;Výkaz o vykonanej odbornej praxi&#8221;, vydaného poskytovateľom odbornej praxe a na základe študentom vypracovanej správy o odbornej praxi, ktorej súčasťou je verejná obhajoba výsledkov odbornej praxe,
+            </p>
+            
+            <p class="indent mb-2">c) spravuje vyplnenú a účastníkmi podpísanú dohodu o odbornej praxi.</p>
+        </div>
         
-        <p class="bold mb-1">1. Fakulta prírodných vied a informatiky Univerzity Konštantína Filozofa v Nitre:</p>
+        <div class="space">
+            <p class="bold mb-1">2. Poskytovateľ odbornej praxe:</p>
         
-        <p class="mb-1">1.1 Poverí svojho zamestnanca: Mgr. Dominik Halvoník, PhD. (ďalej garant odbornej praxe) garanciou odbornej praxe.</p>
+            <p class="mb-1">
+                2.1 poverí svojho zamestnanca (tútor - zodpovedný za odbornú prax v organizácii) {{ $company->contact_person_name ?? '.................................................................' }}, ktorý bude dohliadať na dodržiavanie dohody o odbornej praxi, plnenie obsahovej náplne odbornej praxe a bude nápomocný pri získavaní potrebných údajov pre vypracovanie správy z odbornej praxe,
+            </p>
+            
+            <p class="mb-1">2.2 na začiatku praxe vykoná poučenie o bezpečnosti a ochrane zdravia pri práci v zmysle platných predpisov,</p>
+            
+            <p class="mb-1">2.3 vzniknuté organizačné problémy súvisiace s plnením dohody rieši spolu s garantom odbornej praxe,</p>
+            
+            <p class="mb-1">
+                2.4 po ukončení odbornej praxe vydá študentovi &#8222;Výkaz o vykonanej odbornej praxi&#8221;, ktorý obsahuje popis vykonávaných činností a stručné hodnotenie študenta a je jedným z predpokladov úspešného ukončenia predmetu Odborná prax,
+            </p>
+            
+            <p class="mb-2">2.5 umožní garantovi odbornej praxe a garantovi študijného predmetu kontrolu študentom plnených úloh.</p>
+        </div>
         
-        <p class="mb-1">1.2 Prostredníctvom garanta odbornej praxe:</p>
-        
-        <p class="indent mb-1">a) poskytne študentovi:</p>
-        <ul class="indent-2">
-            <li>informácie o organizácii praxe, o podmienkach dojednania dohody o odbornej praxi, o obsahovom zameraní odbornej praxe a o požiadavkách na obsahovú náplň správy z odbornej praxe,</li>
-            <li>návrh dohody o odbornej praxi študenta,</li>
-        </ul>
-        
-        <p class="indent mb-1">
-            b) rozhodne o udelení hodnotenia „ABS" (absolvoval) študentovi na základe dokladu „Výkaz o vykonanej odbornej praxi", vydaného poskytovateľom odbornej praxe a na základe študentom vypracovanej správy o odbornej praxi, ktorej súčasťou je verejná obhajoba výsledkov odbornej praxe,
-        </p>
-        
-        <p class="indent mb-2">c) spravuje vyplnenú a účastníkmi podpísanú dohodu o odbornej praxi.</p>
-        
-        <p class="bold mb-1">2. Poskytovateľ odbornej praxe:</p>
-        
-        <p class="mb-1">
-            2.1 poverí svojho zamestnanca (tútor - zodpovedný za odbornú prax v organizácii) {{ $company->contact_person_name ?? '.................................................................' }}, ktorý bude dohliadať na dodržiavanie dohody o odbornej praxi, plnenie obsahovej náplne odbornej praxe a bude nápomocný pri získavaní potrebných údajov pre vypracovanie správy z odbornej praxe,
-        </p>
-        
-        <p class="mb-1">2.2 na začiatku praxe vykoná poučenie o bezpečnosti a ochrane zdravia pri práci v zmysle platných predpisov,</p>
-        
-        <p class="mb-1">2.3 vzniknuté organizačné problémy súvisiace s plnením dohody rieši spolu s garantom odbornej praxe,</p>
-        
-        <p class="mb-1">
-            2.4 po ukončení odbornej praxe vydá študentovi „Výkaz o vykonanej odbornej praxi", ktorý obsahuje popis vykonávaných činností a stručné hodnotenie študenta a je jedným z predpokladov úspešného ukončenia predmetu Odborná prax,
-        </p>
-        
-        <p class="mb-2">2.5 umožní garantovi odbornej praxe a garantovi študijného predmetu kontrolu študentom plnených úloh.</p>
-        
-        <p class="bold mb-1">3. Študent FPVaI UKF v Nitre:</p>
-        
-        <p class="mb-1">3.1 osobne zabezpečí podpísanie tejto dohody o odbornej praxi študenta,</p>
-        
-        <p class="mb-1">3.2 zodpovedne vykonáva činnosti pridelené tútorom odbornej praxe,</p>
-        
-        <p class="mb-1">3.3 zabezpečí doručenie dokladu „Výkaz o vykonanej odbornej praxi" najneskôr v termínoch predpísaných garantom pre daný semester,</p>
-        
-        <p class="mb-2">3.4 okamžite, bez zbytočného odkladu informuje garanta odbornej praxe o problémoch, ktoré bránia plneniu odbornej praxe.</p>
+        <div class="space">
+            <p class="bold mb-1">3. Študent FPVaI UKF v Nitre:</p>
+            
+            <p class="mb-1">3.1 osobne zabezpečí podpísanie tejto dohody o odbornej praxi študenta,</p>
+            
+            <p class="mb-1">3.2 zodpovedne vykonáva činnosti pridelené tútorom odbornej praxe,</p>
+            
+            <p class="mb-1">3.3 zabezpečí doručenie dokladu &#8222;Výkaz o vykonanej odbornej praxi&#8221; najneskôr v termínoch predpísaných garantom pre daný semester,</p>
+            
+            <p class="mb-2">3.4 okamžite, bez zbytočného odkladu informuje garanta odbornej praxe o problémoch, ktoré bránia plneniu odbornej praxe.</p>
+        </div>
     </div>
     
     <div class="section">
@@ -287,7 +308,7 @@
     </div>
     
     <div class="signature-section">
-        <div class="signature-row">
+        <div class="signature-row dates">
             <div class="signature-col left">
                 <p>V Nitre, dňa {{ \Carbon\Carbon::now()->format('d.m.Y') }}</p>
             </div>
