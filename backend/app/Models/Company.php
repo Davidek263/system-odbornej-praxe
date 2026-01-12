@@ -39,6 +39,9 @@ class Company extends Model
         'contact_person_email',
         'contact_person_phone',
         'address_id',
+        'approved',
+        'approved_at',
+        'approved_by',
     ];
 
     // ============================================================
@@ -46,6 +49,8 @@ class Company extends Model
     // ============================================================
 
     protected $casts = [
+        'approved' => 'boolean',
+        'approved_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -76,5 +81,10 @@ class Company extends Model
     public function internships()
     {
         return $this->hasMany(Internship::class, 'company_id', 'id');
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by', 'id');
     }
 }

@@ -6,6 +6,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InternshipController;
 use App\Http\Controllers\ExternalSystemTokenController;
 use App\Http\Controllers\StudentDocumentController;
+use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,6 +31,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
+// Email Change Verification
+Route::get('/verify-email-change', [UserController::class, 'verifyEmailChange']);
+
 // Public Data
 Route::get('/study-fields', [AuthController::class, 'getStudyFields']);
 
@@ -51,7 +56,12 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Change Password
     Route::post('/change-password', [AuthController::class, 'changePassword']);
-    
+
+    // Email Management
+    Route::post('/request-student-email-change', [UserController::class, 'requestStudentEmailChange']);
+    Route::post('/update-alternative-email', [UserController::class, 'updateAlternativeEmail']);
+    Route::post('/request-company-email-change', [UserController::class, 'requestCompanyEmailChange']);
+
     // Get Current User
     Route::get('/user', function (Request $request) {
         $user = $request->user();
@@ -155,16 +165,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('guarantor')->group(function () {
         // Get all internships with filters
         Route::get('/internships', [InternshipController::class, 'getGuarantorInternships']);
-        
+
         // Update internship (full access)
         Route::put('/internships/{id}', [InternshipController::class, 'updateInternship']);
-        
+
         // Change internship status
         Route::post('/internships/{id}/change-status', [InternshipController::class, 'changeInternshipStatus']);
-        
+
         // Get students and companies for dropdowns
         Route::get('/students', [InternshipController::class, 'getAllStudents']);
         Route::get('/companies', [InternshipController::class, 'getAllCompanies']);
+
+        // Company approval routes
+        Route::get('/pending-companies', [CompanyController::class, 'getPendingCompanies']);
+        Route::post('/companies/{id}/approve', [CompanyController::class, 'approveCompany']);
+        Route::post('/companies/{id}/reject', [CompanyController::class, 'rejectCompany']);
 
         Route::get('/external-system-tokens', [ExternalSystemTokenController::class, 'index']);
         Route::post('/external-system-tokens', [ExternalSystemTokenController::class, 'store']);

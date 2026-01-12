@@ -428,12 +428,12 @@ function handleRegister() {
     }
   })
 
-  // For company: combine first and last name into contact_person_name for backend
+  // For company: rename fields to match backend expectations
   if (isCompany.value) {
-    payload.contact_person_name = `${payload.contact_person_first_name} ${payload.contact_person_last_name}`.trim()
-    // Remove the separate fields so backend doesn't get confused
+    payload.contact_person_name = payload.contact_person_first_name
+    payload.contact_person_last_name = payload.contact_person_last_name
+    // Remove the _first_name field as backend expects just contact_person_name
     delete payload.contact_person_first_name
-    delete payload.contact_person_last_name
   }
 
   // Convert study_field_id to number for student
@@ -444,19 +444,19 @@ function handleRegister() {
   api.post(endpoint, payload)
     .then(res => {
       loading.value = false
-      const defaultMessage = isCompany.value 
-        ? 'Registrácia úspešná! Dočasné heslo bolo odoslané na Váš email. Po prihlásení budete musieť zmeniť heslo.'
+      const defaultMessage = isCompany.value
+        ? 'Registrácia úspešná! Skontrolujte Váš email pre ďalšie inštrukcie.'
         : 'Registrácia úspešná! Dočasné heslo bolo odoslané na Váš študentský email. Po prihlásení budete musieť zmeniť heslo.'
-      
+
       showAlert(
-        res.data.message || defaultMessage, 
+        res.data.message || defaultMessage,
         'success'
       )
 
-      // Redirect to login after 5 seconds
+      // Redirect to login after 3 seconds for both students and companies
       setTimeout(() => {
         router.push('/login')
-      }, 5000)
+      }, 3000)
     })
     .catch(err => {
       loading.value = false

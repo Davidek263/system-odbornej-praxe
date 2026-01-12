@@ -36,8 +36,24 @@ use Illuminate\Support\Facades\Validator;
  * - Company: View, confirm, reject internships and timesheets
  * - Guarantor: Full oversight, status changes, and reporting
  */
+use App\Services\EmailNotificationService;
+use App\Mail\InternshipCreatedMail;
+use App\Mail\InternshipConfirmedMail;
+use App\Mail\InternshipRejectedMail;
+use App\Mail\InternshipApprovedMail;
+use App\Mail\InternshipDefendedMail;
+use App\Mail\InternshipNotDefendedMail;
+use App\Mail\TimesheetApprovedMail;
+use App\Mail\TimesheetRejectedMail;
+
 class InternshipController extends Controller
 {
+    protected $emailService;
+
+    public function __construct(EmailNotificationService $emailService)
+    {
+        $this->emailService = $emailService;
+    }
     // ============================================================
     // STUDENT METHODS - Internship Creation & Management
     // ============================================================
@@ -418,6 +434,17 @@ class InternshipController extends Controller
                 'notes' => $request->notes ?? 'Potvrdené firmou',
             ]);
 
+            // Send email notification to student and guarantor
+            $recipients = $this->emailService->getRecipientsForConfirmation($internship);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new InternshipConfirmedMail($internship),
+                    type: 'internship_confirmed',
+                    relatedModel: $internship
+                );
+            }
+
             DB::commit();
 
             return response()->json([
@@ -486,6 +513,17 @@ class InternshipController extends Controller
                 'status_changed_at' => now(),
                 'notes' => $request->notes ?? 'Zamietnuté firmou',
             ]);
+
+            // Send email notification to student and guarantor (company rejected, so exclude company)
+            $recipients = $this->emailService->getRecipientsForRejection($internship, $user->id, rejectedByCompany: true);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new InternshipRejectedMail($internship, $user, $request->notes),
+                    type: 'internship_rejected',
+                    relatedModel: $internship
+                );
+            }
 
             DB::commit();
 
@@ -557,6 +595,20 @@ class InternshipController extends Controller
             $document->verified_at = now();
             $document->save();
 
+            // Load internship with student for email
+            $internship = $document->internship()->with('student')->first();
+
+            // Send email notification to student
+            $recipients = $this->emailService->getRecipientsForTimesheet($internship);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new TimesheetApprovedMail($internship, $document),
+                    type: 'timesheet_approved',
+                    relatedModel: $document
+                );
+            }
+
             DB::commit();
 
             return response()->json([
@@ -626,6 +678,20 @@ class InternshipController extends Controller
             $document->verified_by_user_id = null;
             $document->verified_at = null;
             $document->save();
+
+            // Load internship with student for email
+            $internship = $document->internship()->with('student')->first();
+
+            // Send email notification to student
+            $recipients = $this->emailService->getRecipientsForTimesheet($internship);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new TimesheetRejectedMail($internship, $document, $request->notes),
+                    type: 'timesheet_rejected',
+                    relatedModel: $document
+                );
+            }
 
             DB::commit();
 
@@ -835,6 +901,49 @@ class InternshipController extends Controller
             ]);
 
             $internship->load('currentStatus', 'statusHistory.status');
+
+            // Send email notifications based on new status
+            if ($request->status === 'Schválená') {
+                $recipients = $this->emailService->getRecipientsForApproval($internship);
+                if (!empty($recipients)) {
+                    $this->emailService->sendEmail(
+                        recipients: $recipients,
+                        mailable: new InternshipApprovedMail($internship),
+                        type: 'internship_approved',
+                        relatedModel: $internship
+                    );
+                }
+            } elseif ($request->status === 'Obhájená') {
+                $recipients = $this->emailService->getRecipientsForDefended($internship);
+                if (!empty($recipients)) {
+                    $this->emailService->sendEmail(
+                        recipients: $recipients,
+                        mailable: new InternshipDefendedMail($internship),
+                        type: 'internship_defended',
+                        relatedModel: $internship
+                    );
+                }
+            } elseif ($request->status === 'Neobhájená') {
+                $recipients = $this->emailService->getRecipientsForDefended($internship);
+                if (!empty($recipients)) {
+                    $this->emailService->sendEmail(
+                        recipients: $recipients,
+                        mailable: new InternshipNotDefendedMail($internship),
+                        type: 'internship_not_defended',
+                        relatedModel: $internship
+                    );
+                }
+            } elseif ($request->status === 'Zamietnutá') {
+                $recipients = $this->emailService->getRecipientsForRejection($internship, $user->id, rejectedByCompany: false);
+                if (!empty($recipients)) {
+                    $this->emailService->sendEmail(
+                        recipients: $recipients,
+                        mailable: new InternshipRejectedMail($internship, $user, $request->notes),
+                        type: 'internship_rejected',
+                        relatedModel: $internship
+                    );
+                }
+            }
 
             DB::commit();
 
@@ -1256,6 +1365,20 @@ class InternshipController extends Controller
                     ($request->defense_grade ? "Známka: {$request->defense_grade}\n" : "") .
                     "API Token ID: " . $request->user()->currentAccessToken()->id,
             ]);
+
+            // Load relationships for email
+            $internship->load('student');
+
+            // Send email notification to student
+            $recipients = $this->emailService->getRecipientsForDefended($internship);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new InternshipDefendedMail($internship),
+                    type: 'internship_defended',
+                    relatedModel: $internship
+                );
+            }
 
             DB::commit();
 
