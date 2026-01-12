@@ -7,6 +7,7 @@ use App\Http\Controllers\InternshipController;
 use App\Http\Controllers\ExternalSystemTokenController;
 use App\Http\Controllers\StudentDocumentController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +31,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
+// Email Change Verification
+Route::get('/verify-email-change', [UserController::class, 'verifyEmailChange']);
+
 // Public Data
 Route::get('/study-fields', [AuthController::class, 'getStudyFields']);
 
@@ -52,7 +56,12 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Change Password
     Route::post('/change-password', [AuthController::class, 'changePassword']);
-    
+
+    // Email Management
+    Route::post('/request-student-email-change', [UserController::class, 'requestStudentEmailChange']);
+    Route::post('/update-alternative-email', [UserController::class, 'updateAlternativeEmail']);
+    Route::post('/request-company-email-change', [UserController::class, 'requestCompanyEmailChange']);
+
     // Get Current User
     Route::get('/user', function (Request $request) {
         $user = $request->user();

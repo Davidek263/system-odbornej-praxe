@@ -81,7 +81,11 @@ export default {
         'success.activation': 'Účet bol úspešne aktivovaný. Môžete sa prihlásiť.',
         'success.password.changed': 'Heslo bolo úspešne zmenené.',
         'success.password.reset.sent': 'Odkaz na obnovenie hesla bol odoslaný na váš email.',
-        
+        'success.email.changed': 'Email bol úspešne zmenený.',
+        'success.email.change.requested': 'Verifikačný email bol odoslaný. Skontrolujte svoj email.',
+        'info.email.verification.pending': 'Verifikačný email bol odoslaný na váš aktuálny email.',
+        'success.email.verified': 'Email bol úspešne zmenený.',
+
         // Úspešné akcie - praxe
         'success.internship.confirmed': 'Prax bola úspešne potvrdená.',
         'success.internship.rejected': 'Prax bola zamietnutá.',
@@ -99,6 +103,12 @@ export default {
         'server.maintenance': 'Server je momentálne nedostupný kvôli údržbe.',
         'server.unavailable': 'Server je nedostupný. Skúste to neskôr.',
         
+        // Email chyby
+        'error.email.duplicate': 'Tento email už je použitý.',
+        'error.email.format': 'Email musí byť vo formáte: meno.priezvisko@student.ukf.sk',
+        'error.email.token.expired': 'Odkaz na zmenu emailu vypršal.',
+        'error.email.token.invalid': 'Neplatný odkaz na zmenu emailu.',
+
         // Sieťové chyby
         'network.error': 'Chyba spojenia. Skontrolujte internetové pripojenie.',
         'network.offline': 'Ste offline. Skontrolujte pripojenie.',

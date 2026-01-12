@@ -12,9 +12,24 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\EmailNotificationService;
+use App\Mail\InternshipCreatedMail;
+use App\Mail\InternshipConfirmedMail;
+use App\Mail\InternshipRejectedMail;
+use App\Mail\InternshipApprovedMail;
+use App\Mail\InternshipDefendedMail;
+use App\Mail\InternshipNotDefendedMail;
+use App\Mail\TimesheetApprovedMail;
+use App\Mail\TimesheetRejectedMail;
 
 class InternshipController extends Controller
 {
+    protected $emailService;
+
+    public function __construct(EmailNotificationService $emailService)
+    {
+        $this->emailService = $emailService;
+    }
     /**
      * Generate Dohoda PDF for an internship
      * GET /internships/{id}/generate-dohoda
@@ -203,7 +218,16 @@ class InternshipController extends Controller
                 'notes' => $request->notes ?? 'Potvrdené firmou',
             ]);
 
-            // TODO: Send email notification to student and guarantor
+            // Send email notification to student and guarantor
+            $recipients = $this->emailService->getRecipientsForConfirmation($internship);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new InternshipConfirmedMail($internship),
+                    type: 'internship_confirmed',
+                    relatedModel: $internship
+                );
+            }
 
             DB::commit();
 
@@ -278,7 +302,16 @@ class InternshipController extends Controller
                 'notes' => $request->notes ?? 'Zamietnuté firmou',
             ]);
 
-            // TODO: Send email notification to student
+            // Send email notification to student and guarantor (company rejected, so exclude company)
+            $recipients = $this->emailService->getRecipientsForRejection($internship, $user->id, rejectedByCompany: true);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new InternshipRejectedMail($internship, $user, $request->notes),
+                    type: 'internship_rejected',
+                    relatedModel: $internship
+                );
+            }
 
             DB::commit();
 
@@ -456,7 +489,19 @@ class InternshipController extends Controller
             $document->verified_at = now();
             $document->save();
 
-            // TODO: Send email notification to student
+            // Load internship with student for email
+            $internship = $document->internship()->with('student')->first();
+
+            // Send email notification to student
+            $recipients = $this->emailService->getRecipientsForTimesheet($internship);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new TimesheetApprovedMail($internship, $document),
+                    type: 'timesheet_approved',
+                    relatedModel: $document
+                );
+            }
 
             DB::commit();
 
@@ -533,7 +578,19 @@ class InternshipController extends Controller
             $document->verified_at = null;
             $document->save();
 
-            // TODO: Send email notification to student
+            // Load internship with student for email
+            $internship = $document->internship()->with('student')->first();
+
+            // Send email notification to student
+            $recipients = $this->emailService->getRecipientsForTimesheet($internship);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new TimesheetRejectedMail($internship, $document, $request->notes),
+                    type: 'timesheet_rejected',
+                    relatedModel: $document
+                );
+            }
 
             DB::commit();
 
@@ -701,11 +758,48 @@ class InternshipController extends Controller
             // Load fresh data
             $internship->load('currentStatus', 'statusHistory.status');
 
-            // TODO: Send email notifications to:
-            // - Student
-            // - Company
-            // Subject: Zmena stavu odbornej praxe
-            // Content: Stav vašej praxe sa zmenil z "{$oldStatus}" na "{$request->status}"
+            // Send email notifications based on new status
+            if ($request->status === 'Schválená') {
+                $recipients = $this->emailService->getRecipientsForApproval($internship);
+                if (!empty($recipients)) {
+                    $this->emailService->sendEmail(
+                        recipients: $recipients,
+                        mailable: new InternshipApprovedMail($internship),
+                        type: 'internship_approved',
+                        relatedModel: $internship
+                    );
+                }
+            } elseif ($request->status === 'Obhájená') {
+                $recipients = $this->emailService->getRecipientsForDefended($internship);
+                if (!empty($recipients)) {
+                    $this->emailService->sendEmail(
+                        recipients: $recipients,
+                        mailable: new InternshipDefendedMail($internship),
+                        type: 'internship_defended',
+                        relatedModel: $internship
+                    );
+                }
+            } elseif ($request->status === 'Neobhájená') {
+                $recipients = $this->emailService->getRecipientsForDefended($internship);
+                if (!empty($recipients)) {
+                    $this->emailService->sendEmail(
+                        recipients: $recipients,
+                        mailable: new InternshipNotDefendedMail($internship),
+                        type: 'internship_not_defended',
+                        relatedModel: $internship
+                    );
+                }
+            } elseif ($request->status === 'Zamietnutá') {
+                $recipients = $this->emailService->getRecipientsForRejection($internship, $user->id, rejectedByCompany: false);
+                if (!empty($recipients)) {
+                    $this->emailService->sendEmail(
+                        recipients: $recipients,
+                        mailable: new InternshipRejectedMail($internship, $user, $request->notes),
+                        type: 'internship_rejected',
+                        relatedModel: $internship
+                    );
+                }
+            }
 
             DB::commit();
 
@@ -882,12 +976,19 @@ class InternshipController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // TODO: Generate "Dohoda o odbornej praxi" PDF (FR-05)
-            // $this->generateInternshipAgreement($internship);
+            // Load relationships for email
+            $internship->load(['student.studyField', 'company']);
 
-            // TODO: Send email notification to company (FR-06)
-            // Mail::to($internship->company->contact_person_email)
-            //     ->send(new InternshipCreatedNotification($internship));
+            // Send email notification to company
+            $recipients = $this->emailService->getRecipientsForCreation($internship);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new InternshipCreatedMail($internship),
+                    type: 'internship_created',
+                    relatedModel: $internship
+                );
+            }
 
             DB::commit();
 
@@ -1078,7 +1179,19 @@ class InternshipController extends Controller
                 'notes' => $request->notes ?? 'Obhájená externým systémom',
             ]);
 
-            // TODO: Send email notification to student and guarantor
+            // Load relationships for email
+            $internship->load('student');
+
+            // Send email notification to student
+            $recipients = $this->emailService->getRecipientsForDefended($internship);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new InternshipDefendedMail($internship),
+                    type: 'internship_defended',
+                    relatedModel: $internship
+                );
+            }
 
             DB::commit();
 
