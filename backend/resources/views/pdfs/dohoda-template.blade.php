@@ -74,7 +74,7 @@
 <br>
 <p><strong>Poskytovateľ odbornej praxe (organizácia, resp. inštitúcia)</strong></p>
 <p class="indent">Plný názov a adresa {{ $company->company_name }}@if($company->address), {{ $company->address->street }} {{ $company->address->street_number }}, {{ $company->address->postal_code }} {{ $company->address->city }}@endif</p>
-<p class="indent">v zastúpení {{ $company->contact_person_name ?? '.................................................................' }} (meno, pozícia)</p>
+<p class="indent">v zastúpení {{ $company->contact_person_name ?? '.................................................................' }}</p>
 <br>
 <p><strong>Študent:</strong></p>
 <table style="width: 100%; border-collapse: collapse;">
@@ -138,7 +138,7 @@
 <table class="signature-table">
     <tr>
         <td>
-            <p>V Nitre, dňa {{ \Carbon\Carbon::now()->format('d.m.Y') }}</p>
+            <p>V Nitre, dňa ....................</p>
         </td>
         <td>
             <p>V ........., dňa ....................</p>
