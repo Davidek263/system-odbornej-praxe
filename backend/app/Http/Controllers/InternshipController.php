@@ -121,6 +121,17 @@ class InternshipController extends Controller
                 'updated_at' => now(),
             ]);
 
+            // Send email notification to company
+            $recipients = $this->emailService->getRecipientsForCreation($internship->load('company', 'student'));
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new InternshipCreatedMail($internship),
+                    type: 'internship_created',
+                    relatedModel: $internship
+                );
+            }
+
             DB::commit();
 
             return response()->json([
