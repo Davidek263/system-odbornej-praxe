@@ -60,14 +60,21 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+// ============================================================
+// IMPORTS & SETUP
+// ============================================================
+import { reactive, ref, onMounted } from 'vue'
 import api from '@/api'
 import PageAlert from '@/components/PageAlert.vue'
 import Spinner from '@/components/Spinner.vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
+const route = useRoute()
 
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
 const form = reactive({
   email: '',
   password: '',
@@ -76,6 +83,9 @@ const errors = reactive({})
 const alert = reactive({ show: false, type: 'error', message: '' })
 const loading = ref(false)
 
+// ============================================================
+// FUNCTIONS
+// ============================================================
 function showAlert(message, type = 'error') {
   alert.message = message
   alert.type = type
@@ -153,6 +163,50 @@ function handleLogin() {
       showAlert(err.response?.data?.message || 'Prihlásenie zlyhalo. Skúste to znova.', 'error')
     })
 }
+
+// Check for email change success/error on mount
+onMounted(() => {
+  // Force logout if logout parameter is present
+  if (route.query.logout === 'true') {
+    localStorage.clear()
+    sessionStorage.clear()
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+  }
+
+  // Check if email was successfully changed
+  if (route.query.email_changed === 'true') {
+    showAlert('Email bol úspešne zmenený. Prosím prihláste sa s novým emailom.', 'success')
+    // Clean URL
+    router.replace({ query: {} })
+  }
+
+  // Check for email change errors
+  if (route.query.email_change_error) {
+    let errorMessage = ''
+
+    switch (route.query.email_change_error) {
+      case 'expired':
+        errorMessage = 'Odkaz na zmenu emailu vypršal. Požiadajte o novú zmenu emailu v profile.'
+        break
+      case 'invalid':
+        errorMessage = 'Neplatný odkaz na zmenu emailu.'
+        break
+      case 'user_not_found':
+        errorMessage = 'Používateľ nebol nájdený.'
+        break
+      case 'failed':
+        errorMessage = 'Zmena emailu zlyhala. Skúste to znova neskôr.'
+        break
+      default:
+        errorMessage = 'Neplatný alebo expirovaný odkaz.'
+    }
+
+    showAlert(errorMessage, 'error')
+    // Clean URL
+    router.replace({ query: {} })
+  }
+})
 </script>
 
 <style scoped>

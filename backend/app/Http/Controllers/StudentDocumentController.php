@@ -2,17 +2,39 @@
 
 namespace App\Http\Controllers;
 
+// ============================================================
+// IMPORTS
+// ============================================================
 use App\Models\Document;
 use App\Models\DocumentType;
 use App\Models\Internship;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use App\Services\EmailNotificationService;
+use App\Mail\DocumentUploadedMail;
 
+/**
+ * Student Document Controller
+ *
+ * Manages document operations for students including upload, download, and deletion.
+ * Handles document type retrieval and internship-specific document access.
+ * Ensures students can only access documents for their own internships.
+ */
 class StudentDocumentController extends Controller
 {
+    protected $emailService;
+
+    public function __construct(EmailNotificationService $emailService)
+    {
+        $this->emailService = $emailService;
+    }
+    // ======================================
+    // GET INTERNSHIP DOCUMENTS
+    // ======================================
     /**
      * Get all documents for a specific internship
+     * GET /student/internships/{internshipId}/documents
      */
     public function getInternshipDocuments($internshipId)
     {
@@ -47,8 +69,12 @@ class StudentDocumentController extends Controller
         }
     }
 
+    // ======================================
+    // UPLOAD DOCUMENT
+    // ======================================
     /**
      * Upload a new document
+     * POST /student/internships/{internshipId}/documents
      */
     public function uploadDocument(Request $request, $internshipId)
     {
@@ -105,6 +131,20 @@ class StudentDocumentController extends Controller
             // Load relationships
             $document->load('documentType', 'uploadedBy');
 
+            // Load internship with relationships for email
+            $internship = $internship->load('company', 'student');
+
+            // Send email notification to company and guarantors
+            $recipients = $this->emailService->getRecipientsForDocumentUpload($internship, $document);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new DocumentUploadedMail($internship, $document),
+                    type: 'document_uploaded',
+                    relatedModel: $document
+                );
+            }
+
             return response()->json([
                 'message' => 'Document uploaded successfully.',
                 'document' => $document,
@@ -118,8 +158,12 @@ class StudentDocumentController extends Controller
         }
     }
 
+    // ======================================
+    // DOWNLOAD DOCUMENT
+    // ======================================
     /**
      * Download a document
+     * GET /student/documents/{documentId}/download
      */
     public function downloadDocument($documentId)
     {
@@ -154,8 +198,12 @@ class StudentDocumentController extends Controller
         }
     }
 
+    // ======================================
+    // DELETE DOCUMENT
+    // ======================================
     /**
      * Delete a document
+     * DELETE /student/documents/{documentId}
      */
     public function deleteDocument($documentId)
     {
@@ -192,8 +240,12 @@ class StudentDocumentController extends Controller
         }
     }
 
+    // ======================================
+    // GET DOCUMENT TYPES
+    // ======================================
     /**
      * Get all available document types
+     * GET /student/document-types
      */
     public function getDocumentTypes()
     {

@@ -435,12 +435,19 @@
 </template>
 
 <script setup>
+// ============================================================
+// IMPORTS & SETUP
+// ============================================================
 import { reactive, ref, computed, onMounted } from 'vue'
 import api from '@/api'
 import PageAlert from '@/components/PageAlert.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+
+// ============================================================
+// ALERT SYSTEM
+// ============================================================
 const alert = reactive({ show: false, type: 'error', message: '', duration: 5000 })
 
 function showAlert(message, type = 'error') {
@@ -449,14 +456,18 @@ function showAlert(message, type = 'error') {
   alert.show = true
 }
 
-// State
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
 const internships = ref([])
 const loading = ref(false)
 const processing = reactive({})
 const selected = ref(null)
 const showAdvancedFilters = ref(false)
 
-// Filters & Sorting
+// ============================================================
+// FILTERS & SORTING
+// ============================================================
 const filters = reactive({
   search: '',
   status: '',
@@ -470,7 +481,9 @@ const sortDirection = ref('asc')
 const pageSize = ref(10)
 const currentPage = ref(1)
 
-// Helper functions
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
 function formatDate(d) {
   if (!d) return '—'
   const dt = new Date(d)
@@ -598,6 +611,9 @@ function canRejectTimesheet(internship) {
   return status === 'Nahraný' || status === 'Potvrdený'
 }
 
+// ============================================================
+// UI FUNCTIONS
+// ============================================================
 function toggleAdvancedFilters() {
   showAdvancedFilters.value = !showAdvancedFilters.value
 }
@@ -620,7 +636,9 @@ function clearFilters() {
   currentPage.value = 1
 }
 
-// Computed
+// ============================================================
+// COMPUTED PROPERTIES
+// ============================================================
 const academicYears = computed(() => {
   const years = new Set()
   internships.value.forEach(i => {
@@ -738,7 +756,9 @@ const paginated = computed(() => {
   return filteredInternships.value.slice(start, start + pageSize.value)
 })
 
-// API calls
+// ============================================================
+// API CALLS
+// ============================================================
 async function fetchInternships() {
   loading.value = true
   try {
@@ -779,6 +799,9 @@ function applyFilters() {
   currentPage.value = 1
 }
 
+// ============================================================
+// MODAL FUNCTIONS
+// ============================================================
 function viewDetails(internship) {
   selected.value = internship
 }
@@ -787,7 +810,9 @@ function closeModal() {
   selected.value = null
 }
 
-// Actions
+// ============================================================
+// INTERNSHIP ACTIONS
+// ============================================================
 async function confirmInternship(internship) {
   if (!confirm(`Potvrdiť odbornú prax pre študenta ${internship.student.first_name} ${internship.student.last_name}?`)) {
     return
@@ -842,7 +867,9 @@ async function rejectInternship(internship) {
   }
 }
 
-// Timesheet approval/rejection using DocumentController endpoints
+// ============================================================
+// TIMESHEET ACTIONS
+// ============================================================
 async function approveTimesheet(internship) {
   const timesheet = getTimesheet(internship)
   if (!timesheet) {
@@ -919,14 +946,18 @@ async function rejectTimesheet(internship) {
   }
 }
 
-// Pagination
+// ============================================================
+// PAGINATION
+// ============================================================
 function changePage(n) {
   if (n < 1 || n > totalPages.value) return
   currentPage.value = n
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// Mount
+// ============================================================
+// LIFECYCLE HOOKS
+// ============================================================
 onMounted(() => {
   fetchInternships()
 })

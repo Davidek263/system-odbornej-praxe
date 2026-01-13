@@ -5,9 +5,6 @@
       <div class="hero-content">
         <h1>Vitajte v systéme <span>odbornej praxe</span></h1>
         <p>Spravujte evidenciu dokumentov a procesov rýchlo, bezpečne a prehľadne.</p>
-        <div class="cta">
-          <router-link class="btn primary" to="/register">Začať</router-link>
-        </div>
       </div>
 
       <!-- Quick navigation pills -->
@@ -20,23 +17,12 @@
           <i class="fas fa-building"></i>
           <span>Firma</span>
         </button>
-        <button @click="scrollToSection('internship')" class="nav-pill">
-          <i class="fas fa-briefcase"></i>
-          <span>Praxe</span>
-        </button>
-        <button @click="scrollToSection('guarantor')" class="nav-pill">
-          <i class="fas fa-chalkboard-teacher"></i>
-          <span>Garant</span>
-        </button>
       </div>
     </section>
 
     <!-- STUDENT INFO -->
     <section id="student" class="info-section student-section">
       <div class="section-header">
-        <div class="icon-wrapper">
-          <i class="fas fa-user-graduate"></i>
-        </div>
         <h2>Informácie pre študentov</h2>
         <p class="subtitle">Prečítajte si svoje právomoci, možnosti a povinnosti pri evidencii odbornej praxe.</p>
       </div>
@@ -53,9 +39,6 @@
     <!-- COMPANY INFO -->
     <section id="company" class="info-section company-section">
       <div class="section-header">
-        <div class="icon-wrapper">
-          <i class="fas fa-building"></i>
-        </div>
         <h2>Informácie pre firmy</h2>
         <p class="subtitle">Zistite, aké máte právomoci, možnosti a povinnosti pri spolupráci na odbornej praxi.</p>
       </div>
@@ -69,49 +52,35 @@
       </div>
     </section>
 
-    <!-- INTERNSHIP INFO -->
-    <section id="internship" class="info-section internship-section">
-      <div class="section-header">
-        <div class="icon-wrapper">
-          <i class="fas fa-briefcase"></i>
-        </div>
-        <h2>Informácie o praxiach</h2>
-        <p class="subtitle">Prehľad funkcií a povinností spojených so správou odbornej praxe v systéme.</p>
-      </div>
-      <div class="info-grid">
-        <div class="info-card" v-for="(section, idx) in internshipSections" :key="idx">
-          <h3>{{ section.title }}</h3>
-          <ul>
-            <li v-for="(item, iIdx) in section.items" :key="iIdx" v-html="item" />
-          </ul>
-        </div>
-      </div>
-    </section>
 
-    <!-- GUARANTOR INFO -->
-    <section id="guarantor" class="info-section guarantor-section">
+    <!-- MORE INFO -->
+    <section class="info-section more-info-section">
       <div class="section-header">
-        <div class="icon-wrapper">
-          <i class="fas fa-chalkboard-teacher"></i>
-        </div>
-        <h2>Informácie pre garantov praxe</h2>
-        <p class="subtitle">Prehľad právomocí, možností a povinností akademického garanta v systéme.</p>
-      </div>
-      <div class="info-grid">
-        <div class="info-card" v-for="(section, idx) in guarantorSections" :key="idx">
-          <h3>{{ section.title }}</h3>
-          <ul>
-            <li v-for="(item, iIdx) in section.items" :key="iIdx" v-html="item" />
-          </ul>
-        </div>
+        <h2>Chcete vedieť viac?</h2>
+        <p class="subtitle">Viac informácií najdete tu:</p>
+        <a
+          class="more-info-link"
+          href="https://www.fpvai.ukf.sk/sk/studium-fpv-ukf/organizacia-studia"
+          target="_blank"
+          rel="noopener"
+        >
+          https://www.fpvai.ukf.sk/sk/studium-fpv-ukf/organizacia-studia
+        </a>
       </div>
     </section>
   </div>
 </template>
 
 <script>
+// ============================================================
+// IMPORTS & SETUP
+// ============================================================
 export default {
   name: 'LandingPage',
+
+  // ============================================================
+  // STATE MANAGEMENT
+  // ============================================================
   data() {
     return {
       studentSections: [
@@ -175,64 +144,13 @@ export default {
             'Dodržiavať podmienky dohody o odbornej praxi, vrátane bezpečnosti práce.'
           ]
         }
-      ],
-      internshipSections: [
-        {
-          title: 'Právomoci',
-          items: [
-            'Prehľad praxí s detailným zobrazením stavu, dátumov a zmluvných strán.',
-            'Filtrovanie praxí podľa roku, stavu, firmy alebo študenta.',
-            'Stiahnutie PDF dohody a výkazu praxe.',
-            'Export vyfiltrovaného zoznamu do CSV pre reporty a štatistiky.'
-          ]
-        },
-        {
-          title: 'Možnosti',
-          items: [
-            'Založiť novú prax (študent) vyplnením firmy a termínov.',
-            'Potvrdiť alebo zamietnuť prax (firma) v stave Vytvorená.',
-            'Schváliť, označiť za obhájenú alebo neobhájenú (garant).',
-            'Vyžiadať alebo nahrať ďalšie dokumenty praxe podľa potreby.'
-          ]
-        },
-        {
-          title: 'Povinnosti',
-          items: [
-            'Nahrať povinné dokumenty (zmluva pri stave Schválená).',
-            'Dodržiavať termíny potvrdenia, schválenia a obhajoby praxe.',
-            'Udržiavať aktuálne informácie o praxi a jej účastníkoch.'
-          ]
-        }
-      ],
-      guarantorSections: [
-        {
-          title: 'Právomoci',
-          items: [
-            'Prístup k zoznamu všetkých praxí naprieč firmami a odbormi.',
-            'Úprava atribútov praxe – firma, študent, dátumy, stav.',
-            'Zmena stavu praxe (Schválená, Obhájená/Neobhájená) s automatickými notifikáciami.',
-            'Export vyfiltrovaných dát praxe do CSV pre reporty a štatistiky.'
-          ]
-        },
-        {
-          title: 'Možnosti',
-          items: [
-            'Filtrovanie praxí podľa roku, firmy, študijného odboru alebo študenta.',
-            'Automatické emailové notifikácie pri každej zmene stavu praxe.',
-            'Stiahnuť PDF dohody alebo výkaz študenta na kontrolu.'
-          ]
-        },
-        {
-          title: 'Povinnosti',
-          items: [
-            'Spracovať nové žiadosti v primeranom čase (schválenie/zamietnutie).',
-            'Dbať na správnosť údajov praxe a zúčastnených strán.',
-            'Zabezpečiť archiváciu a dostupnosť dokumentácie k praxiam po skončení semestra.'
-          ]
-        }
       ]
     }
   },
+
+  // ============================================================
+  // FUNCTIONS
+  // ============================================================
   methods: {
     scrollToSection(sectionId) {
       const element = document.getElementById(sectionId)
@@ -397,43 +315,6 @@ export default {
   margin-bottom: 50px;
 }
 
-.icon-wrapper {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #42b883 0%, #35a373 100%);
-  box-shadow: 0 8px 24px rgba(66, 184, 131, 0.3);
-}
-
-.student-section .icon-wrapper {
-  background: linear-gradient(135deg, #42b883 0%, #2c3e50 100%);
-  box-shadow: 0 8px 24px rgba(66, 184, 131, 0.3);
-}
-
-.company-section .icon-wrapper {
-  background: linear-gradient(135deg, #2c3e50 0%, #42b883 100%);
-  box-shadow: 0 8px 24px rgba(44, 62, 80, 0.3);
-}
-
-.internship-section .icon-wrapper {
-  background: linear-gradient(135deg, #2c3e50 0%, #16a085 100%);
-  box-shadow: 0 8px 24px rgba(22, 160, 133, 0.3);
-}
-
-.guarantor-section .icon-wrapper {
-  background: linear-gradient(135deg, #16a085 0%, #2c3e50 100%);
-  box-shadow: 0 8px 24px rgba(22, 160, 133, 0.3);
-}
-
-.icon-wrapper i {
-  font-size: 2.5rem;
-  color: #fff;
-}
-
 .section-header h2 {
   font-size: 2.25rem;
   margin-bottom: 12px;
@@ -447,6 +328,15 @@ export default {
   max-width: 700px;
   margin: 0 auto;
   line-height: 1.6;
+}
+
+.more-info-link {
+  display: inline-block;
+  margin-top: 10px;
+  color: #2c3e50;
+  text-decoration: underline;
+  font-weight: 600;
+  word-break: break-word;
 }
 
 /* Info Grid */
@@ -607,15 +497,8 @@ export default {
     font-size: 1.5rem;
   }
 
-  .icon-wrapper {
-    width: 60px;
-    height: 60px;
-  }
-
-  .icon-wrapper i {
-    font-size: 2rem;
-  }
-
+  
+  
   .info-card {
     width: 100%;
     box-sizing: border-box;

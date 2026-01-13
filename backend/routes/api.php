@@ -7,6 +7,8 @@ use App\Http\Controllers\InternshipController;
 use App\Http\Controllers\ExternalSystemTokenController;
 use App\Http\Controllers\StudentDocumentController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\DocumentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +32,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
+// Email Change Verification
+Route::get('/verify-email-change', [UserController::class, 'verifyEmailChange']);
+
 // Public Data
 Route::get('/study-fields', [AuthController::class, 'getStudyFields']);
 
@@ -52,7 +57,12 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Change Password
     Route::post('/change-password', [AuthController::class, 'changePassword']);
-    
+
+    // Email Management
+    Route::post('/request-student-email-change', [UserController::class, 'requestStudentEmailChange']);
+    Route::post('/update-alternative-email', [UserController::class, 'updateAlternativeEmail']);
+    Route::post('/request-company-email-change', [UserController::class, 'requestCompanyEmailChange']);
+
     // Get Current User
     Route::get('/user', function (Request $request) {
         $user = $request->user();
@@ -143,8 +153,8 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::prefix('documents')->group(function () {
         // Company: Approve or Reject timesheet (FR-08)
-        Route::post('/{id}/approve-timesheet', [InternshipController::class, 'approveTimesheet']);
-        Route::post('/{id}/reject-timesheet', [InternshipController::class, 'rejectTimesheet']);
+        Route::post('/{id}/approve-timesheet', [DocumentController::class, 'approveTimesheet']);
+        Route::post('/{id}/reject-timesheet', [DocumentController::class, 'rejectTimesheet']);
     });
 
     /*
@@ -175,8 +185,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/external-system-tokens', [ExternalSystemTokenController::class, 'index']);
         Route::post('/external-system-tokens', [ExternalSystemTokenController::class, 'store']);
         Route::delete('/external-system-tokens/{id}', [ExternalSystemTokenController::class, 'destroy']);
+
+        // CSV Export
+        Route::post('/internships/export', [InternshipController::class, 'exportGuarantorInternships']);
     });
-    
+
     // Legacy route (kept for backwards compatibility)
     Route::prefix('guarantor-internships')->group(function () {
         Route::get('/', [InternshipController::class, 'getGuarantorInternships']);

@@ -22,7 +22,7 @@ class CompanyController extends Controller
         // Check if user is guarantor
         $user = $request->user();
 
-        if (!$user || $user->role->role_name !== 'guarantor') {
+        if (!$user || !$user->hasRole('guarantor')) {
             return response()->json([
                 'message' => 'Unauthorized. Only guarantors can access this endpoint.',
             ], 403);
@@ -47,7 +47,7 @@ class CompanyController extends Controller
         // Check if user is guarantor
         $user = $request->user();
 
-        if (!$user || $user->role->role_name !== 'guarantor') {
+        if (!$user || !$user->hasRole('guarantor')) {
             return response()->json([
                 'message' => 'Unauthorized. Only guarantors can approve companies.',
             ], 403);
@@ -126,7 +126,7 @@ class CompanyController extends Controller
         // Check if user is guarantor
         $user = $request->user();
 
-        if (!$user || $user->role->role_name !== 'guarantor') {
+        if (!$user || !$user->hasRole('guarantor')) {
             return response()->json([
                 'message' => 'Unauthorized. Only guarantors can reject companies.',
             ], 403);

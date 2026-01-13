@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+// ============================================================
+// IMPORTS
+// ============================================================
 use App\Models\Document;
 use App\Models\TimesheetStatus;
 use App\Models\TimesheetStatusHistory;
@@ -9,10 +12,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
+/**
+ * Document Controller
+ *
+ * Manages timesheet approval and rejection workflows for companies.
+ * Handles document verification, status tracking, and access control.
+ * FR-08: Firma môže potvrdiť/zamietnuť výkaz
+ */
 class DocumentController extends Controller
 {
+    // ======================================
+    // APPROVE TIMESHEET
+    // ======================================
     /**
      * Approve timesheet (Company confirms timesheet)
+     * POST /documents/{documentId}/approve
      * FR-08: Firma môže potvrdiť výkaz
      */
     public function approveTimesheet(Request $request, $documentId)
@@ -51,7 +65,7 @@ class DocumentController extends Controller
 
             // Get "Potvrdený" status
             $approvedStatus = TimesheetStatus::where('timesheet_status_name', 'Potvrdený')->first();
-            
+
             if (!$approvedStatus) {
                 throw new \Exception('Potvrdený status not found in database.');
             }
@@ -72,8 +86,6 @@ class DocumentController extends Controller
             $document->verification_notes = $request->notes ?? 'Schválené firmou';
             $document->save();
 
-            // TODO: Send email notification to student
-
             DB::commit();
 
             return response()->json([
@@ -90,8 +102,12 @@ class DocumentController extends Controller
         }
     }
 
+    // ======================================
+    // REJECT TIMESHEET
+    // ======================================
     /**
      * Reject timesheet (Company rejects timesheet)
+     * POST /documents/{documentId}/reject
      * FR-08: Firma môže zamietnuť výkaz
      */
     public function rejectTimesheet(Request $request, $documentId)
@@ -130,7 +146,7 @@ class DocumentController extends Controller
 
             // Get "Zamietnutý" status
             $rejectedStatus = TimesheetStatus::where('timesheet_status_name', 'Zamietnutý')->first();
-            
+
             if (!$rejectedStatus) {
                 throw new \Exception('Zamietnutý status not found in database.');
             }
@@ -151,8 +167,6 @@ class DocumentController extends Controller
             $document->verification_notes = $request->notes ?? 'Zamietnuté firmou';
             $document->save();
 
-            // TODO: Send email notification to student
-
             DB::commit();
 
             return response()->json([
@@ -169,8 +183,12 @@ class DocumentController extends Controller
         }
     }
 
+    // ======================================
+    // GET DOCUMENT DETAILS
+    // ======================================
     /**
      * Get document details with timesheet status history
+     * GET /documents/{documentId}
      */
     public function getDocument($documentId)
     {
@@ -186,7 +204,7 @@ class DocumentController extends Controller
 
             // Check if user has permission to view
             $user = auth()->user();
-            
+
             if ($user->hasRole('company') && $document->internship->company_id !== $user->company_id) {
                 return response()->json([
                     'message' => 'Unauthorized to view this document.',

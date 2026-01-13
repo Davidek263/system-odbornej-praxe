@@ -71,6 +71,9 @@
 </template>
 
 <script setup>
+// ============================================================
+// IMPORTS & SETUP
+// ============================================================
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
@@ -80,6 +83,13 @@ import Spinner from '@/components/Spinner.vue'
 const route = useRoute()
 const router = useRouter()
 
+const api = axios.create({
+  baseURL: 'http://localhost:8000/api',
+})
+
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
 const loading = ref(false)
 
 const isActivationMode = ref(false) // <–– determines which mode we are in
@@ -104,10 +114,9 @@ const alert = reactive({
   message: ''
 })
 
-const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
-})
-
+// ============================================================
+// FUNCTIONS
+// ============================================================
 function showAlert(message, type = 'error') {
   alert.message = message
   alert.type = type
