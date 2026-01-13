@@ -11,6 +11,8 @@ use App\Models\Internship;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use App\Services\EmailNotificationService;
+use App\Mail\DocumentUploadedMail;
 
 /**
  * Student Document Controller
@@ -21,6 +23,12 @@ use Illuminate\Support\Facades\Validator;
  */
 class StudentDocumentController extends Controller
 {
+    protected $emailService;
+
+    public function __construct(EmailNotificationService $emailService)
+    {
+        $this->emailService = $emailService;
+    }
     // ======================================
     // GET INTERNSHIP DOCUMENTS
     // ======================================
@@ -122,6 +130,20 @@ class StudentDocumentController extends Controller
 
             // Load relationships
             $document->load('documentType', 'uploadedBy');
+
+            // Load internship with relationships for email
+            $internship = $internship->load('company', 'student');
+
+            // Send email notification to company and guarantors
+            $recipients = $this->emailService->getRecipientsForDocumentUpload($internship, $document);
+            if (!empty($recipients)) {
+                $this->emailService->sendEmail(
+                    recipients: $recipients,
+                    mailable: new DocumentUploadedMail($internship, $document),
+                    type: 'document_uploaded',
+                    relatedModel: $document
+                );
+            }
 
             return response()->json([
                 'message' => 'Document uploaded successfully.',

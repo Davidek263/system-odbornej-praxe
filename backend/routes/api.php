@@ -8,6 +8,7 @@ use App\Http\Controllers\ExternalSystemTokenController;
 use App\Http\Controllers\StudentDocumentController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\DocumentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -152,8 +153,8 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::prefix('documents')->group(function () {
         // Company: Approve or Reject timesheet (FR-08)
-        Route::post('/{id}/approve-timesheet', [InternshipController::class, 'approveTimesheet']);
-        Route::post('/{id}/reject-timesheet', [InternshipController::class, 'rejectTimesheet']);
+        Route::post('/{id}/approve-timesheet', [DocumentController::class, 'approveTimesheet']);
+        Route::post('/{id}/reject-timesheet', [DocumentController::class, 'rejectTimesheet']);
     });
 
     /*

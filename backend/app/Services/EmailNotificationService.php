@@ -280,4 +280,33 @@ class EmailNotificationService
 
         return $recipients;
     }
+
+    /**
+     * Get recipients for document upload (company + guarantors)
+     */
+    public function getRecipientsForDocumentUpload(Internship $internship, $document = null): array
+    {
+        $recipients = [];
+
+        // Send to company
+        if ($internship->company && $internship->company->contact_person_email) {
+            $recipients[] = (object)[
+                'id' => $internship->company->id,
+                'email' => $internship->company->contact_person_email,
+                'first_name' => $internship->company->contact_person_name,
+                'last_name' => ''
+            ];
+        }
+
+        // Send to all guarantors
+        $guarantors = User::whereHas('role', function($query) {
+            $query->where('role_name', 'guarantor');
+        })->get();
+
+        foreach ($guarantors as $guarantor) {
+            $recipients[] = $guarantor;
+        }
+
+        return $recipients;
+    }
 }

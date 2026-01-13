@@ -8,8 +8,6 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Address;
 use App\Models\Company;
-use App\Mail\PasswordMail;
-use App\Mail\ActivationMail;
 use App\Mail\CompanyPendingApprovalMail;
 use App\Mail\CompanyRegistrationReceivedMail;
 use App\Mail\StudentRegistrationWithCredentialsMail;
@@ -604,7 +602,10 @@ class AuthController extends Controller
             'activation_token_expires_at' => now()->addHours(48),
         ]);
 
-        // TODO: Resend activation email once mail class is implemented
+        // Send activation email with credentials
+        Mail::to($user->email)->send(
+            new StudentRegistrationWithCredentialsMail($user, $activationToken)
+        );
 
         return response()->json([
             'message' => 'If the email exists, an activation link has been sent.',
